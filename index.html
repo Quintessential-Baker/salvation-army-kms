@@ -1,0 +1,3207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Salvation Army Community Meals — Inventory &amp; Kitchen OS</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; }
+      .print-only { display: block !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+
+  <!-- Top Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-red-700 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">SA</div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Salvation Army Community Meals</h1>
+          <p class="text-xs text-slate-500">Inventory, Standardized Recipes (50–80), Prep, HACCP &amp; Forecasting</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="btn-switch-user-modal" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 transition">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span id="header-user-badge">William Clark (Management)</span>
+        </button>
+        <button id="btn-sync-status" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium transition flex items-center gap-1.5" title="Cloud Sync Status">
+          <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span id="sync-label">Connecting...</span>
+        </button>
+        <button id="btn-lock-app" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-medium transition" title="Lock Kitchen OS">Lock</button>
+        <button id="btn-quick-checkin" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-medium transition">+ Check In</button>
+        <button id="btn-quick-waste" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-medium transition">- Scan Waste</button>
+        <button id="btn-backup-modal" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-medium transition">Backup / Restore</button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 border-t border-slate-100 overflow-x-auto no-scrollbar">
+      <div id="nav-tabs" class="flex items-center gap-1 py-1.5 min-w-max">
+        <button data-tab="dashboard" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Dashboard</button>
+        <button data-tab="inventory" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Living Stock</button>
+        <button data-tab="transactions" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Check-In &amp; Waste</button>
+        <button data-tab="orders" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Order Suggestions</button>
+        <button data-tab="recipes" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Recipes (50–80)</button>
+        <button data-tab="menu" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Menu Planner</button>
+        <button data-tab="prep" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Next-Day Prep</button>
+        <button data-tab="checklists" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Checklists</button>
+        <button data-tab="audit" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Blind Audit</button>
+        <button data-tab="haccp" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Time &amp; Temp Logs</button>
+        <button data-tab="forecasting" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Served &amp; Forecasting</button>
+        <button data-tab="users" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Users &amp; Activity</button>
+        <button data-tab="help" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Help / Guide</button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main id="app-main" class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 flex-1">
+    <!-- Dynamic tab content rendered here -->
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm no-print"></div>
+
+  <!-- Modal Container -->
+  <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden items-center justify-center p-4 no-print">
+    <div id="modal-box" class="bg-white rounded-xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-5">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+        <h3 id="modal-title" class="text-base font-bold text-slate-900">Modal</h3>
+        <button id="modal-close" class="text-slate-400 hover:text-slate-700 text-xl leading-none px-2">&times;</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+<script>
+(function() {
+  'use strict';
+
+  const STORAGE_KEY = 'sa_community_meals_kms_v1';
+  const SUPABASE_URL = 'https://vydclmlheskrvvtvemky.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_MpzBqpjpEl4l7G9mM_XEFg_H5u-xSTv';
+  let sbClient = null;
+  let syncStatus = 'connecting'; // 'live' | 'connecting' | 'offline'
+  let syncErrorMsg = '';
+  let suppressCloudPush = false;
+  let lastSliceHashes = {};
+
+  // --- Initial Seed Data ---
+  function getDefaultState() {
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      activeTab: 'dashboard',
+      unitMode: 'grams', // 'grams' or 'us'
+      forecastHorizon: 'days', // 'days' | 'weeks' | 'months' | 'years'
+      inventory: [
+        { id: 'inv-1', sku: 'DRY-101', name: 'All-Purpose Flour', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 25000, unitLabel: 'g', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
+        { id: 'inv-2', sku: 'DRY-102', name: 'Rolled Oats', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 11340, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
+        { id: 'inv-3', sku: 'DRY-103', name: 'Granulated Sugar', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 15000, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
+        { id: 'inv-4', sku: 'DRY-104', name: 'Kosher Salt', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 3000, unitLabel: 'g', packSizeGrams: 1360, packLabel: '3 lb box', lastUpdated: today },
+        { id: 'inv-5', sku: 'DRY-105', name: 'Penne Pasta', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 18144, unitLabel: 'g', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
+        { id: 'inv-6', sku: 'DRY-106', name: 'Crushed Tomatoes (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 24000, parGrams: 36000, unitLabel: 'g', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-7', sku: 'PRO-201', name: 'Yellow Onions', category: 'Produce', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 11340, unitLabel: 'g', packSizeGrams: 22680, packLabel: '50 lb sack', lastUpdated: today },
+        { id: 'inv-8', sku: 'PRO-202', name: 'Carrots (Whole)', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 9072, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
+        { id: 'inv-9', sku: 'PRO-203', name: 'Celery', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 6804, unitLabel: 'g', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-10', sku: 'PRO-204', name: 'Romaine Lettuce', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 3600, parGrams: 6000, unitLabel: 'g', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-11', sku: 'DAI-301', name: 'Whole Milk', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 15140, parGrams: 22710, unitLabel: 'g', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
+        { id: 'inv-12', sku: 'DAI-302', name: 'Unsalted Butter', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 5443, parGrams: 7257, unitLabel: 'g', packSizeGrams: 454, packLabel: '1 lb block', lastUpdated: today },
+        { id: 'inv-13', sku: 'DAI-303', name: 'Shredded Mozzarella', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 4536, parGrams: 9072, unitLabel: 'g', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
+        { id: 'inv-14', sku: 'PRO-401', name: 'Chicken Breast (Boneless)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 22680, unitLabel: 'g', packSizeGrams: 18144, packLabel: '40 lb case', lastUpdated: today },
+        { id: 'inv-15', sku: 'PRO-402', name: 'Ground Beef (80/20)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 18144, unitLabel: 'g', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
+        { id: 'inv-16', sku: 'DRY-107', name: 'Active Dry Yeast', category: 'Baking', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 1814, parGrams: 1360, unitLabel: 'g', packSizeGrams: 454, packLabel: '1 lb brick', lastUpdated: today }
+      ],
+      recipes: [
+        {
+          id: 'rec-1',
+          name: 'Baked Ziti / Penne with Marinara & Mozzarella',
+          category: 'Main Entree',
+          basePortions: 50,
+          prepMin: 35,
+          cookMin: 45,
+          isBakers: false,
+          instructions: '1. Boil penne al dente (60% of package time). 2. Simmer crushed tomatoes with diced onions and kosher salt for 20 min. 3. Combine pasta, sauce, and half the mozzarella in hotel pans; top with remaining cheese. 4. Bake at 375°F until internal temp reaches ≥165°F; hold at ≥135°F.',
+          ingredients: [
+            { itemId: 'inv-5', grams: 5000 },
+            { itemId: 'inv-6', grams: 9000 },
+            { itemId: 'inv-7', grams: 1200 },
+            { itemId: 'inv-4', grams: 90 },
+            { itemId: 'inv-13', grams: 2500 }
+          ]
+        },
+        {
+          id: 'rec-2',
+          name: 'Herb Roasted Chicken Breast & Root Vegetables',
+          category: 'Main Entree',
+          basePortions: 50,
+          prepMin: 40,
+          cookMin: 35,
+          isBakers: false,
+          instructions: '1. Thaw chicken in Walk-In Cooler 24h prior. 2. Toss carrots and onions with melted butter and salt. 3. Season chicken and roast at 400°F until internal temp reaches ≥165°F for 15 sec. 4. Hold in steam table at ≥135°F.',
+          ingredients: [
+            { itemId: 'inv-14', grams: 8500 },
+            { itemId: 'inv-8', grams: 3500 },
+            { itemId: 'inv-7', grams: 1500 },
+            { itemId: 'inv-12', grams: 600 },
+            { itemId: 'inv-4', grams: 110 }
+          ]
+        },
+        {
+          id: 'rec-3',
+          name: 'Daily Community Sandwich Loaf (Batch)',
+          category: 'Fresh Bread',
+          basePortions: 50,
+          prepMin: 45,
+          cookMin: 35,
+          isBakers: true,
+          flourItemId: 'inv-1',
+          instructions: '1. Mix flour, yeast, salt, sugar, and warm milk/water to DDT 78°F. 2. Bulk ferment 60 min with 1 fold. 3. Divide, shape into loaf pans, proof until doubled. 4. Bake at 375°F to internal temp 195°F.',
+          ingredients: [
+            { itemId: 'inv-1', grams: 4000 },
+            { itemId: 'inv-11', grams: 1200 },
+            { itemId: 'inv-12', grams: 320 },
+            { itemId: 'inv-3', grams: 240 },
+            { itemId: 'inv-4', grams: 80 },
+            { itemId: 'inv-16', grams: 60 }
+          ]
+        },
+        {
+          id: 'rec-4',
+          name: 'Hearty Beef & Vegetable Soup',
+          category: 'Soup / Main',
+          basePortions: 50,
+          prepMin: 30,
+          cookMin: 60,
+          isBakers: false,
+          instructions: '1. Brown ground beef to ≥155°F; drain excess fat. 2. Sweat onions, carrots, and celery in butter. 3. Add crushed tomatoes, water, and salt; simmer 45 min. 4. Verify ≥165°F before transfer to hot holding ≥135°F.',
+          ingredients: [
+            { itemId: 'inv-15', grams: 5500 },
+            { itemId: 'inv-6', grams: 6000 },
+            { itemId: 'inv-7', grams: 1500 },
+            { itemId: 'inv-8', grams: 1800 },
+            { itemId: 'inv-9', grams: 1200 },
+            { itemId: 'inv-12', grams: 250 },
+            { itemId: 'inv-4', grams: 100 }
+          ]
+        }
+      ],
+      prepQueue: [
+        {
+          id: 'prep-init-1',
+          recipeId: 'rec-2',
+          recipeName: 'Herb Roasted Chicken Breast & Root Vegetables',
+          portions: 65,
+          deducted: false,
+          targetDate: 'Tomorrow',
+          checkedItems: {}
+        }
+      ],
+      transactions: [
+        { id: 'tx-1', timestamp: today + ' 08:35', type: 'INCOMING', itemId: 'inv-1', itemName: 'All-Purpose Flour', grams: 22680, note: 'Vendor: Jordan Banana | Lot #JB-442', staff: 'William Clark' },
+        { id: 'tx-2', timestamp: today + ' 09:10', type: 'WASTE', itemId: 'inv-10', itemName: 'Romaine Lettuce', grams: -900, note: 'Reason: Spoilage / Wilted outer leaves', staff: 'William Clark' }
+      ],
+      haccpLogs: [
+        { id: 'hac-1', timestamp: today + ' 08:40', type: 'Cold Hold (≤41°F)', target: 'Walk-In Cooler', tempF: 37.5, status: 'PASS', corrective: '—', staff: 'William Clark' },
+        { id: 'hac-2', timestamp: today + ' 08:45', type: 'Cold Hold (≤41°F)', target: 'Walk-In Freezer', tempF: -2.0, status: 'PASS', corrective: '—', staff: 'William Clark' },
+        { id: 'hac-3', timestamp: today + ' 11:20', type: 'Hot Hold (≥135°F)', target: 'Steam Table Well #1 (Soup)', tempF: 148.0, status: 'PASS', corrective: '—', staff: 'William Clark' }
+      ],
+      serviceHistory: [
+        // 16 historical MTWF lunch records to power immediate Day/Week/Month/Year forecasting
+        { id: 'srv-1', date: '2026-10-12', dayName: 'Mon', meal: 'Baked Ziti', planned: 65, served: 61, notes: 'Steady turnout' },
+        { id: 'srv-2', date: '2026-10-13', dayName: 'Tue', meal: 'Roasted Chicken', planned: 65, served: 58, notes: 'Rainy morning' },
+        { id: 'srv-3', date: '2026-10-14', dayName: 'Wed', meal: 'Beef & Veg Soup', planned: 65, served: 64, notes: 'Cool weather boost' },
+        { id: 'srv-4', date: '2026-10-16', dayName: 'Fri', meal: 'Fish & Pasta', planned: 70, served: 68, notes: 'Strong Friday' },
+        { id: 'srv-5', date: '2026-10-19', dayName: 'Mon', meal: 'Chicken Pot Pie', planned: 65, served: 63, notes: '' },
+        { id: 'srv-6', date: '2026-10-20', dayName: 'Tue', meal: 'Spaghetti & Meatballs', planned: 65, served: 60, notes: '' },
+        { id: 'srv-7', date: '2026-10-21', dayName: 'Wed', meal: 'Pulled Pork', planned: 70, served: 69, notes: 'Near capacity' },
+        { id: 'srv-8', date: '2026-10-23', dayName: 'Fri', meal: 'Beef Stew', planned: 70, served: 72, notes: '2 extra walk-ins' },
+        { id: 'srv-9', date: '2026-10-26', dayName: 'Mon', meal: 'Baked Ziti', planned: 70, served: 66, notes: '' },
+        { id: 'srv-10', date: '2026-10-27', dayName: 'Tue', meal: 'Roasted Chicken', planned: 65, served: 62, notes: '' },
+        { id: 'srv-11', date: '2026-10-28', dayName: 'Wed', meal: 'Chili & Cornbread', planned: 70, served: 71, notes: '' },
+        { id: 'srv-12', date: '2026-10-30', dayName: 'Fri', meal: 'Lasagna', planned: 75, served: 74, notes: 'End of month peak' },
+        { id: 'srv-13', date: '2026-11-02', dayName: 'Mon', meal: 'Beef & Veg Soup', planned: 70, served: 67, notes: '' },
+        { id: 'srv-14', date: '2026-11-03', dayName: 'Tue', meal: 'Chicken Alfredo', planned: 70, served: 64, notes: '' },
+        { id: 'srv-15', date: '2026-11-04', dayName: 'Wed', meal: 'Meatloaf & Mash', planned: 70, served: 70, notes: '' },
+        { id: 'srv-16', date: '2026-11-06', dayName: 'Fri', meal: 'Baked Ziti', planned: 75, served: 76, notes: 'Cold front, high demand' }
+      ],
+      selectedRecipeId: 'rec-1',
+      recipeScalePortions: 65,
+      users: [
+        { id: 'usr-1', name: 'William Clark', role: 'Management', title: 'Culinary Extern / Lead', initials: 'WC', pin: '1234', active: true },
+        { id: 'usr-2', name: 'Sabrina', role: 'Staff', title: 'Kitchen Staff', initials: 'SB', pin: '2222', active: true },
+        { id: 'usr-3', name: 'Volunteer Team', role: 'Volunteer', title: 'Prep Volunteer', initials: 'VT', pin: '0000', active: true },
+        { id: 'usr-4', name: 'Guest Observer', role: 'Other', title: 'Observer', initials: 'GO', pin: '9999', active: true }
+      ],
+      activeUserId: 'usr-1',
+      isLocked: false,
+      auditLogs: [],
+      blindAuditDraft: { zone: 'ALL', revealed: false, counts: {}, units: {}, reasons: {} },
+      menuPlan: [
+        { id: 'mp-1', date: new Date().toISOString().slice(0, 10), mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-1', portions: 65, status: 'PLANNED' },
+        { id: 'mp-2', date: new Date(Date.now() + 86400000).toISOString().slice(0, 10), mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-2', portions: 70, status: 'PLANNED' }
+      ],
+      checklistFreq: 'daily',
+      checklists: [
+        { id: 'chk-1', freq: 'daily', category: 'Food Safety', title: 'Log Walk-In Cooler (≤41°F) & Freezer (≤0°F) morning temps', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-2', freq: 'daily', category: 'Cleaning', title: 'Prepare & test sanitizer buckets (200–400 PPM Quat / 50–100 PPM Chlorine)', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-3', freq: 'daily', category: 'Prep', title: 'Complete Next-Day Prep pulls & thaw protein in Walk-In Cooler', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-4', freq: 'daily', category: 'Food Safety', title: 'Verify cooking temps (≥165°F) & steam table hot-hold (≥135°F) before 11:30 AM', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-5', freq: 'daily', category: 'Cleaning', title: 'Sanitize prep tables, clean slicer, sweep & mop kitchen floor at close', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-6', freq: 'daily', category: 'Inventory Count', title: 'Log daily patron headcount & scan out any waste/leftovers', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-7', freq: 'weekly', category: 'Inventory Count', title: 'Run weekly inventory par check & review Order Suggestions (Friday)', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-8', freq: 'weekly', category: 'Cleaning', title: 'Deep-clean Walk-In Cooler shelves & verify FIFO date-dot labels', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-9', freq: 'weekly', category: 'Food Safety', title: 'Calibrate probe thermometers (32°F ice-point test)', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-10', freq: 'monthly', category: 'Ordering', title: 'Finalize & submit monthly Jordan Banana & Marberger order (3rd Friday)', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-11', freq: 'monthly', category: 'Inventory Count', title: 'Perform full Blind Inventory Audit & Reconcile all storage zones', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-12', freq: 'monthly', category: 'Cleaning', title: 'Deep-clean Walk-In Freezer, dry storage dunnage racks & hood filters', done: false, doneBy: '', doneAt: '' }
+      ],
+      checklistLogs: []
+    };
+  }
+
+  let state = loadState();
+  let forecastChartInstance = null;
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.inventory)) {
+          const def = getDefaultState();
+          if (!Array.isArray(parsed.users) || !parsed.users.length) parsed.users = def.users;
+          if (!parsed.activeUserId) parsed.activeUserId = parsed.users[0].id;
+          if (!Array.isArray(parsed.auditLogs)) parsed.auditLogs = [];
+          if (!parsed.blindAuditDraft) parsed.blindAuditDraft = def.blindAuditDraft;
+          if (!Array.isArray(parsed.menuPlan)) parsed.menuPlan = def.menuPlan;
+          if (!parsed.checklistFreq) parsed.checklistFreq = 'daily';
+          if (!Array.isArray(parsed.checklists)) parsed.checklists = def.checklists;
+          if (!Array.isArray(parsed.checklistLogs)) parsed.checklistLogs = [];
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('localStorage unavailable, using in-memory state');
+    }
+    return getDefaultState();
+  }
+
+  const ROLE_TABS = {
+    Management: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'forecasting', 'users', 'help'],
+    Staff: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'forecasting', 'help'],
+    Volunteer: ['recipes', 'menu', 'prep', 'checklists', 'haccp', 'help'],
+    Other: ['dashboard', 'menu', 'prep', 'checklists', 'help']
+  };
+
+  function normalizeRole(role) {
+    if (ROLE_TABS[role]) return role;
+    if (/manager|admin|lead|extern/i.test(role || '')) return 'Management';
+    if (/staff|cook/i.test(role || '')) return 'Staff';
+    if (/volunteer/i.test(role || '')) return 'Volunteer';
+    return 'Other';
+  }
+
+  function getActiveUser() {
+    const u = (state.users || []).find(x => x.id === state.activeUserId && x.active !== false);
+    const user = u || (state.users && state.users[0]) || { id: 'usr-1', name: 'William Clark', role: 'Management', initials: 'WC', pin: '1234' };
+    user.role = normalizeRole(user.role);
+    if (!user.pin) user.pin = '1234';
+    return user;
+  }
+
+  function getAllowedTabs(user) {
+    const role = normalizeRole((user || getActiveUser()).role);
+    return ROLE_TABS[role] || ROLE_TABS.Other;
+  }
+
+  function getSyncSlices() {
+    return {
+      inventory: state.inventory,
+      recipes: state.recipes,
+      prepQueue: state.prepQueue,
+      transactions: state.transactions,
+      haccpLogs: state.haccpLogs,
+      serviceHistory: state.serviceHistory,
+      users: state.users,
+      auditLogs: state.auditLogs,
+      menuPlan: state.menuPlan,
+      checklists: { checklists: state.checklists, checklistLogs: state.checklistLogs }
+    };
+  }
+
+  function applyCloudRow(id, data) {
+    if (id === 'checklists' && data && Array.isArray(data.checklists)) {
+      state.checklists = data.checklists;
+      state.checklistLogs = Array.isArray(data.checklistLogs) ? data.checklistLogs : [];
+    } else if (id in state && data !== undefined) {
+      state[id] = data;
+    }
+  }
+
+  function updateSyncBadge() {
+    const dot = document.getElementById('sync-dot');
+    const lbl = document.getElementById('sync-label');
+    if (!dot || !lbl) return;
+    if (syncStatus === 'live') {
+      dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+      lbl.textContent = 'Live Cloud Sync';
+    } else if (syncStatus === 'connecting') {
+      dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
+      lbl.textContent = 'Connecting...';
+    } else {
+      dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+      lbl.textContent = 'Local Mode';
+    }
+  }
+
+  async function pushChangedSlicesToCloud(forceAll) {
+    if (!sbClient || suppressCloudPush) return;
+    const slices = getSyncSlices();
+    const user = getActiveUser();
+    const rowsToUpsert = [];
+    Object.keys(slices).forEach(k => {
+      const json = JSON.stringify(slices[k]);
+      if (forceAll || lastSliceHashes[k] !== json) {
+        lastSliceHashes[k] = json;
+        rowsToUpsert.push({
+          id: k,
+          data: slices[k],
+          updated_by: user.name,
+          updated_at: new Date().toISOString()
+        });
+      }
+    });
+    if (!rowsToUpsert.length) return;
+    try {
+      const { error } = await sbClient.from('kitchen_records').upsert(rowsToUpsert, { onConflict: 'id' });
+      if (error) {
+        syncStatus = 'offline';
+        syncErrorMsg = error.message;
+      } else {
+        syncStatus = 'live';
+        syncErrorMsg = '';
+      }
+    } catch (err) {
+      syncStatus = 'offline';
+      syncErrorMsg = err && err.message ? err.message : 'Network error';
+    }
+    updateSyncBadge();
+  }
+
+  async function pullFromCloud() {
+    if (!sbClient) return;
+    try {
+      const { data, error } = await sbClient.from('kitchen_records').select('id, data, updated_by, updated_at');
+      if (error) {
+        syncStatus = 'offline';
+        syncErrorMsg = error.message;
+        updateSyncBadge();
+        return;
+      }
+      if (data && data.length > 0) {
+        suppressCloudPush = true;
+        data.forEach(row => {
+          applyCloudRow(row.id, row.data);
+          lastSliceHashes[row.id] = JSON.stringify(row.data);
+        });
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        suppressCloudPush = false;
+        syncStatus = 'live';
+        syncErrorMsg = '';
+        render();
+      } else {
+        // First time setup: seed cloud with initial data
+        await pushChangedSlicesToCloud(true);
+      }
+    } catch (err) {
+      syncStatus = 'offline';
+      syncErrorMsg = err && err.message ? err.message : 'Connection failed';
+    }
+    updateSyncBadge();
+  }
+
+  function initSupabaseSync() {
+    if (!window.supabase || !window.supabase.createClient) {
+      syncStatus = 'offline';
+      syncErrorMsg = 'Supabase SDK unavailable offline';
+      updateSyncBadge();
+      return;
+    }
+    try {
+      sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      pullFromCloud();
+      sbClient.channel('kitchen_records_live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_records' }, (payload) => {
+          const row = payload.new;
+          if (!row || !row.id) return;
+          const incomingJson = JSON.stringify(row.data);
+          if (lastSliceHashes[row.id] === incomingJson) return;
+          suppressCloudPush = true;
+          applyCloudRow(row.id, row.data);
+          lastSliceHashes[row.id] = incomingJson;
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+          suppressCloudPush = false;
+          render();
+          showToast(`Live update (${row.id}) from ${row.updated_by || 'another device'}`);
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            syncStatus = 'live';
+            updateSyncBadge();
+          }
+        });
+    } catch (err) {
+      syncStatus = 'offline';
+      syncErrorMsg = err && err.message ? err.message : 'Init error';
+      updateSyncBadge();
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      // ignore storage quota/sandbox restrictions
+    }
+    pushChangedSlicesToCloud(false);
+  }
+
+  // --- Helpers ---
+  function uid(prefix) {
+    return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+  }
+
+  function nowStamp() {
+    const d = new Date();
+    return d.toISOString().slice(0, 10) + ' ' + d.toTimeString().slice(0, 5);
+  }
+
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatMass(grams) {
+    const g = Number(grams) || 0;
+    if (state.unitMode === 'us') {
+      const lbs = g / 453.592;
+      if (lbs >= 1) return lbs.toFixed(2) + ' lb';
+      const oz = g / 28.3495;
+      return oz.toFixed(1) + ' oz';
+    }
+    if (Math.abs(g) >= 1000) {
+      return (g / 1000).toFixed(2) + ' kg (' + Math.round(g).toLocaleString() + ' g)';
+    }
+    return Math.round(g).toLocaleString() + ' g';
+  }
+
+  function formatShortMass(grams) {
+    const g = Number(grams) || 0;
+    if (state.unitMode === 'us') {
+      const lbs = g / 453.592;
+      return lbs >= 1 ? lbs.toFixed(1) + ' lb' : (g / 28.3495).toFixed(1) + ' oz';
+    }
+    return Math.round(g).toLocaleString() + ' g';
+  }
+
+  function showToast(message, type) {
+    const container = document.getElementById('toast-container');
+    const colors = type === 'error'
+      ? 'bg-rose-700 text-white'
+      : type === 'warn'
+        ? 'bg-amber-600 text-white'
+        : 'bg-slate-900 text-white';
+    const el = document.createElement('div');
+    el.className = `${colors} px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-opacity duration-300`;
+    el.textContent = message;
+    container.appendChild(el);
+    setTimeout(() => {
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 300);
+    }, 3200);
+  }
+
+  function openModal(title, html) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = html;
+    const backdrop = document.getElementById('modal-backdrop');
+    backdrop.classList.remove('hidden');
+    backdrop.classList.add('flex');
+  }
+
+  function closeModal() {
+    const backdrop = document.getElementById('modal-backdrop');
+    backdrop.classList.add('hidden');
+    backdrop.classList.remove('flex');
+  }
+
+  function getStockStatus(item) {
+    if (item.stockGrams <= 0) return { label: 'Out of Stock', cls: 'bg-rose-100 text-rose-800 border-rose-200' };
+    if (item.stockGrams < item.parGrams * 0.5) return { label: 'Critical', cls: 'bg-rose-100 text-rose-800 border-rose-200' };
+    if (item.stockGrams < item.parGrams) return { label: 'Low Stock', cls: 'bg-amber-100 text-amber-800 border-amber-200' };
+    return { label: 'In Stock', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
+  }
+
+  function getTomorrowPrepDemandByItem() {
+    const demand = {};
+    state.prepQueue.forEach(pq => {
+      if (pq.deducted) return;
+      const rec = state.recipes.find(r => r.id === pq.recipeId);
+      if (!rec) return;
+      const factor = pq.portions / rec.basePortions;
+      rec.ingredients.forEach(ing => {
+        demand[ing.itemId] = (demand[ing.itemId] || 0) + ing.grams * factor;
+      });
+    });
+    (state.menuPlan || []).forEach(mp => {
+      if (mp.status === 'DEDUCTED') return;
+      const rec = state.recipes.find(r => r.id === mp.recipeId);
+      if (!rec) return;
+      const factor = mp.portions / rec.basePortions;
+      rec.ingredients.forEach(ing => {
+        demand[ing.itemId] = (demand[ing.itemId] || 0) + ing.grams * factor;
+      });
+    });
+    return demand;
+  }
+
+  function getOrderSuggestions() {
+    const prepDemand = getTomorrowPrepDemandByItem();
+    const list = [];
+    state.inventory.forEach(item => {
+      const reserved = prepDemand[item.id] || 0;
+      const projectedStock = item.stockGrams - reserved;
+      if (projectedStock < item.parGrams) {
+        const deficit = item.parGrams - projectedStock;
+        const pack = item.packSizeGrams || 1000;
+        const suggestedPacks = Math.max(1, Math.ceil(deficit / pack));
+        list.push({
+          item,
+          reserved,
+          projectedStock,
+          deficit,
+          suggestedPacks,
+          suggestedGrams: suggestedPacks * pack
+        });
+      }
+    });
+    return list;
+  }
+
+  // --- Forecasting Engine ---
+  function computeForecasts() {
+    const hist = state.serviceHistory.slice().sort((a, b) => a.date.localeCompare(b.date));
+    const avgAll = hist.length ? hist.reduce((s, r) => s + r.served, 0) / hist.length : 65;
+    const recent4 = hist.slice(-4);
+    const avgRecent = recent4.length ? recent4.reduce((s, r) => s + r.served, 0) / recent4.length : avgAll;
+    const trendDelta = avgRecent - avgAll;
+
+    // Day-of-week averages (Mon, Tue, Wed, Fri)
+    const dowMap = { Mon: [], Tue: [], Wed: [], Fri: [] };
+    hist.forEach(r => {
+      if (dowMap[r.dayName]) dowMap[r.dayName].push(r.served);
+    });
+    const dowFactor = {};
+    ['Mon', 'Tue', 'Wed', 'Fri'].forEach(d => {
+      const arr = dowMap[d];
+      const dAvg = arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : avgAll;
+      dowFactor[d] = avgAll > 0 ? dAvg / avgAll : 1;
+    });
+
+    // Next 7 MTWF service days
+    const days = [];
+    let cursor = new Date();
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    while (days.length < 7) {
+      cursor.setDate(cursor.getDate() + 1);
+      const dn = dayNames[cursor.getDay()];
+      if (dn === 'Mon' || dn === 'Tue' || dn === 'Wed' || dn === 'Fri') {
+        const base = avgRecent * (dowFactor[dn] || 1);
+        const pred = Math.min(80, Math.max(50, Math.round(base)));
+        days.push({
+          label: cursor.toISOString().slice(5, 10) + ' (' + dn + ')',
+          predicted: pred,
+          recommendedPrep: Math.min(80, Math.max(50, Math.ceil(pred / 5) * 5))
+        });
+      }
+    }
+
+    // Next 8 weeks (4 service days per week)
+    const weeks = [];
+    const weeklyBase = avgRecent * 4;
+    for (let w = 1; w <= 8; w++) {
+      const proj = Math.round(weeklyBase + trendDelta * 0.25 * w);
+      weeks.push({
+        label: 'Week +' + w,
+        predicted: Math.max(200, proj),
+        recommendedPrep: Math.min(320, Math.max(200, Math.round(proj * 1.05)))
+      });
+    }
+
+    // Next 12 months (~17 service days/mo, seasonal winter bump)
+    const months = [];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const nowM = new Date().getMonth();
+    const seasonal = [1.06, 1.05, 1.02, 0.98, 0.95, 0.96, 0.97, 0.98, 1.0, 1.03, 1.07, 1.08];
+    for (let m = 1; m <= 12; m++) {
+      const mIdx = (nowM + m) % 12;
+      const proj = Math.round(avgRecent * 17 * seasonal[mIdx]);
+      months.push({
+        label: monthNames[mIdx],
+        predicted: proj,
+        recommendedPrep: Math.round(proj * 1.05)
+      });
+    }
+
+    // Next 3 years (~200 service days/year)
+    const years = [];
+    const baseYear = new Date().getFullYear();
+    for (let y = 0; y < 3; y++) {
+      const growth = 1 + 0.03 * y;
+      const proj = Math.round(avgRecent * 200 * growth);
+      years.push({
+        label: String(baseYear + y),
+        predicted: proj,
+        recommendedPrep: Math.round(proj * 1.05)
+      });
+    }
+
+    return { avgAll, avgRecent, days, weeks, months, years };
+  }
+
+  // --- Render Tabs ---
+  function renderNav() {
+    const user = getActiveUser();
+    const allowed = getAllowedTabs(user);
+    if (!allowed.includes(state.activeTab)) {
+      state.activeTab = allowed[0];
+    }
+    const badge = document.getElementById('header-user-badge');
+    if (badge) {
+      badge.textContent = `${user.name} (${user.role})`;
+    }
+    const btnCheckin = document.getElementById('btn-quick-checkin');
+    const btnWaste = document.getElementById('btn-quick-waste');
+    updateSyncBadge();
+    const btnBackup = document.getElementById('btn-backup-modal');
+    if (btnCheckin) btnCheckin.classList.toggle('hidden', !allowed.includes('transactions'));
+    if (btnWaste) btnWaste.classList.toggle('hidden', !allowed.includes('transactions'));
+    if (btnBackup) btnBackup.classList.toggle('hidden', user.role !== 'Management');
+
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+      const tab = btn.dataset.tab;
+      const isAllowed = allowed.includes(tab);
+      btn.classList.toggle('hidden', !isAllowed);
+      if (!isAllowed) return;
+      const active = tab === state.activeTab;
+      btn.className = active
+        ? 'nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold bg-red-700 text-white transition'
+        : 'nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition';
+    });
+  }
+
+  function render() {
+    renderNav();
+    const main = document.getElementById('app-main');
+    if (state.isLocked) {
+      if (forecastChartInstance) { forecastChartInstance.destroy(); forecastChartInstance = null; }
+      const activeUsers = (state.users || []).filter(u => u.active !== false);
+      main.innerHTML = `
+        <div class="max-w-md mx-auto mt-10 bg-white rounded-2xl border border-slate-200 p-6 shadow-md space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-red-700 text-white flex items-center justify-center font-bold">SA</div>
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Kitchen OS Locked</h2>
+              <p class="text-xs text-slate-500">Select your profile and enter your password / PIN.</p>
+            </div>
+          </div>
+          <form id="form-unlock-user" class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">User Profile</label>
+              <select name="userId" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                ${activeUsers.map(u => `<option value="${u.id}" ${u.id === state.activeUserId ? 'selected' : ''}>${escapeHtml(u.name)} — ${escapeHtml(normalizeRole(u.role))}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Password / PIN</label>
+              <input name="pin" type="password" required autocomplete="off" placeholder="Enter PIN or password" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div id="unlock-error" class="text-xs font-semibold text-rose-700 hidden">Incorrect password or PIN.</div>
+            <button type="submit" class="w-full py-2.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Sign In &amp; Unlock</button>
+          </form>
+          <div class="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-200">
+            <strong>Default PINs:</strong> Management (1234) &bull; Staff (2222) &bull; Volunteer (0000) &bull; Other (9999). Update PINs anytime in Users &amp; Activity.
+          </div>
+        </div>
+      `;
+      return;
+    }
+    if (forecastChartInstance) {
+      forecastChartInstance.destroy();
+      forecastChartInstance = null;
+    }
+
+    switch (state.activeTab) {
+      case 'dashboard': renderDashboard(main); break;
+      case 'inventory': renderInventory(main); break;
+      case 'transactions': renderTransactions(main); break;
+      case 'orders': renderOrders(main); break;
+      case 'recipes': renderRecipes(main); break;
+      case 'menu': renderMenuPlanner(main); break;
+      case 'prep': renderPrep(main); break;
+      case 'checklists': renderChecklists(main); break;
+      case 'audit': renderAudit(main); break;
+      case 'haccp': renderHaccp(main); break;
+      case 'forecasting': renderForecasting(main); break;
+      case 'users': renderUsers(main); break;
+      case 'help': renderHelp(main); break;
+      default: renderDashboard(main);
+    }
+  }
+
+  // 1. DASHBOARD
+  function renderDashboard(main) {
+    const orders = getOrderSuggestions();
+    const criticalCount = state.inventory.filter(i => i.stockGrams < i.parGrams * 0.5).length;
+    const forecasts = computeForecasts();
+    const nextDayPred = forecasts.days[0];
+    const flaggedHaccp = state.haccpLogs.filter(h => h.status === 'FLAGGED').length;
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Tracked Stock Items</div>
+            <div class="mt-1 text-2xl font-bold text-slate-900">${state.inventory.length}</div>
+            <div class="mt-1 text-xs text-slate-600">${orders.length} items below par (${criticalCount} critical)</div>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Tomorrow's Prep Queue</div>
+            <div class="mt-1 text-2xl font-bold text-slate-900">${state.prepQueue.length} Recipes</div>
+            <div class="mt-1 text-xs text-slate-600">${state.prepQueue.filter(p => !p.deducted).length} pending stock deduction</div>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Next Service Forecast</div>
+            <div class="mt-1 text-2xl font-bold text-red-700">${nextDayPred ? nextDayPred.predicted : 65} Patrons</div>
+            <div class="mt-1 text-xs text-slate-600">Rec. batch: ${nextDayPred ? nextDayPred.recommendedPrep : 70} portions (${nextDayPred ? nextDayPred.label : ''})</div>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">HACCP Time &amp; Temp</div>
+            <div class="mt-1 text-2xl font-bold ${flaggedHaccp ? 'text-rose-700' : 'text-emerald-700'}">${flaggedHaccp ? flaggedHaccp + ' Flagged' : 'All Passing'}</div>
+            <div class="mt-1 text-xs text-slate-600">${state.haccpLogs.length} total compliance checks</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- Priority Reorder Alerts -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm font-bold text-slate-900">Priority Reorder Suggestions</h2>
+              <button data-goto="orders" class="text-xs font-semibold text-red-700 hover:underline">View Full Order Sheet &rarr;</button>
+            </div>
+            ${orders.length === 0
+              ? '<p class="text-sm text-emerald-700 bg-emerald-50 rounded-lg p-3">All stock levels are at or above par.</p>'
+              : `<div class="divide-y divide-slate-100">${orders.slice(0, 5).map(o => `
+                  <div class="py-2.5 flex items-center justify-between gap-2 text-sm">
+                    <div>
+                      <div class="font-medium text-slate-900">${escapeHtml(o.item.name)}</div>
+                      <div class="text-xs text-slate-500">${escapeHtml(o.item.vendor)} &bull; On hand: ${formatShortMass(o.item.stockGrams)} / Par: ${formatShortMass(o.item.parGrams)}</div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 shrink-0">Order ${o.suggestedPacks} &times; ${escapeHtml(o.item.packLabel)}</span>
+                  </div>
+                `).join('')}</div>`
+            }
+          </div>
+
+          <!-- Recent Inventory Movements -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm font-bold text-slate-900">Recent Stock Movements</h2>
+              <button data-goto="transactions" class="text-xs font-semibold text-red-700 hover:underline">Log Check-In / Waste &rarr;</button>
+            </div>
+            <div class="divide-y divide-slate-100">
+              ${state.transactions.slice(0, 6).map(tx => `
+                <div class="py-2 flex items-center justify-between gap-2 text-sm">
+                  <div>
+                    <div class="font-medium text-slate-900">${escapeHtml(tx.itemName)}</div>
+                    <div class="text-xs text-slate-500">${escapeHtml(tx.timestamp)} &bull; ${escapeHtml(tx.note)}</div>
+                  </div>
+                  <span class="text-xs font-bold px-2 py-0.5 rounded ${tx.grams >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                    ${tx.grams >= 0 ? '+' : ''}${formatShortMass(tx.grams)}
+                  </span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. LIVING STOCK
+  function renderInventory(main) {
+    const searchVal = (document.getElementById('inv-search')?.value || '').toLowerCase();
+    const zoneVal = document.getElementById('inv-zone')?.value || 'ALL';
+
+    const filtered = state.inventory.filter(i => {
+      const matchText = !searchVal || i.name.toLowerCase().includes(searchVal) || i.sku.toLowerCase().includes(searchVal) || i.vendor.toLowerCase().includes(searchVal);
+      const matchZone = zoneVal === 'ALL' || i.zone === zoneVal;
+      return matchText && matchZone;
+    });
+
+    main.innerHTML = `
+      <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Living Running Stock</h2>
+            <p class="text-xs text-slate-500">Real-time inventory updated automatically by Check-Ins, Waste Scan-Outs, and Recipe Deductions.</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="btn-toggle-units" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium bg-slate-50 hover:bg-slate-100">
+              Units: <strong>${state.unitMode === 'grams' ? 'Metric (g / kg)' : 'US (lb / oz)'}</strong>
+            </button>
+            <button id="btn-print-qr-labels" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-medium">Print QR Labels</button>
+            <button id="btn-add-inv-item" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-medium">+ New Inventory Item</button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <input id="inv-search" type="text" value="${escapeHtml(searchVal)}" placeholder="Search SKU, item name, or vendor..." class="flex-1 min-w-[200px] px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+          <select id="inv-zone" class="px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+            <option value="ALL" ${zoneVal === 'ALL' ? 'selected' : ''}>All Storage Zones</option>
+            <option value="Dry Storage" ${zoneVal === 'Dry Storage' ? 'selected' : ''}>Dry Storage</option>
+            <option value="Walk-In Cooler" ${zoneVal === 'Walk-In Cooler' ? 'selected' : ''}>Walk-In Cooler</option>
+            <option value="Walk-In Freezer" ${zoneVal === 'Walk-In Freezer' ? 'selected' : ''}>Walk-In Freezer</option>
+          </select>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                <th class="py-2.5 pr-3">SKU</th>
+                <th class="py-2.5 pr-3">Item</th>
+                <th class="py-2.5 pr-3">Zone</th>
+                <th class="py-2.5 pr-3">Vendor</th>
+                <th class="py-2.5 pr-3">Running Stock</th>
+                <th class="py-2.5 pr-3">Par Level</th>
+                <th class="py-2.5 pr-3">Status</th>
+                <th class="py-2.5 text-right">Quick Adjust</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              ${filtered.map(item => {
+                const st = getStockStatus(item);
+                return `
+                  <tr class="hover:bg-slate-50">
+                    <td class="py-2.5 pr-3 font-mono text-xs text-slate-500">${escapeHtml(item.sku)}</td>
+                    <td class="py-2.5 pr-3 font-medium text-slate-900">${escapeHtml(item.name)}</td>
+                    <td class="py-2.5 pr-3 text-xs text-slate-600">${escapeHtml(item.zone)}</td>
+                    <td class="py-2.5 pr-3 text-xs text-slate-600">${escapeHtml(item.vendor)}</td>
+                    <td class="py-2.5 pr-3 font-semibold text-slate-900">${formatMass(item.stockGrams)}</td>
+                    <td class="py-2.5 pr-3 text-slate-600">${formatShortMass(item.parGrams)}</td>
+                    <td class="py-2.5 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium border ${st.cls}">${st.label}</span></td>
+                    <td class="py-2.5 text-right space-x-1 whitespace-nowrap">
+                      <button data-adj="${item.id}" data-delta="1000" class="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold">+1kg</button>
+                      <button data-adj="${item.id}" data-delta="-500" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">-500g</button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('inv-search').addEventListener('input', () => renderInventory(main));
+    document.getElementById('inv-zone').addEventListener('change', () => renderInventory(main));
+  }
+
+  // 3. CHECK-IN & WASTE SCAN-OUT
+  function renderTransactions(main) {
+    const itemOptions = state.inventory.map(i => `<option value="${i.id}">${escapeHtml(i.sku)} — ${escapeHtml(i.name)} (${formatShortMass(i.stockGrams)})</option>`).join('');
+    main.innerHTML = `
+      <div class="space-y-5">
+        <!-- Fast Scan Terminal (Camera / USB-Bluetooth Barcode & RFID / NFC) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Fast Scan Terminal (Camera QR/Barcode, USB/Bluetooth Scanner, or NFC)</h2>
+              <p class="text-xs text-slate-500">Scan a bin QR label, product SKU, or RFID/NFC tag to auto-select the item below.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button id="btn-start-cam-scan" type="button" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">Start Camera Scan</button>
+              <button id="btn-stop-cam-scan" type="button" class="hidden px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Stop Camera</button>
+              <button id="btn-nfc-scan" type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold">Tap NFC Tag</button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-3 items-center">
+            <input id="quick-scan-input" type="text" placeholder="Focus here for USB/Bluetooth barcode or RFID scanner (e.g. DRY-101) + Enter..." class="flex-1 min-w-[240px] px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+            <select id="quick-scan-target" class="px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+              <option value="checkin">Target: Check-In (+)</option>
+              <option value="waste">Target: Waste Scan-Out (-)</option>
+            </select>
+          </div>
+          <div id="cam-reader-wrap" class="hidden max-w-sm mx-auto border border-slate-200 rounded-lg overflow-hidden p-2 bg-slate-50">
+            <div id="cam-reader" class="w-full"></div>
+            <p id="cam-status" class="text-xs text-center text-slate-500 mt-1">Point camera at a QR label or barcode...</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- Check-In New Goods -->
+          <form id="form-checkin" class="bg-white rounded-xl border border-emerald-200 p-4 sm:p-5 shadow-sm space-y-3">
+            <h2 class="text-base font-bold text-emerald-800">Check In Incoming Goods</h2>
+            <p class="text-xs text-slate-500">Scan SKU or select item to add incoming delivery to living stock.</p>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Item / SKU</label>
+              <select id="checkin-item-select" name="itemId" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">${itemOptions}</select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Quantity</label>
+                <input name="qty" type="number" step="0.01" min="0.01" required placeholder="e.g. 5000" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Unit</label>
+                <select name="unit" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                  <option value="g">Grams (g)</option>
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="lb">Pounds (lb)</option>
+                  <option value="pack">Vendor Case / Pack</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Lot / Expiration / Invoice #</label>
+                <input name="note" type="text" placeholder="e.g. Lot #JB-901 / Exp 12/01" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Staff Initials</label>
+                <input name="staff" type="text" value="${escapeHtml(getActiveUser().name)}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              </div>
+            </div>
+            <button type="submit" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition">Check In &amp; Update Stock</button>
+          </form>
+
+          <!-- Scan Out Waste / Old -->
+          <form id="form-waste" class="bg-white rounded-xl border border-amber-200 p-4 sm:p-5 shadow-sm space-y-3">
+            <h2 class="text-base font-bold text-amber-800">Scan Out Waste &amp; Expired Stock</h2>
+            <p class="text-xs text-slate-500">Log spoilage, expired goods, or prep trim to deduct from living stock.</p>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Item / SKU</label>
+              <select id="waste-item-select" name="itemId" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">${itemOptions}</select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Waste Quantity</label>
+                <input name="qty" type="number" step="0.01" min="0.01" required placeholder="e.g. 450" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Unit</label>
+                <select name="unit" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                  <option value="g">Grams (g)</option>
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="lb">Pounds (lb)</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Waste Reason</label>
+                <select name="reason" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                  <option value="Expired / Past Use-By">Expired / Past Use-By</option>
+                  <option value="Spoilage / Damaged">Spoilage / Damaged</option>
+                  <option value="Prep Trim / Overproduction">Prep Trim / Overproduction</option>
+                  <option value="Temp Abuse Discard">Temp Abuse Discard</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Staff Initials</label>
+                <input name="staff" type="text" value="${escapeHtml(getActiveUser().name)}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              </div>
+            </div>
+            <button type="submit" class="w-full py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition">Scan Out Waste &amp; Deduct</button>
+          </form>
+        </div>
+
+        <!-- Full Ledger -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-900">Complete Inventory Movement Ledger</h3>
+            <button id="btn-export-tx-csv" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">Export CSV</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                  <th class="py-2 pr-3">Timestamp</th>
+                  <th class="py-2 pr-3">Type</th>
+                  <th class="py-2 pr-3">Item</th>
+                  <th class="py-2 pr-3">Delta</th>
+                  <th class="py-2 pr-3">Notes</th>
+                  <th class="py-2">Staff</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${state.transactions.map(tx => `
+                  <tr>
+                    <td class="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(tx.timestamp)}</td>
+                    <td class="py-2 pr-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${tx.type === 'INCOMING' ? 'bg-emerald-100 text-emerald-800' : tx.type === 'WASTE' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}">${escapeHtml(tx.type)}</span></td>
+                    <td class="py-2 pr-3 font-medium text-slate-900">${escapeHtml(tx.itemName)}</td>
+                    <td class="py-2 pr-3 font-semibold ${tx.grams >= 0 ? 'text-emerald-700' : 'text-rose-700'}">${tx.grams >= 0 ? '+' : ''}${formatShortMass(tx.grams)}</td>
+                    <td class="py-2 pr-3 text-xs text-slate-600">${escapeHtml(tx.note)}</td>
+                    <td class="py-2 text-xs text-slate-600">${escapeHtml(tx.staff)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 4. ORDER SUGGESTIONS
+  function renderOrders(main) {
+    const orders = getOrderSuggestions();
+    const byVendor = {};
+    orders.forEach(o => {
+      if (!byVendor[o.item.vendor]) byVendor[o.item.vendor] = [];
+      byVendor[o.item.vendor].push(o);
+    });
+
+    main.innerHTML = `
+      <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Smart Order Suggestions (Grouped by Vendor)</h2>
+            <p class="text-xs text-slate-500">Calculated from Living Stock minus un-deducted Next-Day Prep demand compared against Par Levels.</p>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-export-orders-csv" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">Export Order CSV</button>
+            <button id="btn-print-orders" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-medium hover:bg-slate-900">Print Order Sheet</button>
+          </div>
+        </div>
+
+        ${orders.length === 0
+          ? '<div class="p-4 rounded-lg bg-emerald-50 text-emerald-800 text-sm font-medium">All inventory items meet or exceed Par Levels after accounting for queued prep.</div>'
+          : Object.keys(byVendor).map(vendor => `
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+              <div class="bg-slate-100 px-4 py-2.5 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-slate-900">Vendor: ${escapeHtml(vendor)}</h3>
+                <span class="text-xs font-medium text-slate-600">${byVendor[vendor].length} items to order</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase bg-white">
+                      <th class="py-2 px-4">Item</th>
+                      <th class="py-2 px-3">On Hand</th>
+                      <th class="py-2 px-3">Prep Reserved</th>
+                      <th class="py-2 px-3">Par Level</th>
+                      <th class="py-2 px-3">Suggested Order</th>
+                      <th class="py-2 px-4 text-right no-print">Quick Receive</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${byVendor[vendor].map(o => `
+                      <tr>
+                        <td class="py-2.5 px-4 font-medium text-slate-900">${escapeHtml(o.item.name)} <span class="text-xs text-slate-400">(${escapeHtml(o.item.sku)})</span></td>
+                        <td class="py-2.5 px-3">${formatShortMass(o.item.stockGrams)}</td>
+                        <td class="py-2.5 px-3 text-amber-700">${o.reserved > 0 ? '-' + formatShortMass(o.reserved) : '—'}</td>
+                        <td class="py-2.5 px-3">${formatShortMass(o.item.parGrams)}</td>
+                        <td class="py-2.5 px-3 font-bold text-red-700">${o.suggestedPacks} &times; ${escapeHtml(o.item.packLabel)}</td>
+                        <td class="py-2.5 px-4 text-right no-print">
+                          <button data-receive-item="${o.item.id}" data-receive-grams="${o.suggestedGrams}" data-receive-label="${o.suggestedPacks}x ${escapeHtml(o.item.packLabel)}" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Receive Order</button>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `).join('')
+        }
+      </div>
+    `;
+  }
+
+  // 5. RECIPES & 50-80 SCALING
+  function renderRecipes(main) {
+    const selected = state.recipes.find(r => r.id === state.selectedRecipeId) || state.recipes[0];
+    const portions = state.recipeScalePortions;
+    const factor = selected ? (portions / selected.basePortions) : 1;
+    const flourIng = selected && selected.isBakers ? selected.ingredients.find(i => i.itemId === selected.flourItemId) : null;
+    const totalFlourGrams = flourIng ? flourIng.grams * factor : 0;
+
+    main.innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <!-- Recipe List -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-900">Standardized Recipe Book</h2>
+            ${['Management', 'Staff'].includes(getActiveUser().role) ? '<button id="btn-new-recipe" class="px-2.5 py-1 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">+ Add Recipe</button>' : ''}
+          </div>
+          <div class="space-y-2">
+            ${state.recipes.map(r => `
+              <button data-select-recipe="${r.id}" class="w-full text-left p-3 rounded-lg border transition ${selected && r.id === selected.id ? 'border-red-600 bg-red-50' : 'border-slate-200 hover:bg-slate-50'}">
+                <div class="font-semibold text-sm text-slate-900">${escapeHtml(r.name)}</div>
+                <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(r.category)} &bull; Base: ${r.basePortions} portions &bull; Total: ${r.prepMin + r.cookMin} min</div>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Selected Recipe & Scaler -->
+        <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          ${selected ? `
+            <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-3">
+              <div>
+                <span class="text-xs font-semibold uppercase tracking-wide text-red-700">${escapeHtml(selected.category)}</span>
+                <h2 class="text-lg font-bold text-slate-900">${escapeHtml(selected.name)}</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Prep: ${selected.prepMin} min &bull; Cook: ${selected.cookMin} min &bull; Complete: ${selected.prepMin + selected.cookMin} min &bull; Yield: <strong>${portions} portions</strong></p>
+              </div>
+              <button id="btn-toggle-units-rec" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">
+                ${state.unitMode === 'grams' ? 'Showing Grams (Switch to US)' : 'Showing US (Switch to Grams)'}
+              </button>
+            </div>
+
+            <!-- 50-80 Scaler Control -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <label class="text-sm font-bold text-slate-900">Scale Portions (50–80): <span class="text-red-700 text-base">${portions}</span></label>
+                <div class="flex gap-1.5 flex-wrap">
+                  ${[50, 55, 60, 65, 70, 75, 80].map(p => `
+                    <button data-scale-preset="${p}" class="px-2.5 py-1 rounded text-xs font-semibold ${portions === p ? 'bg-red-700 text-white' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}">${p}</button>
+                  `).join('')}
+                </div>
+              </div>
+              <input id="recipe-scale-slider" type="range" min="50" max="80" step="1" value="${portions}" class="w-full accent-red-700" />
+            </div>
+
+            <!-- Ingredients Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                    <th class="py-2 pr-3">Ingredient</th>
+                    <th class="py-2 pr-3">Zone</th>
+                    <th class="py-2 pr-3">Scaled Qty (${portions} portions)</th>
+                    ${selected.isBakers ? '<th class="py-2 pr-3">Baker\'s %</th>' : ''}
+                    <th class="py-2">Stock Available</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${selected.ingredients.map(ing => {
+                    const inv = state.inventory.find(i => i.id === ing.itemId);
+                    const scaledG = ing.grams * factor;
+                    const enough = inv ? inv.stockGrams >= scaledG : false;
+                    const bakersPct = (selected.isBakers && totalFlourGrams > 0) ? ((scaledG / totalFlourGrams) * 100).toFixed(1) + '%' : '';
+                    return `
+                      <tr>
+                        <td class="py-2 pr-3 font-medium text-slate-900">${inv ? escapeHtml(inv.name) : 'Unknown Item'}</td>
+                        <td class="py-2 pr-3 text-xs text-slate-500">${inv ? escapeHtml(inv.zone) : '—'}</td>
+                        <td class="py-2 pr-3 font-bold text-slate-900">${formatMass(scaledG)}</td>
+                        ${selected.isBakers ? `<td class="py-2 pr-3 text-xs font-mono text-slate-600">${bakersPct}</td>` : ''}
+                        <td class="py-2 text-xs font-semibold ${enough ? 'text-emerald-700' : 'text-rose-700'}">${inv ? formatShortMass(inv.stockGrams) + (enough ? ' (OK)' : ' (Short)') : 'N/A'}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Instructions -->
+            <div class="bg-slate-50 rounded-lg p-3 text-xs sm:text-sm text-slate-700 leading-relaxed">
+              <strong class="block text-slate-900 mb-1">Standardized Method &amp; CCP Notes:</strong>
+              ${escapeHtml(selected.instructions)}
+            </div>
+
+            <!-- Action Buttons -->
+            ${['Management', 'Staff'].includes(getActiveUser().role) ? `
+            <div class="flex flex-wrap gap-3 pt-2">
+              <button id="btn-deduct-today" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition">Cook Today &amp; Deduct Stock</button>
+              <button id="btn-queue-tomorrow" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold transition">Add to Next-Day Prep &amp; Deduct Stock</button>
+            </div>` : '<p class="text-xs text-slate-500 italic pt-1">View &amp; scale mode (Staff or Management required to deduct inventory).</p>'}
+          ` : '<p class="text-sm text-slate-500">Select or add a recipe.</p>'}
+        </div>
+      </div>
+    `;
+
+    const slider = document.getElementById('recipe-scale-slider');
+    if (slider) {
+      slider.addEventListener('input', (e) => {
+        state.recipeScalePortions = Number(e.target.value);
+        saveState();
+        renderRecipes(main);
+      });
+    }
+  }
+
+  // 6. NEXT-DAY PREP LIST
+  function renderPrep(main) {
+    // Aggregate ingredient pulls by storage zone
+    const byZone = { 'Walk-In Cooler': [], 'Walk-In Freezer': [], 'Dry Storage': [] };
+    state.prepQueue.forEach(pq => {
+      const rec = state.recipes.find(r => r.id === pq.recipeId);
+      if (!rec) return;
+      const factor = pq.portions / rec.basePortions;
+      rec.ingredients.forEach(ing => {
+        const inv = state.inventory.find(i => i.id === ing.itemId);
+        if (!inv) return;
+        const zone = byZone[inv.zone] ? inv.zone : 'Dry Storage';
+        byZone[zone].push({
+          prepId: pq.id,
+          key: pq.id + '_' + inv.id,
+          recipeName: rec.name,
+          itemName: inv.name,
+          grams: ing.grams * factor,
+          checked: !!(pq.checkedItems && pq.checkedItems[inv.id])
+        });
+      });
+    });
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Next-Day Prep List (Pulls by Storage Zone)</h2>
+            <p class="text-xs text-slate-500">Scheduled recipes for tomorrow's 11:30 AM service. Check off items as pulled or thawed.</p>
+          </div>
+          <button id="btn-print-prep" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-medium no-print">Print Prep Sheet</button>
+        </div>
+
+        <!-- Queued Recipes -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
+          <h3 class="text-sm font-bold text-slate-900">Queued Recipes for Tomorrow</h3>
+          ${state.prepQueue.length === 0
+            ? '<p class="text-sm text-slate-500">No recipes queued yet. Go to <strong>Recipes (50–80)</strong> and click "Add to Next-Day Prep".</p>'
+            : state.prepQueue.map(pq => `
+              <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm">
+                <div>
+                  <span class="font-semibold text-slate-900">${escapeHtml(pq.recipeName)}</span>
+                  <span class="ml-2 text-xs font-bold text-red-700">${pq.portions} portions</span>
+                  <span class="ml-2 px-2 py-0.5 rounded text-xs font-medium ${pq.deducted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${pq.deducted ? 'Stock Deducted' : 'Pending Deduction'}</span>
+                </div>
+                <div class="flex gap-2 no-print">
+                  ${!pq.deducted ? `<button data-deduct-prep="${pq.id}" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Deduct Stock Now</button>` : ''}
+                  <button data-remove-prep="${pq.id}" class="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Remove</button>
+                </div>
+              </div>
+            `).join('')
+          }
+        </div>
+
+        <!-- Pull List by Zone -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          ${Object.keys(byZone).map(zone => `
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
+              <h3 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">${escapeHtml(zone)}</h3>
+              ${byZone[zone].length === 0
+                ? '<p class="text-xs text-slate-400 py-2">No pulls required.</p>'
+                : byZone[zone].map(row => `
+                  <label class="flex items-start gap-2.5 py-1.5 text-sm cursor-pointer">
+                    <input type="checkbox" data-prep-check="${row.key}" ${row.checked ? 'checked' : ''} class="mt-0.5 accent-red-700 rounded" />
+                    <div class="${row.checked ? 'line-through text-slate-400' : 'text-slate-800'}">
+                      <div class="font-medium">${escapeHtml(row.itemName)} — <span class="font-bold">${formatMass(row.grams)}</span></div>
+                      <div class="text-xs text-slate-500">For: ${escapeHtml(row.recipeName)}</div>
+                    </div>
+                  </label>
+                `).join('')
+              }
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // 7. TIME & TEMPERATURE LOGS (HACCP)
+  function renderHaccp(main) {
+    main.innerHTML = `
+      <div class="space-y-5">
+        <form id="form-haccp" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3 no-print">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base font-bold text-slate-900">Log HACCP Time &amp; Temperature Check</h2>
+            <span class="text-xs text-slate-500">Auto-evaluates ServSafe thresholds</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Check Type</label>
+              <select name="type" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                <option value="Cold Hold (≤41°F)">Cold Hold (≤41°F)</option>
+                <option value="Freezer (≤0°F)">Freezer (≤0°F)</option>
+                <option value="Cook / Reheat (≥165°F)">Cook / Reheat (≥165°F)</option>
+                <option value="Hot Hold (≥135°F)">Hot Hold (≥135°F)</option>
+                <option value="Receiving (≤41°F)">Receiving (≤41°F)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Food Item / Equipment</label>
+              <input name="target" type="text" required placeholder="e.g. Steam Table #1 / Chicken" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Temperature (°F)</label>
+              <input name="tempF" type="number" step="0.1" required placeholder="e.g. 168.5" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Staff Initials</label>
+              <input name="staff" type="text" value="${escapeHtml(getActiveUser().name)}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+          </div>
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-xs font-medium text-slate-700 mb-1">Corrective Action (if out of range)</label>
+              <input name="corrective" type="text" placeholder="e.g. Reheated to 165°F / Discarded" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition">Record Time &amp; Temp</button>
+          </div>
+        </form>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-900">Time &amp; Temperature Compliance Log</h3>
+            <button id="btn-print-haccp" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50 no-print">Print HACCP Log</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                  <th class="py-2 pr-3">Timestamp</th>
+                  <th class="py-2 pr-3">Check Type</th>
+                  <th class="py-2 pr-3">Item / Unit</th>
+                  <th class="py-2 pr-3">Temp (°F)</th>
+                  <th class="py-2 pr-3">Status</th>
+                  <th class="py-2 pr-3">Corrective Action</th>
+                  <th class="py-2">Staff</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${state.haccpLogs.map(log => `
+                  <tr>
+                    <td class="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(log.timestamp)}</td>
+                    <td class="py-2 pr-3 text-xs font-medium text-slate-700">${escapeHtml(log.type)}</td>
+                    <td class="py-2 pr-3 font-medium text-slate-900">${escapeHtml(log.target)}</td>
+                    <td class="py-2 pr-3 font-bold">${log.tempF}&deg;F</td>
+                    <td class="py-2 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${log.status === 'PASS' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${log.status}</span></td>
+                    <td class="py-2 pr-3 text-xs text-slate-600">${escapeHtml(log.corrective)}</td>
+                    <td class="py-2 text-xs text-slate-600">${escapeHtml(log.staff)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 8. PATRONS SERVED & FORECASTING
+  function renderForecasting(main) {
+    const fc = computeForecasts();
+    const activeSeries = fc[state.forecastHorizon] || fc.days;
+    const today = new Date().toISOString().slice(0, 10);
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        <form id="form-served" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <h2 class="text-base font-bold text-slate-900">Log People Served (Updates Forecasting Engine)</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Service Date</label>
+              <input name="date" type="date" value="${today}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Meal Served</label>
+              <input name="meal" type="text" required placeholder="e.g. Baked Ziti" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Planned Portions</label>
+              <input name="planned" type="number" min="1" value="70" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Actual People Served</label>
+              <input name="served" type="number" min="0" required placeholder="e.g. 68" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <button type="submit" class="py-2 px-4 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition">Save Service Count</button>
+          </div>
+        </form>
+
+        <!-- Multi-Horizon Forecast Chart -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Attendance Forecasting &amp; Portion Predictions</h3>
+              <p class="text-xs text-slate-500">Historical avg: <strong>${fc.avgAll.toFixed(1)}</strong>/day &bull; Recent 4-service avg: <strong>${fc.avgRecent.toFixed(1)}</strong>/day</p>
+            </div>
+            <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
+              ${[
+                ['days', 'Days (7)'],
+                ['weeks', 'Weeks (8)'],
+                ['months', 'Months (12)'],
+                ['years', 'Years (3)']
+              ].map(([k, lbl]) => `
+                <button data-horizon="${k}" class="px-3 py-1 rounded-md text-xs font-semibold transition ${state.forecastHorizon === k ? 'bg-white text-red-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}">${lbl}</button>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="relative h-72">
+            <canvas id="forecast-chart"></canvas>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                  <th class="py-2 pr-3">Period</th>
+                  <th class="py-2 pr-3">Predicted People Served</th>
+                  <th class="py-2">Recommended Batch / Prep Target</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${activeSeries.map(row => `
+                  <tr>
+                    <td class="py-2 pr-3 font-medium text-slate-900">${escapeHtml(row.label)}</td>
+                    <td class="py-2 pr-3 font-bold text-red-700">${row.predicted.toLocaleString()}</td>
+                    <td class="py-2 text-slate-700">${row.recommendedPrep.toLocaleString()} portions</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const ctx = document.getElementById('forecast-chart');
+    if (ctx && window.Chart) {
+      forecastChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: activeSeries.map(d => d.label),
+          datasets: [
+            {
+              label: 'Predicted Served',
+              data: activeSeries.map(d => d.predicted),
+              backgroundColor: 'rgba(185, 28, 28, 0.85)',
+              borderRadius: 6
+            },
+            {
+              label: 'Recommended Prep Target',
+              data: activeSeries.map(d => d.recommendedPrep),
+              backgroundColor: 'rgba(15, 23, 42, 0.25)',
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'top' } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+  }
+
+
+
+  // 8b. MENU PLANNER (LINKED TO RECIPE BANK & INVENTORY)
+  function renderMenuPlanner(main) {
+    const canEdit = ['Management', 'Staff'].includes(getActiveUser().role);
+    const today = new Date().toISOString().slice(0, 10);
+    const recOpts = state.recipes.map(r => `<option value="${r.id}">${escapeHtml(r.name)} (${escapeHtml(r.category)})</option>`).join('');
+    const sortedPlan = (state.menuPlan || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        ${canEdit ? `
+        <form id="form-add-menu-item" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Schedule Meal from Standardized Recipe Bank</h2>
+              <p class="text-xs text-slate-500">Pick a date and recipe (50–80 portions). Planned meals reserve stock for Order Suggestions; committing deducts Living Stock &amp; sends to Prep.</p>
+            </div>
+            <button type="button" data-goto="recipes" class="text-xs font-semibold text-red-700 hover:underline">+ Add New Recipe to Bank &rarr;</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Service Date</label>
+              <input name="date" type="date" value="${today}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div class="lg:col-span-2">
+              <label class="block text-xs font-medium text-slate-700 mb-1">Recipe from Bank</label>
+              <select name="recipeId" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">${recOpts}</select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Portions (50–80)</label>
+              <input name="portions" type="number" min="10" max="200" value="65" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <button type="submit" class="py-2 px-4 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition">Add to Menu Plan</button>
+          </div>
+        </form>
+        ` : ''}
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Scheduled Menu &amp; Inventory Impact</h3>
+              <p class="text-xs text-slate-500">Click <strong>Commit &amp; Deduct Stock</strong> when ready to pull ingredients from Living Stock and queue Next-Day Prep.</p>
+            </div>
+            ${canEdit && sortedPlan.some(m => m.status !== 'DEDUCTED')
+              ? `<button id="btn-commit-all-menu" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold">Commit All Planned &amp; Deduct Stock</button>`
+              : ''}
+          </div>
+
+          ${sortedPlan.length === 0
+            ? '<p class="text-sm text-slate-500">No meals scheduled yet. Select a recipe above to start planning.</p>'
+            : `<div class="space-y-3">
+                ${sortedPlan.map(mp => {
+                  const rec = state.recipes.find(r => r.id === mp.recipeId);
+                  const factor = rec ? mp.portions / rec.basePortions : 1;
+                  const isDeducted = mp.status === 'DEDUCTED';
+                  return `
+                    <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-2">
+                      <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <span class="text-xs font-mono font-semibold text-slate-500">${escapeHtml(mp.date)} &bull; ${escapeHtml(mp.mealSlot)}</span>
+                          <h4 class="text-sm sm:text-base font-bold text-slate-900">${rec ? escapeHtml(rec.name) : 'Removed Recipe'} <span class="text-red-700">(${mp.portions} portions)</span></h4>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDeducted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                            ${isDeducted ? 'Deducted from Stock' : 'Planned (Reserved for Orders)'}
+                          </span>
+                          ${canEdit && !isDeducted ? `<button data-commit-menu="${mp.id}" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Commit &amp; Deduct Stock</button>` : ''}
+                          ${canEdit ? `<button data-remove-menu="${mp.id}" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Remove</button>` : ''}
+                        </div>
+                      </div>
+                      ${rec ? `
+                        <div class="flex flex-wrap gap-2 pt-1">
+                          ${rec.ingredients.map(ing => {
+                            const inv = state.inventory.find(i => i.id === ing.itemId);
+                            const reqG = ing.grams * factor;
+                            const ok = inv ? inv.stockGrams >= reqG : false;
+                            return `<span class="text-xs px-2 py-1 rounded bg-white border ${ok ? 'border-slate-200 text-slate-700' : 'border-rose-300 text-rose-700 font-semibold'}">${inv ? escapeHtml(inv.name) : 'Item'}: ${formatShortMass(reqG)}</span>`;
+                          }).join('')}
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>`
+          }
+        </div>
+      </div>
+    `;
+  }
+
+
+  // 8c. DAILY, WEEKLY & MONTHLY CHECKLISTS
+  function renderChecklists(main) {
+    const freq = state.checklistFreq || 'daily';
+    const canManage = ['Management', 'Staff'].includes(getActiveUser().role);
+    const items = (state.checklists || []).filter(c => c.freq === freq);
+    const doneCount = items.filter(c => c.done).length;
+    const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Operational Checklists (Cleaning, Prep, Ordering, Inventory &amp; Safety)</h2>
+              <p class="text-xs text-slate-500">Checking off any item automatically logs your name and timestamp for accountability.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                ${[['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly']].map(([k, lbl]) => `
+                  <button data-chk-freq="${k}" class="px-3 py-1 rounded-md text-xs font-semibold transition ${freq === k ? 'bg-white text-red-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}">${lbl}</button>
+                `).join('')}
+              </div>
+              ${canManage ? `<button id="btn-reset-chk-cycle" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">Reset ${freq.charAt(0).toUpperCase() + freq.slice(1)} Cycle</button>` : ''}
+              <button id="btn-print-checklists" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium no-print">Print Checklist</button>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-semibold text-slate-700">
+              <span>${freq.charAt(0).toUpperCase() + freq.slice(1)} Completion</span>
+              <span>${doneCount} / ${items.length} (${pct}%)</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full bg-emerald-600 transition-all" style="width: ${pct}%"></div>
+            </div>
+          </div>
+
+          <!-- Checklist Items -->
+          <div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+            ${items.length === 0
+              ? '<p class="p-4 text-sm text-slate-500">No tasks in this cycle yet.</p>'
+              : items.map(c => `
+                <div class="p-3 sm:px-4 flex flex-wrap items-center justify-between gap-2 ${c.done ? 'bg-emerald-50/40' : 'bg-white hover:bg-slate-50'}">
+                  <label class="flex items-start gap-3 cursor-pointer flex-1 min-w-[220px]">
+                    <input type="checkbox" data-chk-toggle="${c.id}" ${c.done ? 'checked' : ''} class="mt-0.5 w-4 h-4 accent-red-700 rounded" />
+                    <div>
+                      <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 mr-1.5">${escapeHtml(c.category)}</span>
+                      <span class="text-sm font-medium ${c.done ? 'line-through text-slate-400' : 'text-slate-900'}">${escapeHtml(c.title)}</span>
+                      ${c.done ? `<div class="text-xs text-emerald-700 mt-0.5">Completed by <strong>${escapeHtml(c.doneBy)}</strong> at ${escapeHtml(c.doneAt)}</div>` : ''}
+                    </div>
+                  </label>
+                  ${canManage ? `<button data-chk-delete="${c.id}" class="text-xs text-rose-600 hover:underline no-print">Remove</button>` : ''}
+                </div>
+              `).join('')
+            }
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          ${canManage ? `
+          <form id="form-add-checklist" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3 no-print">
+            <h3 class="text-sm font-bold text-slate-900">Add Custom Checklist Task</h3>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Task Description</label>
+              <input name="title" type="text" required placeholder="e.g. Clean ice machine baffle & bin" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Frequency</label>
+                <select name="freq" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                  <option value="daily" ${freq === 'daily' ? 'selected' : ''}>Daily</option>
+                  <option value="weekly" ${freq === 'weekly' ? 'selected' : ''}>Weekly</option>
+                  <option value="monthly" ${freq === 'monthly' ? 'selected' : ''}>Monthly</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Category</label>
+                <select name="category" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                  <option value="Cleaning">Cleaning</option>
+                  <option value="Prep">Prep</option>
+                  <option value="Ordering">Ordering</option>
+                  <option value="Inventory Count">Inventory Count</option>
+                  <option value="Food Safety">Food Safety</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Add to Checklist</button>
+          </form>
+          ` : ''}
+
+          <!-- Permanent Checklist Completion Log -->
+          <div class="${canManage ? '' : 'lg:col-span-2'} bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-slate-900">Checklist Completion Log</h3>
+              <button id="btn-export-chk-csv" class="px-3 py-1 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50 no-print">Export CSV</button>
+            </div>
+            ${(state.checklistLogs || []).length === 0
+              ? '<p class="text-xs text-slate-500">Check off tasks above to build the permanent log.</p>'
+              : `<div class="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                  ${state.checklistLogs.slice(0, 25).map(l => `
+                    <div class="py-2 flex items-center justify-between gap-2 text-xs">
+                      <div>
+                        <span class="font-semibold text-slate-900">${escapeHtml(l.user)}</span>
+                        <span class="text-slate-500">(${escapeHtml(l.freq)} / ${escapeHtml(l.category)}):</span>
+                        <span class="text-slate-700">${escapeHtml(l.title)}</span>
+                      </div>
+                      <span class="text-slate-400 font-mono shrink-0">${escapeHtml(l.timestamp)}</span>
+                    </div>
+                  `).join('')}
+                </div>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 9. BLIND AUDIT & RECONCILIATION
+  function renderAudit(main) {
+    const draft = state.blindAuditDraft || { zone: 'ALL', revealed: false, counts: {}, units: {}, reasons: {} };
+    const zone = draft.zone || 'ALL';
+    const items = state.inventory.filter(i => zone === 'ALL' || i.zone === zone);
+
+    function toGrams(val, unit, item) {
+      const n = Number(val);
+      if (isNaN(n) || val === '' || val === null) return null;
+      if (unit === 'kg') return Math.round(n * 1000);
+      if (unit === 'lb') return Math.round(n * 453.592);
+      if (unit === 'pack') return Math.round(n * (item.packSizeGrams || 1000));
+      return Math.round(n);
+    }
+
+    const enteredItems = items.filter(i => draft.counts[i.id] !== undefined && draft.counts[i.id] !== '');
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Blind Inventory Audit &amp; Reconciliation</h2>
+              <p class="text-xs text-slate-500">Auditor: <strong>${escapeHtml(getActiveUser().name)}</strong> (${escapeHtml(getActiveUser().role)}). System quantities stay hidden until you reveal.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <select id="audit-zone-filter" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs sm:text-sm bg-white" ${draft.revealed ? 'disabled' : ''}>
+                <option value="ALL" ${zone === 'ALL' ? 'selected' : ''}>All Storage Zones</option>
+                <option value="Dry Storage" ${zone === 'Dry Storage' ? 'selected' : ''}>Dry Storage</option>
+                <option value="Walk-In Cooler" ${zone === 'Walk-In Cooler' ? 'selected' : ''}>Walk-In Cooler</option>
+                <option value="Walk-In Freezer" ${zone === 'Walk-In Freezer' ? 'selected' : ''}>Walk-In Freezer</option>
+              </select>
+              ${!draft.revealed
+                ? `<button id="btn-audit-reveal" class="px-3.5 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-semibold">Reveal &amp; Calculate Variances (${enteredItems.length})</button>`
+                : `<button id="btn-audit-reconcile-all" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold">Reconcile All (${enteredItems.length})</button>
+                   <button id="btn-audit-reset" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs sm:text-sm font-medium hover:bg-slate-50">New Blind Audit</button>`
+              }
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg text-xs font-medium ${draft.revealed ? 'bg-amber-50 text-amber-900 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}">
+            ${draft.revealed
+              ? 'Variance Review Mode: Compare your physical counts against expected system stock, add a reason note if needed, and reconcile to update Living Stock.'
+              : 'Blind Count Mode Active: Expected system stock is hidden so counts remain unbiased. Enter physical counts for the items you are auditing, then click "Reveal & Calculate Variances".'}
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                  <th class="py-2 pr-3">SKU</th>
+                  <th class="py-2 pr-3">Item</th>
+                  <th class="py-2 pr-3">Zone</th>
+                  ${draft.revealed ? '<th class="py-2 pr-3">System Expected</th>' : ''}
+                  <th class="py-2 pr-3">Physical Count</th>
+                  <th class="py-2 pr-3">Unit</th>
+                  ${draft.revealed ? '<th class="py-2 pr-3">Variance</th><th class="py-2 pr-3">Audit Note</th><th class="py-2 text-right">Action</th>' : ''}
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${items.map(item => {
+                  const rawVal = draft.counts[item.id] !== undefined ? draft.counts[item.id] : '';
+                  const unit = draft.units[item.id] || (state.unitMode === 'us' ? 'lb' : 'g');
+                  const physG = toGrams(rawVal, unit, item);
+                  const varianceG = physG !== null ? physG - item.stockGrams : null;
+                  const varPct = (varianceG !== null && item.stockGrams > 0) ? ((varianceG / item.stockGrams) * 100).toFixed(1) + '%' : '';
+                  const reasonVal = draft.reasons[item.id] || '';
+                  return `
+                    <tr class="hover:bg-slate-50">
+                      <td class="py-2 pr-3 font-mono text-xs text-slate-500">${escapeHtml(item.sku)}</td>
+                      <td class="py-2 pr-3 font-medium text-slate-900">${escapeHtml(item.name)}</td>
+                      <td class="py-2 pr-3 text-xs text-slate-600">${escapeHtml(item.zone)}</td>
+                      ${draft.revealed ? `<td class="py-2 pr-3 font-medium text-slate-700">${formatShortMass(item.stockGrams)}</td>` : ''}
+                      <td class="py-2 pr-3">
+                        <input type="number" step="0.01" min="0" data-audit-count="${item.id}" value="${escapeHtml(rawVal)}" placeholder="Enter count" ${draft.revealed ? 'readonly' : ''} class="w-28 px-2.5 py-1 rounded border border-slate-300 text-sm ${draft.revealed ? 'bg-slate-100' : 'bg-white'}" />
+                      </td>
+                      <td class="py-2 pr-3">
+                        <select data-audit-unit="${item.id}" ${draft.revealed ? 'disabled' : ''} class="px-2 py-1 rounded border border-slate-300 text-xs bg-white">
+                          <option value="g" ${unit === 'g' ? 'selected' : ''}>g</option>
+                          <option value="kg" ${unit === 'kg' ? 'selected' : ''}>kg</option>
+                          <option value="lb" ${unit === 'lb' ? 'selected' : ''}>lb</option>
+                          <option value="pack" ${unit === 'pack' ? 'selected' : ''}>cases (${escapeHtml(item.packLabel)})</option>
+                        </select>
+                      </td>
+                      ${draft.revealed ? `
+                        <td class="py-2 pr-3 font-bold ${varianceG === null ? 'text-slate-400' : varianceG === 0 ? 'text-emerald-700' : varianceG > 0 ? 'text-blue-700' : 'text-rose-700'}">
+                          ${varianceG === null ? '—' : `${varianceG >= 0 ? '+' : ''}${formatShortMass(varianceG)} ${varPct ? '(' + varPct + ')' : ''}`}
+                        </td>
+                        <td class="py-2 pr-3">
+                          <input type="text" data-audit-reason="${item.id}" value="${escapeHtml(reasonVal)}" placeholder="Reason (optional)" class="w-36 px-2 py-1 rounded border border-slate-300 text-xs" />
+                        </td>
+                        <td class="py-2 text-right">
+                          ${physG !== null
+                            ? `<button data-reconcile-item="${item.id}" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Reconcile</button>`
+                            : '<span class="text-xs text-slate-400">Not counted</span>'}
+                        </td>
+                      ` : ''}
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Audit Reconciliation History -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-900">Completed Audit &amp; Reconciliation History</h3>
+            <button id="btn-export-audit-csv" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">Export Audit CSV</button>
+          </div>
+          ${state.auditLogs.length === 0
+            ? '<p class="text-sm text-slate-500">No blind audits reconciled yet.</p>'
+            : `<div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                      <th class="py-2 pr-3">Timestamp</th>
+                      <th class="py-2 pr-3">Auditor</th>
+                      <th class="py-2 pr-3">Item</th>
+                      <th class="py-2 pr-3">System</th>
+                      <th class="py-2 pr-3">Physical</th>
+                      <th class="py-2 pr-3">Variance</th>
+                      <th class="py-2">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${state.auditLogs.map(a => `
+                      <tr>
+                        <td class="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(a.timestamp)}</td>
+                        <td class="py-2 pr-3 text-xs font-semibold text-slate-800">${escapeHtml(a.userName)}</td>
+                        <td class="py-2 pr-3 font-medium text-slate-900">${escapeHtml(a.itemName)}</td>
+                        <td class="py-2 pr-3 text-xs">${formatShortMass(a.systemGrams)}</td>
+                        <td class="py-2 pr-3 text-xs font-semibold">${formatShortMass(a.physicalGrams)}</td>
+                        <td class="py-2 pr-3 text-xs font-bold ${a.varianceGrams === 0 ? 'text-emerald-700' : a.varianceGrams > 0 ? 'text-blue-700' : 'text-rose-700'}">${a.varianceGrams >= 0 ? '+' : ''}${formatShortMass(a.varianceGrams)}</td>
+                        <td class="py-2 text-xs text-slate-600">${escapeHtml(a.reason || '—')}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>`
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  // 10. USERS & REAL-TIME ACCOUNTABILITY FEED
+  function renderUsers(main) {
+    const activeUser = getActiveUser();
+
+    // Combine all accountability events into a unified chronological feed
+    const feed = [];
+    state.transactions.forEach(t => feed.push({ timestamp: t.timestamp, user: t.staff, category: t.type, detail: `${t.itemName} (${t.grams >= 0 ? '+' : ''}${formatShortMass(t.grams)}) — ${t.note}` }));
+    state.haccpLogs.forEach(h => feed.push({ timestamp: h.timestamp, user: h.staff, category: 'HACCP ' + h.status, detail: `${h.type}: ${h.target} @ ${h.tempF}°F` }));
+    state.auditLogs.forEach(a => feed.push({ timestamp: a.timestamp, user: a.userName, category: 'BLIND AUDIT', detail: `${a.itemName}: System ${formatShortMass(a.systemGrams)} → Physical ${formatShortMass(a.physicalGrams)} (${a.varianceGrams >= 0 ? '+' : ''}${formatShortMass(a.varianceGrams)})` }));
+    (state.checklistLogs || []).forEach(c => feed.push({ timestamp: c.timestamp, user: c.user, category: 'CHECKLIST (' + c.freq.toUpperCase() + ')', detail: `[${c.category}] ${c.title}` }));
+    feed.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <!-- Add User Form -->
+          <form id="form-add-user" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+            <h2 class="text-base font-bold text-slate-900">Add User &amp; Role Access</h2>
+            <p class="text-xs text-slate-500">Assign a role tier and password/PIN to control which tabs and actions each person can access.</p>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Full Name</label>
+              <input name="name" type="text" required placeholder="e.g. Jordan Lee" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-slate-700 mb-1">Access Role</label>
+                <select name="role" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                  <option value="Management">Management (Full Access)</option>
+                  <option value="Staff">Staff (Kitchen Ops)</option>
+                  <option value="Volunteer">Volunteer (Recipes, Prep, HACCP)</option>
+                  <option value="Other">Other (Dashboard &amp; Prep Only)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Initials</label>
+                <input name="initials" type="text" maxlength="4" required placeholder="JL" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm uppercase" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Password / PIN</label>
+              <input name="pin" type="password" required placeholder="e.g. 4321" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Add User</button>
+          </form>
+
+          <!-- User Roster -->
+          <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-base font-bold text-slate-900">Staff Roster &amp; Auto-Accountability</h2>
+              <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">Active: ${escapeHtml(activeUser.name)}</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                    <th class="py-2 pr-3">User</th>
+                    <th class="py-2 pr-3">Role</th>
+                    <th class="py-2 pr-3">Logged Actions</th>
+                    <th class="py-2 pr-3">Status</th>
+                    <th class="py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${state.users.map(u => {
+                    const count = feed.filter(f => f.user === u.name).length;
+                    const isCur = u.id === activeUser.id;
+                    return `
+                      <tr class="${isCur ? 'bg-red-50/50' : ''}">
+                        <td class="py-2.5 pr-3 font-semibold text-slate-900">${escapeHtml(u.name)} <span class="text-xs font-mono text-slate-400">(${escapeHtml(u.initials)})</span></td>
+                        <td class="py-2.5 pr-3 text-xs text-slate-600">${escapeHtml(u.role)}</td>
+                        <td class="py-2.5 pr-3 text-xs font-bold text-slate-800">${count}</td>
+                        <td class="py-2.5 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${u.active !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${u.active !== false ? 'Active' : 'Inactive'}</span></td>
+                        <td class="py-2.5 text-right space-x-1 whitespace-nowrap">
+                          <button data-edit-pin="${u.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Set PIN</button>
+                          ${!isCur && u.active !== false ? `<button data-switch-user="${u.id}" class="px-2.5 py-1 rounded bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">Switch</button>` : ''}
+                          ${state.users.length > 1 ? `<button data-toggle-user="${u.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">${u.active !== false ? 'Deactivate' : 'Reactivate'}</button>` : ''}
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-Time Accountability Feed -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-900">Real-Time Accountability Feed (All Actions)</h3>
+            <span class="text-xs text-slate-500">Auto-syncs across open tabs</span>
+          </div>
+          <div class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+            ${feed.slice(0, 40).map(f => `
+              <div class="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-800">${escapeHtml(f.user)}</span>
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold ${f.category.includes('WASTE') || f.category.includes('FLAGGED') ? 'bg-amber-100 text-amber-800' : f.category.includes('AUDIT') ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}">${escapeHtml(f.category)}</span>
+                  <span class="text-slate-700 text-xs sm:text-sm">${escapeHtml(f.detail)}</span>
+                </div>
+                <span class="text-xs text-slate-400 font-mono">${escapeHtml(f.timestamp)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+
+  // 11. INTERACTIVE HELP, TUTORIAL & QUICK REFERENCE
+  function renderHelp(main) {
+    const allowed = getAllowedTabs(getActiveUser());
+    const goBtn = (tab, label) => allowed.includes(tab)
+      ? `<button data-goto="${tab}" class="mt-2 inline-block text-xs font-semibold text-red-700 hover:underline">Open ${label} &rarr;</button>`
+      : `<span class="mt-2 inline-block text-xs text-slate-400">Requires Staff/Management access</span>`;
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900">Quick-Start Tutorial &amp; Kitchen Reference Guide</h2>
+            <p class="text-xs sm:text-sm text-slate-500">Step-by-step workflows for daily community meal operations, inventory control, and food safety.</p>
+          </div>
+          <button id="btn-print-help" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-medium no-print">Print Reference Guide</button>
+        </div>
+
+        <!-- Daily Workflow Steps -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Daily Kitchen Workflow (MTWF Service)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-xs font-bold text-red-700 uppercase">Step 1 &bull; Morning Opening</div>
+              <div class="font-bold text-slate-900 mt-1">Check Temps &amp; Receive Deliveries</div>
+              <p class="text-xs text-slate-600 mt-1 leading-relaxed">Log Walk-In Cooler (&le;41&deg;F) and Freezer (&le;0&deg;F) temps in <strong>Time &amp; Temp Logs</strong>. Check in new vendor deliveries in <strong>Check-In &amp; Waste</strong> to add them to Living Stock.</p>
+              ${goBtn('haccp', 'Time & Temp Logs')}
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-xs font-bold text-red-700 uppercase">Step 2 &bull; Recipe Bank &amp; Menu</div>
+              <div class="font-bold text-slate-900 mt-1">Add Recipes &amp; Plan the Menu</div>
+              <p class="text-xs text-slate-600 mt-1 leading-relaxed">Save dishes in <strong>Recipes (50–80)</strong> using grams or US units. Schedule meals in <strong>Menu Planner</strong> and click <strong>Commit &amp; Deduct Stock</strong> to update inventory and build tomorrow's prep list.</p>
+              ${goBtn('menu', 'Menu Planner')}
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-xs font-bold text-red-700 uppercase">Step 3 &bull; Prep &amp; Service</div>
+              <div class="font-bold text-slate-900 mt-1">Pull Prep &amp; Log Hot Holding</div>
+              <p class="text-xs text-slate-600 mt-1 leading-relaxed">Use <strong>Next-Day Prep</strong> (grouped by Cooler, Freezer, Dry Storage) to check off pulls. Before 11:30 AM service, verify cooking (&ge;165&deg;F) and hot holding (&ge;135&deg;F) temps.</p>
+              ${goBtn('prep', 'Next-Day Prep')}
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-xs font-bold text-red-700 uppercase">Step 4 &bull; Post-Service</div>
+              <div class="font-bold text-slate-900 mt-1">Scan Out Waste &amp; Log Patrons</div>
+              <p class="text-xs text-slate-600 mt-1 leading-relaxed">Record spoilage or expired items under <strong>Check-In &amp; Waste</strong>. Enter today's headcount in <strong>Served &amp; Forecasting</strong> to update Day, Week, Month, and Year predictions.</p>
+              ${goBtn('forecasting', 'Served & Forecasting')}
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-xs font-bold text-red-700 uppercase">Step 5 &bull; Weekly / Monthly</div>
+              <div class="font-bold text-slate-900 mt-1">Blind Audit &amp; Reconcile</div>
+              <p class="text-xs text-slate-600 mt-1 leading-relaxed">Run an unbiased physical count in <strong>Blind Audit</strong> (system stock stays hidden until you click Reveal), review variances, and reconcile to update Living Stock.</p>
+              ${goBtn('audit', 'Blind Audit')}
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-xs font-bold text-red-700 uppercase">Step 6 &bull; Ordering &amp; Backup</div>
+              <div class="font-bold text-slate-900 mt-1">Vendor Orders &amp; JSON Backups</div>
+              <p class="text-xs text-slate-600 mt-1 leading-relaxed">Check <strong>Order Suggestions</strong> for Jordan Banana and Marberger restocks based on Par Levels + Menu Demand. Use <strong>Backup / Restore</strong> to save a JSON copy anytime.</p>
+              ${goBtn('orders', 'Order Suggestions')}
+            </div>
+          </div>
+        </div>
+
+        <!-- Role-Based Access & Default PINs -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Role-Based Access &amp; Accountability</h3>
+          <p class="text-xs text-slate-600">Every action is automatically stamped with the signed-in user's name. Click the user badge or <strong>Lock</strong> in the top bar to switch profiles.</p>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                  <th class="py-2 pr-3">Role Tier</th>
+                  <th class="py-2 pr-3">Default User &amp; PIN</th>
+                  <th class="py-2">Visible Tabs &amp; Permissions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-xs sm:text-sm">
+                <tr>
+                  <td class="py-2.5 pr-3 font-bold text-red-700">Management</td>
+                  <td class="py-2.5 pr-3 font-mono">William Clark (1234)</td>
+                  <td class="py-2.5 text-slate-700">Full access to all tabs, User/PIN setup, and Backup/Restore.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 pr-3 font-bold text-slate-900">Staff</td>
+                  <td class="py-2.5 pr-3 font-mono">Sabrina (2222)</td>
+                  <td class="py-2.5 text-slate-700">Dashboard, Living Stock, Check-In &amp; Waste, Orders, Recipes, Menu Planner, Prep, Blind Audit, HACCP, Forecasting.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 pr-3 font-bold text-emerald-700">Volunteer</td>
+                  <td class="py-2.5 pr-3 font-mono">Volunteer Team (0000)</td>
+                  <td class="py-2.5 text-slate-700">Recipes (view &amp; scale 50–80 only), Menu Planner (view), Next-Day Prep, Time &amp; Temp Logs.</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 pr-3 font-bold text-slate-600">Other</td>
+                  <td class="py-2.5 pr-3 font-mono">Guest Observer (9999)</td>
+                  <td class="py-2.5 text-slate-700">Dashboard summary, Menu Planner (view), and Next-Day Prep only.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- Modals ---
+  function showAddItemModal() {
+    openModal('Add New Inventory Item', `
+      <form id="form-new-inv" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">SKU</label>
+            <input name="sku" type="text" required placeholder="e.g. DRY-199" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Item Name</label>
+            <input name="name" type="text" required placeholder="e.g. Black Beans" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Storage Zone</label>
+            <select name="zone" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+              <option value="Dry Storage">Dry Storage</option>
+              <option value="Walk-In Cooler">Walk-In Cooler</option>
+              <option value="Walk-In Freezer">Walk-In Freezer</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Preferred Vendor</label>
+            <input name="vendor" type="text" value="Jordan Banana" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Initial Stock (g)</label>
+            <input name="stockGrams" type="number" min="0" value="5000" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Par Level (g)</label>
+            <input name="parGrams" type="number" min="1" value="10000" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Case Size (g)</label>
+            <input name="packSizeGrams" type="number" min="1" value="5000" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Case / Pack Label</label>
+          <input name="packLabel" type="text" value="10 lb case" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Add Item to Living Stock</button>
+      </form>
+    `);
+  }
+
+  function showAddRecipeModal() {
+    const invOpts = state.inventory.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
+    openModal('Add Standardized Recipe', `
+      <form id="form-new-recipe" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Recipe Name</label>
+          <input name="name" type="text" required placeholder="e.g. Classic Chili & Cornbread" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Category</label>
+            <input name="category" type="text" value="Main Entree" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Base Portions</label>
+            <input name="basePortions" type="number" min="10" value="50" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Prep / Cook (min)</label>
+            <input name="totalMin" type="number" min="5" value="60" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="border border-slate-200 rounded-lg p-3 space-y-2 bg-slate-50">
+          <div class="text-xs font-bold text-slate-700">Primary Ingredients (Grams at Base Yield)</div>
+          <div class="grid grid-cols-3 gap-2">
+            <select name="ing1" class="col-span-2 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">${invOpts}</select>
+            <input name="g1" type="number" min="1" value="5000" placeholder="Grams" class="px-2 py-1.5 rounded border border-slate-300 text-xs" />
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <select name="ing2" class="col-span-2 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">${invOpts}</select>
+            <input name="g2" type="number" min="0" value="2000" placeholder="Grams" class="px-2 py-1.5 rounded border border-slate-300 text-xs" />
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <select name="ing3" class="col-span-2 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">${invOpts}</select>
+            <input name="g3" type="number" min="0" value="500" placeholder="Grams" class="px-2 py-1.5 rounded border border-slate-300 text-xs" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Method &amp; Food Safety Notes</label>
+          <textarea name="instructions" rows="3" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Step-by-step instructions and CCP temps..."></textarea>
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save to Recipe Book</button>
+      </form>
+    `);
+  }
+
+  function showSwitchUserModal(preselectId) {
+    const activeUsers = (state.users || []).filter(u => u.active !== false);
+    const targetId = preselectId || state.activeUserId;
+    openModal('Switch User (Password / PIN Required)', `
+      <form id="form-switch-user" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Select User</label>
+          <select name="userId" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+            ${activeUsers.map(u => `<option value="${u.id}" ${u.id === targetId ? 'selected' : ''}>${escapeHtml(u.name)} — ${escapeHtml(normalizeRole(u.role))}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Password / PIN</label>
+          <input name="pin" type="password" required autocomplete="off" placeholder="Enter user PIN or password" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
+        <div id="switch-error" class="text-xs font-semibold text-rose-700 hidden">Incorrect password or PIN.</div>
+        <div class="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+          <strong>Role Access:</strong> Management (All) &bull; Staff (Ops) &bull; Volunteer (Recipes, Prep, HACCP) &bull; Other (Dashboard &amp; Prep)
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Verify &amp; Switch User</button>
+      </form>
+    `);
+  }
+
+  function showEditPinModal(userId) {
+    const u = state.users.find(x => x.id === userId);
+    if (!u) return;
+    openModal(`Update Role & Password — ${u.name}`, `
+      <form id="form-edit-pin" class="space-y-3">
+        <input type="hidden" name="userId" value="${u.id}" />
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Access Role</label>
+          <select name="role" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+            ${['Management', 'Staff', 'Volunteer', 'Other'].map(r => `<option value="${r}" ${normalizeRole(u.role) === r ? 'selected' : ''}>${r}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">New Password / PIN</label>
+          <input name="pin" type="password" required placeholder="Enter new PIN or password" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save Credentials</button>
+      </form>
+    `);
+  }
+
+
+  let html5QrInstance = null;
+
+  function applyScannedCode(code) {
+    const clean = String(code || '').trim().toLowerCase();
+    if (!clean) return;
+    const match = state.inventory.find(i =>
+      i.sku.toLowerCase() === clean ||
+      i.id.toLowerCase() === clean ||
+      i.name.toLowerCase().includes(clean)
+    );
+    if (!match) {
+      showToast(`No inventory item matched "${code}"`, 'warn');
+      return;
+    }
+    const targetMode = document.getElementById('quick-scan-target')?.value || 'checkin';
+    const sel = document.getElementById(targetMode === 'waste' ? 'waste-item-select' : 'checkin-item-select');
+    const form = document.getElementById(targetMode === 'waste' ? 'form-waste' : 'form-checkin');
+    if (sel) sel.value = match.id;
+    const qtyInput = form ? form.querySelector('input[name="qty"]') : null;
+    if (qtyInput) qtyInput.focus();
+    showToast(`Scanned: ${match.name} (${match.sku}) → ready for ${targetMode === 'waste' ? 'Waste' : 'Check-In'}`);
+  }
+
+  function stopCameraScan() {
+    const wrap = document.getElementById('cam-reader-wrap');
+    const startBtn = document.getElementById('btn-start-cam-scan');
+    const stopBtn = document.getElementById('btn-stop-cam-scan');
+    if (html5QrInstance) {
+      try {
+        html5QrInstance.stop().catch(() => {});
+      } catch (e) {}
+      html5QrInstance = null;
+    }
+    if (wrap) wrap.classList.add('hidden');
+    if (startBtn) startBtn.classList.remove('hidden');
+    if (stopBtn) stopBtn.classList.add('hidden');
+  }
+
+  function showQrLabelsModal() {
+    const cards = state.inventory.map(item => {
+      let svgHtml = '';
+      try {
+        if (window.qrcode) {
+          const qr = window.qrcode(0, 'M');
+          qr.addData(item.sku);
+          qr.make();
+          svgHtml = qr.createSvgTag({ cellSize: 3, margin: 2 });
+        }
+      } catch (e) {}
+      return `
+        <div class="border border-slate-300 rounded-lg p-3 flex items-center gap-3 bg-white break-inside-avoid">
+          <div class="shrink-0">${svgHtml || '<span class="text-xs font-mono">' + escapeHtml(item.sku) + '</span>'}</div>
+          <div class="min-w-0">
+            <div class="font-bold text-xs text-slate-900 truncate">${escapeHtml(item.name)}</div>
+            <div class="text-xs font-mono text-red-700 font-semibold">${escapeHtml(item.sku)}</div>
+            <div class="text-[11px] text-slate-500">${escapeHtml(item.zone)} &bull; ${escapeHtml(item.packLabel)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    openModal('Printable Bin & Shelf QR Labels', `
+      <div class="space-y-3">
+        <div class="flex items-center justify-between no-print">
+          <p class="text-xs text-slate-600">Print and tape these QR labels to bins or shelves to scan with your iPad/phone camera.</p>
+          <button id="btn-print-qr-now" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">Print Labels</button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">${cards}</div>
+      </div>
+    `);
+  }
+
+  function showSyncModal() {
+    openModal('Supabase Live Cloud Sync', `
+      <div class="space-y-4 text-sm">
+        <div class="p-3 rounded-lg border ${syncStatus === 'live' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'}">
+          <div class="font-bold">Status: ${syncStatus === 'live' ? 'Connected (Real-Time Sync Active)' : 'Local Mode (' + escapeHtml(syncErrorMsg || 'Connecting...') + ')'}</div>
+          <div class="text-xs mt-1 font-mono break-all">${escapeHtml(SUPABASE_URL)}</div>
+        </div>
+        <p class="text-xs text-slate-600">Every inventory change, recipe, menu plan, checklist, audit, and temp check syncs automatically across all devices connected to this Supabase project.</p>
+        <div class="flex flex-wrap gap-2">
+          <button id="btn-force-pull" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Pull Latest from Cloud</button>
+          <button id="btn-force-push" class="px-3.5 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">Push Local Data to Cloud</button>
+        </div>
+      </div>
+    `);
+  }
+
+  function showBackupModal() {
+    openModal('Backup & Restore Program Data', `
+      <div class="space-y-4 text-sm">
+        <p class="text-slate-600">All data saves automatically in this browser. Download a JSON backup to transfer between computers or reset to defaults.</p>
+        <div class="flex flex-wrap gap-2">
+          <button id="btn-download-json" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs">Download JSON Backup</button>
+          <label class="px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 font-semibold text-xs cursor-pointer">
+            Restore from JSON
+            <input id="input-restore-json" type="file" accept=".json" class="hidden" />
+          </label>
+          <button id="btn-reset-demo" class="px-4 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs">Reset Sample Data</button>
+        </div>
+      </div>
+    `);
+  }
+
+  function downloadFile(filename, content, mime) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function deductRecipeFromInventory(rec, portions, labelPrefix) {
+    const factor = portions / rec.basePortions;
+    rec.ingredients.forEach(ing => {
+      const inv = state.inventory.find(i => i.id === ing.itemId);
+      if (!inv) return;
+      const usedG = Math.round(ing.grams * factor);
+      inv.stockGrams = Math.max(0, inv.stockGrams - usedG);
+      inv.lastUpdated = new Date().toISOString().slice(0, 10);
+      state.transactions.unshift({
+        id: uid('tx'),
+        timestamp: nowStamp(),
+        type: 'USAGE',
+        itemId: inv.id,
+        itemName: inv.name,
+        grams: -usedG,
+        note: `${labelPrefix}: ${rec.name} (${portions} portions)`,
+        staff: getActiveUser().name
+      });
+    });
+  }
+
+  // --- Global Event Delegation ---
+  document.addEventListener('click', (e) => {
+    const tabBtn = e.target.closest('[data-tab]');
+    if (tabBtn) {
+      state.activeTab = tabBtn.dataset.tab;
+      saveState();
+      render();
+      return;
+    }
+
+    const gotoBtn = e.target.closest('[data-goto]');
+    if (gotoBtn) {
+      state.activeTab = gotoBtn.dataset.goto;
+      saveState();
+      render();
+      return;
+    }
+
+    if (e.target.id === 'btn-quick-checkin') {
+      state.activeTab = 'transactions';
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-quick-waste') {
+      state.activeTab = 'transactions';
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.closest('#btn-sync-status')) {
+      showSyncModal();
+      return;
+    }
+    if (e.target.id === 'btn-force-pull') {
+      pullFromCloud().then(() => { closeModal(); showToast('Pulled latest cloud data'); });
+      return;
+    }
+    if (e.target.id === 'btn-force-push') {
+      pushChangedSlicesToCloud(true).then(() => { closeModal(); showToast('Pushed local data to Supabase'); });
+      return;
+    }
+    if (e.target.id === 'btn-backup-modal') {
+      showBackupModal();
+      return;
+    }
+    if (e.target.id === 'modal-close' || e.target.id === 'modal-backdrop') {
+      closeModal();
+      return;
+    }
+    if (e.target.id === 'btn-toggle-units' || e.target.id === 'btn-toggle-units-rec') {
+      state.unitMode = state.unitMode === 'grams' ? 'us' : 'grams';
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-print-qr-labels') {
+      showQrLabelsModal();
+      return;
+    }
+    if (e.target.id === 'btn-start-cam-scan') {
+      const wrap = document.getElementById('cam-reader-wrap');
+      const startBtn = document.getElementById('btn-start-cam-scan');
+      const stopBtn = document.getElementById('btn-stop-cam-scan');
+      if (!window.Html5Qrcode) {
+        showToast('Camera scanner library unavailable offline — use USB/Bluetooth scanner or SKU search.', 'warn');
+        return;
+      }
+      if (wrap) wrap.classList.remove('hidden');
+      if (startBtn) startBtn.classList.add('hidden');
+      if (stopBtn) stopBtn.classList.remove('hidden');
+      try {
+        html5QrInstance = new window.Html5Qrcode('cam-reader');
+        html5QrInstance.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 220, height: 140 } },
+          (decodedText) => {
+            applyScannedCode(decodedText);
+            stopCameraScan();
+          },
+          () => {}
+        ).catch(() => {
+          stopCameraScan();
+          showToast('Camera access blocked in this window. Open the HTML file directly in Safari/Chrome or use a USB/Bluetooth scanner.', 'warn');
+        });
+      } catch (err) {
+        stopCameraScan();
+        showToast('Camera unavailable here — open standalone file in Safari/Chrome.', 'warn');
+      }
+      return;
+    }
+    if (e.target.id === 'btn-stop-cam-scan') {
+      stopCameraScan();
+      return;
+    }
+    if (e.target.id === 'btn-nfc-scan') {
+      if (!('NDEFReader' in window)) {
+        showToast('Web NFC is only supported in Chrome on Android (not iPad/iOS Safari). Use Camera QR or a Bluetooth RFID/barcode scanner.', 'warn');
+        return;
+      }
+      try {
+        const ndef = new window.NDEFReader();
+        ndef.scan().then(() => {
+          showToast('NFC ready — tap tag to back of device');
+          ndef.onreading = (ev) => {
+            const dec = new TextDecoder();
+            for (const rec of ev.message.records) {
+              applyScannedCode(dec.decode(rec.data));
+              break;
+            }
+          };
+        }).catch(() => showToast('NFC permission denied or disabled.', 'warn'));
+      } catch (err) {
+        showToast('Could not start NFC reader.', 'warn');
+      }
+      return;
+    }
+    if (e.target.id === 'btn-add-inv-item') {
+      showAddItemModal();
+      return;
+    }
+    if (e.target.id === 'btn-new-recipe') {
+      showAddRecipeModal();
+      return;
+    }
+
+    const adjBtn = e.target.closest('[data-adj]');
+    if (adjBtn) {
+      const item = state.inventory.find(i => i.id === adjBtn.dataset.adj);
+      const delta = Number(adjBtn.dataset.delta);
+      if (item) {
+        item.stockGrams = Math.max(0, item.stockGrams + delta);
+        state.transactions.unshift({
+          id: uid('tx'),
+          timestamp: nowStamp(),
+          type: delta >= 0 ? 'INCOMING' : 'USAGE',
+          itemId: item.id,
+          itemName: item.name,
+          grams: delta,
+          note: 'Quick manual adjustment',
+          staff: getActiveUser().name
+        });
+        saveState();
+        render();
+        showToast(`${item.name} adjusted by ${delta >= 0 ? '+' : ''}${delta} g`);
+      }
+      return;
+    }
+
+    const recBtn = e.target.closest('[data-select-recipe]');
+    if (recBtn) {
+      state.selectedRecipeId = recBtn.dataset.selectRecipe;
+      saveState();
+      render();
+      return;
+    }
+
+    const presetBtn = e.target.closest('[data-scale-preset]');
+    if (presetBtn) {
+      state.recipeScalePortions = Number(presetBtn.dataset.scalePreset);
+      saveState();
+      render();
+      return;
+    }
+
+    if (e.target.id === 'btn-deduct-today') {
+      const rec = state.recipes.find(r => r.id === state.selectedRecipeId);
+      if (rec) {
+        deductRecipeFromInventory(rec, state.recipeScalePortions, 'Today Service');
+        saveState();
+        render();
+        showToast(`Deducted ingredients for ${rec.name} (${state.recipeScalePortions} portions)`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'btn-queue-tomorrow') {
+      const rec = state.recipes.find(r => r.id === state.selectedRecipeId);
+      if (rec) {
+        deductRecipeFromInventory(rec, state.recipeScalePortions, 'Next-Day Prep');
+        state.prepQueue.push({
+          id: uid('prep'),
+          recipeId: rec.id,
+          recipeName: rec.name,
+          portions: state.recipeScalePortions,
+          deducted: true,
+          targetDate: 'Tomorrow',
+          checkedItems: {}
+        });
+        saveState();
+        render();
+        showToast(`Added ${rec.name} (${state.recipeScalePortions} portions) to Next-Day Prep & deducted stock`);
+      }
+      return;
+    }
+
+    const deductPrepBtn = e.target.closest('[data-deduct-prep]');
+    if (deductPrepBtn) {
+      const pq = state.prepQueue.find(p => p.id === deductPrepBtn.dataset.deductPrep);
+      const rec = pq && state.recipes.find(r => r.id === pq.recipeId);
+      if (pq && rec && !pq.deducted) {
+        deductRecipeFromInventory(rec, pq.portions, 'Next-Day Prep');
+        pq.deducted = true;
+        saveState();
+        render();
+        showToast(`Deducted stock for ${rec.name}`);
+      }
+      return;
+    }
+
+    const commitMenuBtn = e.target.closest('[data-commit-menu]');
+    if (commitMenuBtn) {
+      const mp = (state.menuPlan || []).find(m => m.id === commitMenuBtn.dataset.commitMenu);
+      const rec = mp && state.recipes.find(r => r.id === mp.recipeId);
+      if (mp && rec && mp.status !== 'DEDUCTED') {
+        deductRecipeFromInventory(rec, mp.portions, `Menu Plan (${mp.date})`);
+        mp.status = 'DEDUCTED';
+        state.prepQueue.push({
+          id: uid('prep'),
+          recipeId: rec.id,
+          recipeName: rec.name,
+          portions: mp.portions,
+          deducted: true,
+          targetDate: mp.date,
+          checkedItems: {}
+        });
+        saveState();
+        render();
+        showToast(`Committed ${rec.name} (${mp.portions} portions): Stock deducted & added to Prep`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'btn-commit-all-menu') {
+      let committed = 0;
+      (state.menuPlan || []).forEach(mp => {
+        if (mp.status === 'DEDUCTED') return;
+        const rec = state.recipes.find(r => r.id === mp.recipeId);
+        if (!rec) return;
+        deductRecipeFromInventory(rec, mp.portions, `Menu Plan (${mp.date})`);
+        mp.status = 'DEDUCTED';
+        state.prepQueue.push({
+          id: uid('prep'),
+          recipeId: rec.id,
+          recipeName: rec.name,
+          portions: mp.portions,
+          deducted: true,
+          targetDate: mp.date,
+          checkedItems: {}
+        });
+        committed++;
+      });
+      saveState();
+      render();
+      showToast(`Committed ${committed} planned meal(s) & updated Living Stock`);
+      return;
+    }
+
+    const removeMenuBtn = e.target.closest('[data-remove-menu]');
+    if (removeMenuBtn) {
+      state.menuPlan = (state.menuPlan || []).filter(m => m.id !== removeMenuBtn.dataset.removeMenu);
+      saveState();
+      render();
+      return;
+    }
+
+    const removePrepBtn = e.target.closest('[data-remove-prep]');
+    if (removePrepBtn) {
+      state.prepQueue = state.prepQueue.filter(p => p.id !== removePrepBtn.dataset.removePrep);
+      saveState();
+      render();
+      return;
+    }
+
+    const receiveBtn = e.target.closest('[data-receive-item]');
+    if (receiveBtn) {
+      const item = state.inventory.find(i => i.id === receiveBtn.dataset.receiveItem);
+      const grams = Number(receiveBtn.dataset.receiveGrams);
+      if (item) {
+        item.stockGrams += grams;
+        state.transactions.unshift({
+          id: uid('tx'),
+          timestamp: nowStamp(),
+          type: 'INCOMING',
+          itemId: item.id,
+          itemName: item.name,
+          grams,
+          note: `Received Suggested Order (${receiveBtn.dataset.receiveLabel})`,
+          staff: getActiveUser().name
+        });
+        saveState();
+        render();
+        showToast(`Received ${item.name} (+${formatShortMass(grams)})`);
+      }
+      return;
+    }
+
+    const chkFreqBtn = e.target.closest('[data-chk-freq]');
+    if (chkFreqBtn) {
+      state.checklistFreq = chkFreqBtn.dataset.chkFreq;
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-reset-chk-cycle') {
+      const freq = state.checklistFreq || 'daily';
+      (state.checklists || []).forEach(c => {
+        if (c.freq === freq) { c.done = false; c.doneBy = ''; c.doneAt = ''; }
+      });
+      saveState();
+      render();
+      showToast(`Reset ${freq} checklist for new cycle`);
+      return;
+    }
+    const chkDelBtn = e.target.closest('[data-chk-delete]');
+    if (chkDelBtn) {
+      state.checklists = (state.checklists || []).filter(c => c.id !== chkDelBtn.dataset.chkDelete);
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-export-chk-csv') {
+      const rows = [['Timestamp', 'User', 'Frequency', 'Category', 'Task']];
+      (state.checklistLogs || []).forEach(l => rows.push([l.timestamp, l.user, l.freq, l.category, l.title]));
+      downloadFile('checklist_log.csv', rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
+      return;
+    }
+
+    const horizonBtn = e.target.closest('[data-horizon]');
+    if (horizonBtn) {
+      state.forecastHorizon = horizonBtn.dataset.horizon;
+      saveState();
+      render();
+      return;
+    }
+
+    if (e.target.id === 'btn-print-prep' || e.target.id === 'btn-print-orders' || e.target.id === 'btn-print-haccp' || e.target.id === 'btn-print-help' || e.target.id === 'btn-print-qr-now' || e.target.id === 'btn-print-checklists') {
+      window.print();
+      return;
+    }
+
+    if (e.target.id === 'btn-export-tx-csv') {
+      const rows = [['Timestamp', 'Type', 'Item', 'Grams', 'Notes', 'Staff']];
+      state.transactions.forEach(t => rows.push([t.timestamp, t.type, t.itemName, t.grams, t.note, t.staff]));
+      downloadFile('inventory_ledger.csv', rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
+      return;
+    }
+
+    if (e.target.id === 'btn-export-orders-csv') {
+      const orders = getOrderSuggestions();
+      const rows = [['Vendor', 'SKU', 'Item', 'On Hand (g)', 'Par (g)', 'Suggested Packs', 'Pack Label']];
+      orders.forEach(o => rows.push([o.item.vendor, o.item.sku, o.item.name, o.item.stockGrams, o.item.parGrams, o.suggestedPacks, o.item.packLabel]));
+      downloadFile('order_suggestions.csv', rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
+      return;
+    }
+
+    if (e.target.id === 'btn-download-json') {
+      downloadFile('salvation_army_kms_backup.json', JSON.stringify(state, null, 2), 'application/json');
+      return;
+    }
+
+    if (e.target.id === 'btn-audit-reveal') {
+      state.blindAuditDraft.revealed = true;
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-audit-reset') {
+      state.blindAuditDraft = { zone: state.blindAuditDraft.zone || 'ALL', revealed: false, counts: {}, units: {}, reasons: {} };
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-audit-reconcile-all' || e.target.closest('[data-reconcile-item]')) {
+      const singleBtn = e.target.closest('[data-reconcile-item]');
+      const draft = state.blindAuditDraft;
+      const targetIds = singleBtn ? [singleBtn.dataset.reconcileItem] : Object.keys(draft.counts).filter(id => draft.counts[id] !== '' && draft.counts[id] !== undefined);
+      let countReconciled = 0;
+      const user = getActiveUser();
+      targetIds.forEach(id => {
+        const item = state.inventory.find(i => i.id === id);
+        if (!item) return;
+        const raw = draft.counts[id];
+        if (raw === '' || raw === undefined) return;
+        const unit = draft.units[id] || (state.unitMode === 'us' ? 'lb' : 'g');
+        const n = Number(raw);
+        if (isNaN(n)) return;
+        const physG = unit === 'kg' ? Math.round(n * 1000) : unit === 'lb' ? Math.round(n * 453.592) : unit === 'pack' ? Math.round(n * (item.packSizeGrams || 1000)) : Math.round(n);
+        const sysG = item.stockGrams;
+        const varianceG = physG - sysG;
+        const reason = draft.reasons[id] || 'Blind audit reconciliation';
+        item.stockGrams = physG;
+        item.lastUpdated = new Date().toISOString().slice(0, 10);
+        state.transactions.unshift({
+          id: uid('tx'),
+          timestamp: nowStamp(),
+          type: 'AUDIT_RECONCILE',
+          itemId: item.id,
+          itemName: item.name,
+          grams: varianceG,
+          note: `Blind Audit (${formatShortMass(sysG)} → ${formatShortMass(physG)}): ${reason}`,
+          staff: user.name
+        });
+        state.auditLogs.unshift({
+          id: uid('aud'),
+          timestamp: nowStamp(),
+          userName: user.name,
+          userRole: user.role,
+          zone: item.zone,
+          itemId: item.id,
+          itemName: item.name,
+          sku: item.sku,
+          systemGrams: sysG,
+          physicalGrams: physG,
+          varianceGrams: varianceG,
+          reason
+        });
+        delete draft.counts[id];
+        delete draft.reasons[id];
+        countReconciled++;
+      });
+      if (!Object.keys(draft.counts).length) draft.revealed = false;
+      saveState();
+      render();
+      showToast(`Reconciled ${countReconciled} item(s) by ${user.name}`);
+      return;
+    }
+    if (e.target.id === 'btn-export-audit-csv') {
+      const rows = [['Timestamp', 'Auditor', 'SKU', 'Item', 'Zone', 'System (g)', 'Physical (g)', 'Variance (g)', 'Reason']];
+      state.auditLogs.forEach(a => rows.push([a.timestamp, a.userName, a.sku, a.itemName, a.zone, a.systemGrams, a.physicalGrams, a.varianceGrams, a.reason]));
+      downloadFile('blind_audit_history.csv', rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
+      return;
+    }
+    if (e.target.closest('#btn-switch-user-modal')) {
+      showSwitchUserModal();
+      return;
+    }
+    if (e.target.id === 'btn-lock-app') {
+      state.isLocked = true;
+      saveState();
+      render();
+      return;
+    }
+    const editPinBtn = e.target.closest('[data-edit-pin]');
+    if (editPinBtn) {
+      showEditPinModal(editPinBtn.dataset.editPin);
+      return;
+    }
+    const swBtn = e.target.closest('[data-switch-user]');
+    if (swBtn) {
+      showSwitchUserModal(swBtn.dataset.switchUser);
+      return;
+    }
+    const togBtn = e.target.closest('[data-toggle-user]');
+    if (togBtn) {
+      const u = state.users.find(x => x.id === togBtn.dataset.toggleUser);
+      if (u) {
+        u.active = u.active === false ? true : false;
+        if (!u.active && state.activeUserId === u.id) {
+          const fallback = state.users.find(x => x.active !== false);
+          if (fallback) state.activeUserId = fallback.id;
+        }
+        saveState();
+        render();
+      }
+      return;
+    }
+    if (e.target.id === 'btn-reset-demo') {
+      state = getDefaultState();
+      saveState();
+      closeModal();
+      render();
+      showToast('Restored default kitchen data');
+      return;
+    }
+  });
+
+  document.addEventListener('input', (e) => {
+    if (e.target.matches('[data-audit-count]')) {
+      state.blindAuditDraft.counts[e.target.dataset.auditCount] = e.target.value;
+      saveState();
+    }
+    if (e.target.matches('[data-audit-reason]')) {
+      state.blindAuditDraft.reasons[e.target.dataset.auditReason] = e.target.value;
+      saveState();
+    }
+  });
+
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'active-user-select') {
+      state.activeUserId = e.target.value;
+      saveState();
+      render();
+      showToast(`Active user: ${getActiveUser().name}`);
+      return;
+    }
+    if (e.target.id === 'audit-zone-filter') {
+      state.blindAuditDraft.zone = e.target.value;
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.matches('[data-audit-unit]')) {
+      state.blindAuditDraft.units[e.target.dataset.auditUnit] = e.target.value;
+      saveState();
+      return;
+    }
+    if (e.target.matches('[data-chk-toggle]')) {
+      const item = (state.checklists || []).find(c => c.id === e.target.dataset.chkToggle);
+      if (item) {
+        const u = getActiveUser();
+        item.done = e.target.checked;
+        item.doneBy = item.done ? u.name : '';
+        item.doneAt = item.done ? nowStamp() : '';
+        if (item.done) {
+          if (!Array.isArray(state.checklistLogs)) state.checklistLogs = [];
+          state.checklistLogs.unshift({
+            id: uid('clg'),
+            timestamp: item.doneAt,
+            user: u.name,
+            freq: item.freq,
+            category: item.category,
+            title: item.title
+          });
+        }
+        saveState();
+        render();
+        if (item.done) showToast(`Logged: ${item.title} (${u.name})`);
+      }
+      return;
+    }
+    if (e.target.matches('[data-prep-check]')) {
+      const [prepId, invId] = e.target.dataset.prepCheck.split('_');
+      const pq = state.prepQueue.find(p => p.id === prepId);
+      if (pq) {
+        if (!pq.checkedItems) pq.checkedItems = {};
+        pq.checkedItems[invId] = e.target.checked;
+        saveState();
+        render();
+      }
+    }
+    if (e.target.id === 'input-restore-json' && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (parsed && Array.isArray(parsed.inventory)) {
+            state = parsed;
+            saveState();
+            closeModal();
+            render();
+            showToast('Backup restored successfully');
+          } else {
+            showToast('Invalid backup file format', 'error');
+          }
+        } catch (err) {
+          showToast('Could not parse JSON file', 'error');
+        }
+      };
+      reader.readAsText(e.target.files[0]);
+    }
+  });
+
+  document.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+
+    if (e.target.id === 'form-checkin') {
+      const item = state.inventory.find(i => i.id === fd.get('itemId'));
+      const rawQty = Number(fd.get('qty'));
+      const unit = fd.get('unit');
+      const grams = unit === 'kg' ? rawQty * 1000 : unit === 'lb' ? rawQty * 453.592 : unit === 'pack' ? rawQty * (item.packSizeGrams || 1000) : rawQty;
+      item.stockGrams += Math.round(grams);
+      item.lastUpdated = new Date().toISOString().slice(0, 10);
+      state.transactions.unshift({
+        id: uid('tx'),
+        timestamp: nowStamp(),
+        type: 'INCOMING',
+        itemId: item.id,
+        itemName: item.name,
+        grams: Math.round(grams),
+        note: (fd.get('note') || 'Delivery Check-In') + ` | Vendor: ${item.vendor}`,
+        staff: fd.get('staff')
+      });
+      saveState();
+      render();
+      showToast(`Checked in +${formatShortMass(grams)} of ${item.name}`);
+      return;
+    }
+
+    if (e.target.id === 'form-waste') {
+      const item = state.inventory.find(i => i.id === fd.get('itemId'));
+      const rawQty = Number(fd.get('qty'));
+      const unit = fd.get('unit');
+      const grams = Math.round(unit === 'kg' ? rawQty * 1000 : unit === 'lb' ? rawQty * 453.592 : rawQty);
+      item.stockGrams = Math.max(0, item.stockGrams - grams);
+      item.lastUpdated = new Date().toISOString().slice(0, 10);
+      state.transactions.unshift({
+        id: uid('tx'),
+        timestamp: nowStamp(),
+        type: 'WASTE',
+        itemId: item.id,
+        itemName: item.name,
+        grams: -grams,
+        note: `Reason: ${fd.get('reason')}`,
+        staff: fd.get('staff')
+      });
+      saveState();
+      render();
+      showToast(`Logged waste: -${formatShortMass(grams)} of ${item.name}`, 'warn');
+      return;
+    }
+
+    if (e.target.id === 'form-new-inv') {
+      const newItem = {
+        id: uid('inv'),
+        sku: fd.get('sku'),
+        name: fd.get('name'),
+        category: 'General',
+        zone: fd.get('zone'),
+        vendor: fd.get('vendor'),
+        stockGrams: Number(fd.get('stockGrams')),
+        parGrams: Number(fd.get('parGrams')),
+        unitLabel: 'g',
+        packSizeGrams: Number(fd.get('packSizeGrams')),
+        packLabel: fd.get('packLabel'),
+        lastUpdated: new Date().toISOString().slice(0, 10)
+      };
+      state.inventory.push(newItem);
+      saveState();
+      closeModal();
+      render();
+      showToast(`Added ${newItem.name} to Living Stock`);
+      return;
+    }
+
+    if (e.target.id === 'form-new-recipe') {
+      const ings = [];
+      [[fd.get('ing1'), Number(fd.get('g1'))], [fd.get('ing2'), Number(fd.get('g2'))], [fd.get('ing3'), Number(fd.get('g3'))]].forEach(([id, g]) => {
+        if (id && g > 0) ings.push({ itemId: id, grams: g });
+      });
+      const totalMin = Number(fd.get('totalMin')) || 60;
+      const newRec = {
+        id: uid('rec'),
+        name: fd.get('name'),
+        category: fd.get('category'),
+        basePortions: Number(fd.get('basePortions')) || 50,
+        prepMin: Math.round(totalMin * 0.4),
+        cookMin: Math.round(totalMin * 0.6),
+        isBakers: false,
+        instructions: fd.get('instructions'),
+        ingredients: ings
+      };
+      state.recipes.push(newRec);
+      state.selectedRecipeId = newRec.id;
+      saveState();
+      closeModal();
+      render();
+      showToast(`Saved recipe: ${newRec.name}`);
+      return;
+    }
+
+    if (e.target.id === 'form-haccp') {
+      const type = fd.get('type');
+      const tempF = Number(fd.get('tempF'));
+      let pass = true;
+      if (type.includes('≤41°F') && tempF > 41) pass = false;
+      if (type.includes('≤0°F') && tempF > 0) pass = false;
+      if (type.includes('≥165°F') && tempF < 165) pass = false;
+      if (type.includes('≥135°F') && tempF < 135) pass = false;
+      state.haccpLogs.unshift({
+        id: uid('hac'),
+        timestamp: nowStamp(),
+        type,
+        target: fd.get('target'),
+        tempF,
+        status: pass ? 'PASS' : 'FLAGGED',
+        corrective: fd.get('corrective') || (pass ? '—' : 'Action required'),
+        staff: fd.get('staff')
+      });
+      saveState();
+      render();
+      showToast(pass ? `HACCP Check Passed (${tempF}°F)` : `HACCP Check FLAGGED (${tempF}°F)`, pass ? 'ok' : 'error');
+      return;
+    }
+
+    if (e.target.id === 'form-served') {
+      const dateStr = fd.get('date');
+      const dObj = new Date(dateStr + 'T12:00:00');
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      state.serviceHistory.push({
+        id: uid('srv'),
+        date: dateStr,
+        dayName: dayNames[dObj.getDay()],
+        meal: fd.get('meal'),
+        planned: Number(fd.get('planned')),
+        served: Number(fd.get('served')),
+        notes: ''
+      });
+      saveState();
+      render();
+      showToast(`Logged ${fd.get('served')} people served — forecasts updated!`);
+      return;
+    }
+
+    if (e.target.id === 'form-unlock-user' || e.target.id === 'form-switch-user') {
+      const targetUser = state.users.find(u => u.id === fd.get('userId') && u.active !== false);
+      const pin = String(fd.get('pin') || '');
+      if (!targetUser || String(targetUser.pin || '1234') !== pin) {
+        const errEl = document.getElementById(e.target.id === 'form-unlock-user' ? 'unlock-error' : 'switch-error');
+        if (errEl) errEl.classList.remove('hidden');
+        return;
+      }
+      state.activeUserId = targetUser.id;
+      state.isLocked = false;
+      const allowed = getAllowedTabs(targetUser);
+      if (!allowed.includes(state.activeTab)) state.activeTab = allowed[0];
+      saveState();
+      closeModal();
+      render();
+      showToast(`Signed in as ${targetUser.name} (${normalizeRole(targetUser.role)})`);
+      return;
+    }
+
+    if (e.target.id === 'form-edit-pin') {
+      const u = state.users.find(x => x.id === fd.get('userId'));
+      if (u) {
+        u.role = fd.get('role');
+        u.pin = String(fd.get('pin'));
+        saveState();
+        closeModal();
+        render();
+        showToast(`Updated role & password for ${u.name}`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-add-checklist') {
+      const freq = fd.get('freq');
+      const task = {
+        id: uid('chk'),
+        freq,
+        category: fd.get('category'),
+        title: fd.get('title').trim(),
+        done: false,
+        doneBy: '',
+        doneAt: ''
+      };
+      if (!Array.isArray(state.checklists)) state.checklists = [];
+      state.checklists.push(task);
+      state.checklistFreq = freq;
+      saveState();
+      render();
+      showToast(`Added task to ${freq} checklist`);
+      return;
+    }
+
+    if (e.target.id === 'form-add-menu-item') {
+      const mp = {
+        id: uid('mp'),
+        date: fd.get('date'),
+        mealSlot: 'Lunch (11:30 AM)',
+        recipeId: fd.get('recipeId'),
+        portions: Number(fd.get('portions')) || 65,
+        status: 'PLANNED'
+      };
+      if (!Array.isArray(state.menuPlan)) state.menuPlan = [];
+      state.menuPlan.push(mp);
+      saveState();
+      render();
+      showToast('Added recipe to Menu Plan (Order Suggestions updated)');
+      return;
+    }
+
+    if (e.target.id === 'form-add-user') {
+      const newUser = {
+        id: uid('usr'),
+        name: fd.get('name').trim(),
+        role: fd.get('role'),
+        initials: fd.get('initials').trim().toUpperCase(),
+        pin: String(fd.get('pin') || '1234'),
+        active: true
+      };
+      state.users.push(newUser);
+      saveState();
+      render();
+      showToast(`Added ${newUser.name} (${newUser.role})`);
+    }
+  });
+
+  // Real-time cross-tab sync
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY && e.newValue) {
+      try {
+        state = JSON.parse(e.newValue);
+        render();
+        showToast('Synced real-time update from another tab');
+      } catch (err) {}
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.id === 'quick-scan-input' && e.key === 'Enter') {
+      e.preventDefault();
+      applyScannedCode(e.target.value);
+      e.target.value = '';
+    }
+  });
+
+  // Initial render + start Supabase real-time sync
+  function bootApp() {
+    render();
+    initSupabaseSync();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootApp);
+  } else {
+    bootApp();
+  }
+})();
+</script>
+</body>
+</html>
