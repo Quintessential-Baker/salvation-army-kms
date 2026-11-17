@@ -20,6 +20,10 @@
       .no-print { display: none !important; }
       body { background: #fff !important; }
       .print-only { display: block !important; }
+      body.printing-modal #app-main { display: none !important; }
+      body.printing-modal #modal-backdrop { position: static !important; background: #fff !important; padding: 0 !important; display: block !important; }
+      body.printing-modal #modal-box { box-shadow: none !important; max-width: 100% !important; max-height: none !important; overflow: visible !important; padding: 0 !important; }
+      body.printing-modal #modal-box > div:first-child { display: none !important; }
     }
   </style>
 </head>
@@ -73,9 +77,12 @@
   </header>
 
   <!-- Main Content -->
-  <main id="app-main" class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 flex-1">
+  <main id="app-main" class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 pb-24 md:pb-8 flex-1">
     <!-- Dynamic tab content rendered here -->
   </main>
+
+  <!-- Mobile / iPad Quick-Tap Bottom Dock -->
+  <div id="mobile-quick-dock" class="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t border-slate-200 z-30 px-2 py-1.5 flex justify-around items-center shadow-lg no-print"></div>
 
   <!-- Toast Container -->
   <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm no-print"></div>
@@ -88,6 +95,50 @@
         <button id="modal-close" class="text-slate-400 hover:text-slate-700 text-xl leading-none px-2">&times;</button>
       </div>
       <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Non-Skippable Force PIN Change Pop-Up -->
+  <div id="pin-change-backdrop" class="fixed inset-0 bg-slate-950/80 z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+      <div>
+        <span class="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-100 text-amber-800">Security Action Required</span>
+        <h3 class="text-base sm:text-lg font-bold text-slate-900 mt-1">Set Your Personal PIN / Password</h3>
+        <p id="pin-change-subtitle" class="text-xs text-slate-600 mt-0.5">Your account is using a temporary or reset PIN. Please choose a new personal PIN before continuing.</p>
+      </div>
+      <form id="form-force-pin-change" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">New Personal PIN / Password</label>
+          <input name="newPin" type="password" required minlength="4" autocomplete="off" placeholder="At least 4 characters" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Confirm New PIN / Password</label>
+          <input name="confirmPin" type="password" required minlength="4" autocomplete="off" placeholder="Re-enter new PIN" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
+        <div id="force-pin-error" class="text-xs font-semibold text-rose-700 hidden"></div>
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save Personal PIN &amp; Continue</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Non-Skippable First-Login Mandatory Training Pop-Up -->
+  <div id="onboarding-backdrop" class="fixed inset-0 bg-slate-950/80 z-50 hidden items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 border border-slate-200">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div>
+          <span id="onb-badge" class="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-red-100 text-red-800">Required Training</span>
+          <h3 id="onb-title" class="text-base sm:text-lg font-bold text-slate-900 mt-1">Welcome</h3>
+        </div>
+        <span id="onb-step-counter" class="text-xs font-semibold text-slate-500">1 / 1</span>
+      </div>
+      <div id="onb-body" class="text-sm text-slate-700 leading-relaxed whitespace-pre-line"></div>
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+        <span id="onb-user-lbl" class="text-xs text-slate-500"></span>
+        <div class="flex gap-2">
+          <button id="btn-onb-prev" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">&larr; Back</button>
+          <button id="btn-onb-next" class="px-4 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-semibold">Next &rarr;</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -104,6 +155,72 @@
   let suppressCloudPush = false;
   let lastSliceHashes = {};
   let tourState = { active: false, stepIndex: 0, completedTabs: {} };
+  let onboardingStepIdx = 0;
+
+  function getUserTrainingModules(user) {
+    const u = user || getActiveUser();
+    const role = normalizeRole(u.role);
+    const allForRole = (state.trainingModules || []).filter(m => m.role === 'ALL' || m.role === role);
+    if (!Array.isArray(u.completedTrainingIds)) {
+      if (u.onboardingCompleted) {
+        u.completedTrainingIds = allForRole.map(m => m.id);
+      } else {
+        u.completedTrainingIds = [];
+      }
+    }
+    return allForRole.filter(m => !u.completedTrainingIds.includes(m.id));
+  }
+
+  function renderForcePinChange() {
+    const pinBackdrop = document.getElementById('pin-change-backdrop');
+    if (!pinBackdrop) return false;
+    const user = getActiveUser();
+    if (state.isLocked || !user.mustChangePin) {
+      pinBackdrop.classList.add('hidden');
+      pinBackdrop.classList.remove('flex');
+      return false;
+    }
+    const sub = document.getElementById('pin-change-subtitle');
+    if (sub) sub.textContent = `Hi ${user.name}, your account is using a temporary or reset PIN. Please set your personal PIN before continuing.`;
+    pinBackdrop.classList.remove('hidden');
+    pinBackdrop.classList.add('flex');
+    return true;
+  }
+
+  function renderMandatoryOnboarding() {
+    const mustChange = renderForcePinChange();
+    const backdrop = document.getElementById('onboarding-backdrop');
+    if (!backdrop) return;
+    const user = getActiveUser();
+    const mods = getUserTrainingModules(user);
+    if (mustChange || state.isLocked || !mods.length) {
+      backdrop.classList.add('hidden');
+      backdrop.classList.remove('flex');
+      return;
+    }
+    if (onboardingStepIdx >= mods.length) onboardingStepIdx = mods.length - 1;
+    if (onboardingStepIdx < 0) onboardingStepIdx = 0;
+    const mod = mods[onboardingStepIdx];
+    const isLast = onboardingStepIdx === mods.length - 1;
+
+    document.getElementById('onb-badge').textContent = `Mandatory First-Login Training (${mod.role === 'ALL' ? 'All Roles' : mod.role})`;
+    document.getElementById('onb-title').textContent = mod.title;
+    document.getElementById('onb-step-counter').textContent = `Step ${onboardingStepIdx + 1} of ${mods.length}`;
+    document.getElementById('onb-body').textContent = mod.content;
+    document.getElementById('onb-user-lbl').textContent = `Signed in as: ${user.name} (${user.role})`;
+
+    const prevBtn = document.getElementById('btn-onb-prev');
+    const nextBtn = document.getElementById('btn-onb-next');
+    if (prevBtn) {
+      prevBtn.disabled = onboardingStepIdx === 0;
+      prevBtn.classList.toggle('opacity-40', onboardingStepIdx === 0);
+    }
+    if (nextBtn) {
+      nextBtn.textContent = isLast ? 'I Understand & Complete Training ✓' : 'Acknowledge & Next →';
+    }
+    backdrop.classList.remove('hidden');
+    backdrop.classList.add('flex');
+  }
 
   const TOUR_STEPS = [
     { tab: 'dashboard', title: '1. Kitchen Dashboard', desc: 'Your daily command center: see low-stock alerts, tomorrow\'s prep queue, next service patron forecast, HACCP status, and recent stock movements at a glance.', tryIt: 'Click any "View Full Order Sheet" or "Log Check-In" link to jump straight to work.' },
@@ -130,7 +247,7 @@
     const today = new Date().toISOString().slice(0, 10);
     return {
       activeTab: 'dashboard',
-      unitMode: 'grams', // 'grams' or 'us'
+      unitMode: 'volume', // 'volume' | 'grams' | 'us'
       forecastHorizon: 'days', // 'days' | 'weeks' | 'months' | 'years'
       inventory: [
         { id: 'inv-1', sku: 'DRY-101', name: 'All-Purpose Flour', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 25000, unitLabel: 'g', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
@@ -148,7 +265,9 @@
         { id: 'inv-13', sku: 'DAI-303', name: 'Shredded Mozzarella', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 4536, parGrams: 9072, unitLabel: 'g', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
         { id: 'inv-14', sku: 'PRO-401', name: 'Chicken Breast (Boneless)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 22680, unitLabel: 'g', packSizeGrams: 18144, packLabel: '40 lb case', lastUpdated: today },
         { id: 'inv-15', sku: 'PRO-402', name: 'Ground Beef (80/20)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 18144, unitLabel: 'g', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
-        { id: 'inv-16', sku: 'DRY-107', name: 'Active Dry Yeast', category: 'Baking', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 1814, parGrams: 1360, unitLabel: 'g', packSizeGrams: 454, packLabel: '1 lb brick', lastUpdated: today }
+        { id: 'inv-16', sku: 'FRZ-501', name: 'Frozen Breadsticks (144 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13000, parGrams: 13000, unitLabel: 'g', packSizeGrams: 6500, packLabel: 'case (144 ct)', lastUpdated: today },
+        { id: 'inv-17', sku: 'FRZ-502', name: 'Frozen Dinner Rolls (120 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 10800, parGrams: 10800, unitLabel: 'g', packSizeGrams: 5400, packLabel: 'case (120 ct)', lastUpdated: today },
+        { id: 'inv-18', sku: 'FRZ-503', name: 'Frozen Biscuits (108 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 12000, parGrams: 6000, unitLabel: 'g', packSizeGrams: 6000, packLabel: 'case (108 ct)', lastUpdated: today }
       ],
       recipes: [
         {
@@ -187,21 +306,16 @@
         },
         {
           id: 'rec-3',
-          name: 'Daily Community Sandwich Loaf (Batch)',
-          category: 'Fresh Bread',
+          name: 'Frozen Dinner Rolls / Biscuits (Bake-Off)',
+          category: 'Frozen Bread Side',
           basePortions: 50,
-          prepMin: 45,
-          cookMin: 35,
-          isBakers: true,
-          flourItemId: 'inv-1',
-          instructions: '1. Mix flour, yeast, salt, sugar, and warm milk/water to DDT 78°F. 2. Bulk ferment 60 min with 1 fold. 3. Divide, shape into loaf pans, proof until doubled. 4. Bake at 375°F to internal temp 195°F.',
+          prepMin: 5,
+          cookMin: 15,
+          isBakers: false,
+          instructions: '1. Pull frozen rolls or biscuits from Walk-In Freezer onto parchment-lined sheet pans (2 per patron if serving as main bread). 2. Bake at 375°F for 12–15 min until golden brown (≥135°F). 3. Hold warm in warmer or covered pan.',
           ingredients: [
-            { itemId: 'inv-1', grams: 4000 },
-            { itemId: 'inv-11', grams: 1200 },
-            { itemId: 'inv-12', grams: 320 },
-            { itemId: 'inv-3', grams: 240 },
-            { itemId: 'inv-4', grams: 80 },
-            { itemId: 'inv-16', grams: 60 }
+            { itemId: 'inv-17', grams: 2250 },
+            { itemId: 'inv-12', grams: 227 }
           ]
         },
         {
@@ -221,6 +335,137 @@
             { itemId: 'inv-9', grams: 1200 },
             { itemId: 'inv-12', grams: 250 },
             { itemId: 'inv-4', grams: 100 }
+          ]
+        },
+        {
+          id: 'rec-nov-16',
+          name: 'Chicken Sandwich, Chips & Potato Salad',
+          category: 'Main Entree',
+          basePortions: 50,
+          prepMin: 35,
+          cookMin: 25,
+          isBakers: false,
+          instructions: '1. Cook chicken breasts to ≥165°F; slice or shred for sandwiches. 2. Hold hot chicken at ≥135°F and keep potato salad chilled at ≤41°F. 3. Serve with portioned chips.',
+          ingredients: [
+            { itemId: 'inv-14', grams: 7500 },
+            { itemId: 'inv-7', grams: 800 },
+            { itemId: 'inv-9', grams: 600 },
+            { itemId: 'inv-4', grams: 75 }
+          ]
+        },
+        {
+          id: 'rec-nov-17',
+          name: 'Goulash & Bread Sticks (2)',
+          category: 'Main Entree',
+          basePortions: 50,
+          prepMin: 30,
+          cookMin: 40,
+          isBakers: false,
+          instructions: '1. Brown ground beef to ≥155°F with diced onions. 2. Simmer with crushed tomatoes and cooked pasta until ≥165°F. 3. Bake 2 bread sticks per patron; hold goulash at ≥135°F.',
+          ingredients: [
+            { itemId: 'inv-15', grams: 6000 },
+            { itemId: 'inv-5', grams: 4500 },
+            { itemId: 'inv-6', grams: 9000 },
+            { itemId: 'inv-7', grams: 1200 },
+            { itemId: 'inv-16', grams: 4500 },
+            { itemId: 'inv-4', grams: 90 }
+          ]
+        },
+        {
+          id: 'rec-nov-18',
+          name: 'Hot Dogs (2) & Baked Beans',
+          category: 'Main Entree',
+          basePortions: 50,
+          prepMin: 20,
+          cookMin: 30,
+          isBakers: false,
+          instructions: '1. Heat hot dogs to ≥165°F (2 per patron). 2. Simmer baked beans with diced onions to ≥165°F. 3. Hold both at ≥135°F during service.',
+          ingredients: [
+            { itemId: 'inv-7', grams: 900 },
+            { itemId: 'inv-3', grams: 400 },
+            { itemId: 'inv-4', grams: 50 }
+          ]
+        },
+        {
+          id: 'rec-nov-20',
+          name: 'Leftovers or Beef Stew over Noodles',
+          category: 'Main Entree',
+          basePortions: 50,
+          prepMin: 35,
+          cookMin: 60,
+          isBakers: false,
+          instructions: '1. Reheat approved leftovers to ≥165°F within 2 hours, or prepare Beef Stew (beef, carrots, celery, onions, tomatoes) over cooked noodles. 2. Hold at ≥135°F.',
+          ingredients: [
+            { itemId: 'inv-15', grams: 5500 },
+            { itemId: 'inv-5', grams: 3500 },
+            { itemId: 'inv-8', grams: 2500 },
+            { itemId: 'inv-9', grams: 1200 },
+            { itemId: 'inv-7', grams: 1200 },
+            { itemId: 'inv-6', grams: 6000 }
+          ]
+        },
+        {
+          id: 'rec-nov-23',
+          name: 'Tuna Salad Sandwich, Chips & Mac Salad',
+          category: 'Main Entree',
+          basePortions: 50,
+          prepMin: 40,
+          cookMin: 15,
+          isBakers: false,
+          instructions: '1. Prepare tuna salad with diced celery and onion; chill to ≤41°F. 2. Cook pasta for mac salad, cool rapidly to ≤41°F. 3. Assemble sandwiches and serve with chips.',
+          ingredients: [
+            { itemId: 'inv-5', grams: 3000 },
+            { itemId: 'inv-9', grams: 1000 },
+            { itemId: 'inv-7', grams: 600 },
+            { itemId: 'inv-4', grams: 60 }
+          ]
+        },
+        {
+          id: 'rec-nov-24',
+          name: 'Thanksgiving Dinner',
+          category: 'Holiday Feast',
+          basePortions: 75,
+          prepMin: 90,
+          cookMin: 120,
+          isBakers: false,
+          instructions: '1. Roast protein to ≥165°F; verify internal temp in thickest part. 2. Prepare vegetables, buttered rolls, and sides. 3. Hold all hot items at ≥135°F and cold items at ≤41°F.',
+          ingredients: [
+            { itemId: 'inv-14', grams: 12000 },
+            { itemId: 'inv-8', grams: 4500 },
+            { itemId: 'inv-9', grams: 2000 },
+            { itemId: 'inv-7', grams: 2000 },
+            { itemId: 'inv-12', grams: 1200 },
+            { itemId: 'inv-11', grams: 3000 },
+            { itemId: 'inv-17', grams: 3375 }
+          ]
+        },
+        {
+          id: 'rec-nov-25',
+          name: 'Leftovers Service',
+          category: 'Main Entree',
+          basePortions: 50,
+          prepMin: 20,
+          cookMin: 30,
+          isBakers: false,
+          instructions: '1. Inspect date-dot labels on Thanksgiving leftovers (must be ≤41°F). 2. Reheat all items to ≥165°F for 15 seconds. 3. Hold at ≥135°F.',
+          ingredients: []
+        },
+        {
+          id: 'rec-nov-30',
+          name: 'Spaghetti',
+          category: 'Main Entree',
+          basePortions: 50,
+          prepMin: 25,
+          cookMin: 35,
+          isBakers: false,
+          instructions: '1. Brown ground beef to ≥155°F with diced onions; simmer with crushed tomatoes to ≥165°F. 2. Boil pasta al dente. 3. Top with mozzarella as desired; hold at ≥135°F.',
+          ingredients: [
+            { itemId: 'inv-5', grams: 5000 },
+            { itemId: 'inv-15', grams: 5000 },
+            { itemId: 'inv-6', grams: 9000 },
+            { itemId: 'inv-7', grams: 1000 },
+            { itemId: 'inv-13', grams: 1500 },
+            { itemId: 'inv-4', grams: 80 }
           ]
         }
       ],
@@ -266,18 +511,40 @@
       selectedRecipeId: 'rec-1',
       recipeScalePortions: 65,
       users: [
-        { id: 'usr-1', name: 'William Clark', role: 'Management', title: 'Culinary Extern / Lead', initials: 'WC', pin: '1234', active: true },
-        { id: 'usr-2', name: 'Sabrina', role: 'Staff', title: 'Kitchen Staff', initials: 'SB', pin: '2222', active: true },
-        { id: 'usr-3', name: 'Volunteer Team', role: 'Volunteer', title: 'Prep Volunteer', initials: 'VT', pin: '0000', active: true },
-        { id: 'usr-4', name: 'Guest Observer', role: 'Other', title: 'Observer', initials: 'GO', pin: '9999', active: true }
+        { id: 'usr-1', name: 'William Clark', role: 'Management', title: 'Culinary Extern / Lead', initials: 'WC', pin: '1234', active: true, onboardingCompleted: true, completedTrainingIds: ['trn-1', 'trn-2', 'trn-3', 'trn-4'] },
+        { id: 'usr-2', name: 'Sabrina', role: 'Staff', title: 'Kitchen Staff', initials: 'SB', pin: '2222', active: true, onboardingCompleted: false },
+        { id: 'usr-3', name: 'Volunteer Team', role: 'Volunteer', title: 'Prep Volunteer', initials: 'VT', pin: '0000', active: true, onboardingCompleted: false },
+        { id: 'usr-4', name: 'Guest Observer', role: 'Other', title: 'Observer', initials: 'GO', pin: '9999', active: true, onboardingCompleted: false }
       ],
+      trainingModules: [
+        { id: 'trn-1', role: 'ALL', title: 'Welcome & Auto-Accountability', content: 'Welcome to The Salvation Army Community Meals Kitchen OS.\n\nEvery action you take—checking in deliveries, scanning waste, checking off prep or cleaning lists, logging temps, and doing blind counts—is automatically stamped with your name and time.' },
+        { id: 'trn-2', role: 'ALL', title: 'Food Safety & Time/Temp Standards', content: 'Always verify Cold Holding at 41°F or below, Freezer at 0°F or below, Cooking/Reheating to 165°F, and Steam Table Hot Holding at 135°F or above.\n\nLog every check in Time & Temp Logs before 11:30 AM service.' },
+        { id: 'trn-3', role: 'Volunteer', title: 'Fast Blind Count & Prep Lists', content: 'In Blind Audit, you never need a scale: tap + / - for full cases or bags and tap 1/4, 1/2, or 3/4 for any open container, then click Submit Blind Count.\n\nRecipes and Next-Day Prep lists are shown in Volume, Cans, and Packs.' },
+        { id: 'trn-4', role: 'ALL', title: 'Daily Checklists & Guided Tour', content: 'Check off Daily, Weekly, and Monthly tasks under the Checklists tab as you finish them.\n\nIf you ever need a refresher on any screen, click Guided Tour in the top header.' }
+      ],
+      trainingLogs: [],
       activeUserId: 'usr-1',
+      defaultNewUserPin: '0000',
+      autoLockMinutes: 5,
       isLocked: false,
       auditLogs: [],
       blindAuditDraft: { zone: 'ALL', revealed: false, packs: {}, partials: {}, counts: {}, units: {}, reasons: {}, submittedBy: '', submittedAt: '' },
+      purchaseOrders: [],
+      announcements: [
+        { id: 'ann-1', priority: 'urgent', title: 'Thanksgiving Holiday Closing (Nov 26–27)', body: 'Kitchen & office closed Thu Nov 26 & Fri Nov 27. Thanksgiving Dinner is Tue Nov 24 (75 portions).', author: 'William Clark', createdAt: '2026-11-16' },
+        { id: 'ann-2', priority: 'reminder', title: 'Weekly & Monthly Order Schedule', body: 'Marberger (dairy) and Produce can be ordered weekly. Dry Goods & Frozen items (Jordan Banana) are ordered monthly on the 3rd Friday.', author: 'William Clark', createdAt: '2026-11-16' }
+      ],
       menuPlan: [
-        { id: 'mp-1', date: new Date().toISOString().slice(0, 10), mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-1', portions: 65, status: 'PLANNED' },
-        { id: 'mp-2', date: new Date(Date.now() + 86400000).toISOString().slice(0, 10), mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-2', portions: 70, status: 'PLANNED' }
+        { id: 'mp-nov-16', date: '2026-11-16', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-16', customTitle: 'Chicken Sandwich, Chips, Potato Salad', portions: 65, status: 'PLANNED' },
+        { id: 'mp-nov-17', date: '2026-11-17', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-17', customTitle: 'Goulash, Bread Sticks (2)', portions: 65, status: 'PLANNED' },
+        { id: 'mp-nov-18', date: '2026-11-18', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-18', customTitle: 'Hot Dogs (2), Baked Beans', portions: 65, status: 'PLANNED' },
+        { id: 'mp-nov-20', date: '2026-11-20', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-20', customTitle: 'Leftovers or Beef Stew over noodles', portions: 65, status: 'PLANNED' },
+        { id: 'mp-nov-23', date: '2026-11-23', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-23', customTitle: 'Tuna Salad Sandwich & chips, Mac Salad', portions: 65, status: 'PLANNED' },
+        { id: 'mp-nov-24', date: '2026-11-24', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-24', customTitle: 'Thanksgiving Dinner', portions: 75, status: 'PLANNED' },
+        { id: 'mp-nov-25', date: '2026-11-25', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-25', customTitle: 'Leftovers', portions: 60, status: 'PLANNED' },
+        { id: 'mp-nov-26', date: '2026-11-26', mealSlot: 'Closed', recipeId: '', customTitle: 'Office Closed (Thanksgiving)', portions: 0, status: 'CLOSED' },
+        { id: 'mp-nov-27', date: '2026-11-27', mealSlot: 'Closed', recipeId: '', customTitle: 'Office Closed', portions: 0, status: 'CLOSED' },
+        { id: 'mp-nov-30', date: '2026-11-30', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-30', customTitle: 'Spaghetti', portions: 65, status: 'PLANNED' }
       ],
       checklistFreq: 'daily',
       checklists: [
@@ -313,11 +580,46 @@
           if (!parsed.activeUserId) parsed.activeUserId = parsed.users[0].id;
           if (!Array.isArray(parsed.auditLogs)) parsed.auditLogs = [];
           if (!parsed.blindAuditDraft) parsed.blindAuditDraft = def.blindAuditDraft;
-          if (!Array.isArray(parsed.menuPlan)) parsed.menuPlan = def.menuPlan;
+          if (!Array.isArray(parsed.menuPlan) || parsed.menuPlan.some(m => m.id === 'mp-1' || m.id === 'mp-2')) {
+            parsed.menuPlan = def.menuPlan;
+          }
+          if (Array.isArray(parsed.inventory) && parsed.inventory.some(i => i.id === 'inv-16' && i.name.includes('Yeast'))) {
+            parsed.inventory = parsed.inventory.filter(i => i.id !== 'inv-16');
+            def.inventory.filter(i => ['inv-16', 'inv-17', 'inv-18'].includes(i.id)).forEach(fi => {
+              if (!parsed.inventory.some(i => i.id === fi.id)) parsed.inventory.push(fi);
+            });
+          }
+          if (Array.isArray(parsed.recipes)) {
+            const idx3 = parsed.recipes.findIndex(r => r.id === 'rec-3' && r.name.includes('Sandwich Loaf'));
+            if (idx3 !== -1) parsed.recipes[idx3] = def.recipes.find(r => r.id === 'rec-3');
+            ['rec-nov-17', 'rec-nov-24'].forEach(rid => {
+              const rIdx = parsed.recipes.findIndex(r => r.id === rid);
+              const dRec = def.recipes.find(r => r.id === rid);
+              if (rIdx !== -1 && dRec) parsed.recipes[rIdx] = dRec;
+            });
+            def.recipes.forEach(dr => {
+              if (dr.id.startsWith('rec-nov-') && !parsed.recipes.some(r => r.id === dr.id)) {
+                parsed.recipes.push(dr);
+              }
+            });
+          }
+          if (!Array.isArray(parsed.purchaseOrders)) parsed.purchaseOrders = [];
+          if (!Array.isArray(parsed.announcements)) parsed.announcements = def.announcements;
+          else {
+            const oldA2 = parsed.announcements.find(a => a.id === 'ann-2' && a.title === 'Monthly Vendor Order Cutoff');
+            if (oldA2) {
+              oldA2.title = 'Weekly & Monthly Order Schedule';
+              oldA2.body = 'Marberger (dairy) and Produce can be ordered weekly. Dry Goods & Frozen items (Jordan Banana) are ordered monthly on the 3rd Friday.';
+            }
+          }
           if (!parsed.checklistFreq) parsed.checklistFreq = 'daily';
           if (!Array.isArray(parsed.checklists)) parsed.checklists = def.checklists;
           if (!Array.isArray(parsed.checklistLogs)) parsed.checklistLogs = [];
           if (!parsed.checklistCycleKeys) parsed.checklistCycleKeys = { daily: '', weekly: '', monthly: '' };
+          if (!Array.isArray(parsed.trainingModules)) parsed.trainingModules = def.trainingModules;
+          if (!Array.isArray(parsed.trainingLogs)) parsed.trainingLogs = [];
+          if (!parsed.defaultNewUserPin) parsed.defaultNewUserPin = '0000';
+          if (parsed.autoLockMinutes === undefined) parsed.autoLockMinutes = 5;
           return parsed;
         }
       }
@@ -365,17 +667,34 @@
       serviceHistory: state.serviceHistory,
       users: state.users,
       auditLogs: state.auditLogs,
+      purchaseOrders: state.purchaseOrders,
+      announcements: state.announcements,
       menuPlan: state.menuPlan,
       checklists: { checklists: state.checklists, checklistLogs: state.checklistLogs, checklistCycleKeys: state.checklistCycleKeys },
-      blindAuditDraft: state.blindAuditDraft
+      blindAuditDraft: state.blindAuditDraft,
+      training: { trainingModules: state.trainingModules, trainingLogs: state.trainingLogs, defaultNewUserPin: state.defaultNewUserPin, autoLockMinutes: state.autoLockMinutes }
     };
   }
 
   function applyCloudRow(id, data) {
-    if (id === 'checklists' && data && Array.isArray(data.checklists)) {
+    if (id === 'training' && data && Array.isArray(data.trainingModules)) {
+      state.trainingModules = data.trainingModules;
+      state.trainingLogs = Array.isArray(data.trainingLogs) ? data.trainingLogs : [];
+      if (data.defaultNewUserPin) state.defaultNewUserPin = data.defaultNewUserPin;
+      if (data.autoLockMinutes !== undefined) state.autoLockMinutes = Number(data.autoLockMinutes);
+    } else if (id === 'checklists' && data && Array.isArray(data.checklists)) {
       state.checklists = data.checklists;
       state.checklistLogs = Array.isArray(data.checklistLogs) ? data.checklistLogs : [];
       if (data.checklistCycleKeys) state.checklistCycleKeys = data.checklistCycleKeys;
+    } else if (id === 'menuPlan' && Array.isArray(data) && data.some(m => m.id === 'mp-1' || m.id === 'mp-2')) {
+      state.menuPlan = getDefaultState().menuPlan;
+    } else if (id === 'recipes' && Array.isArray(data)) {
+      const defRecs = getDefaultState().recipes;
+      const merged = data.slice();
+      defRecs.forEach(dr => {
+        if (dr.id.startsWith('rec-nov-') && !merged.some(r => r.id === dr.id)) merged.push(dr);
+      });
+      state.recipes = merged;
     } else if (id in state && data !== undefined) {
       state[id] = data;
     }
@@ -527,9 +846,18 @@
       .replace(/"/g, '&quot;');
   }
 
+  function formatVendorStock(item) {
+    const g = Number(item.stockGrams) || 0;
+    if (state.unitMode === 'volume' && item.packSizeGrams) {
+      const packs = g / item.packSizeGrams;
+      return `${packs.toFixed(1)} &times; ${escapeHtml(item.packLabel)}`;
+    }
+    return formatMass(g);
+  }
+
   function formatMass(grams) {
     const g = Number(grams) || 0;
-    if (state.unitMode === 'us') {
+    if (state.unitMode === 'us' || state.unitMode === 'volume') {
       const lbs = g / 453.592;
       if (lbs >= 1) return lbs.toFixed(2) + ' lb';
       const oz = g / 28.3495;
@@ -547,7 +875,87 @@
       const lbs = g / 453.592;
       return lbs >= 1 ? lbs.toFixed(1) + ' lb' : (g / 28.3495).toFixed(1) + ' oz';
     }
+    if (state.unitMode === 'volume') {
+      const lbs = g / 453.592;
+      return lbs >= 1 ? lbs.toFixed(1) + ' lb' : (g / 28.3495).toFixed(1) + ' oz';
+    }
     return Math.round(g).toLocaleString() + ' g';
+  }
+
+  const VOLUME_SPECS = {
+    'inv-1':  { gPerCup: 120, packUnit: '50 lb bag', gPerUnit: 22680 },
+    'inv-2':  { gPerCup: 90,  packUnit: '25 lb bag', gPerUnit: 11340 },
+    'inv-3':  { gPerCup: 200, packUnit: '25 lb bag', gPerUnit: 11340 },
+    'inv-4':  { gPerCup: 240, gPerTbsp: 15, gPerTsp: 5, packUnit: '3 lb box', gPerUnit: 1360 },
+    'inv-5':  { gPerCup: 100, packUnit: '1 lb box', gPerUnit: 454 },
+    'inv-6':  { gPerCup: 245, packUnit: '#10 can', gPerUnit: 3000 },
+    'inv-7':  { gPerCup: 160, packUnit: 'medium onion', gPerUnit: 150 },
+    'inv-8':  { gPerCup: 128, packUnit: '1 lb bag', gPerUnit: 454 },
+    'inv-9':  { gPerCup: 120, packUnit: 'bunch', gPerUnit: 600 },
+    'inv-10': { gPerCup: 55,  packUnit: 'head', gPerUnit: 350 },
+    'inv-11': { gPerCup: 244, isLiquid: true, packUnit: '1 gal jug', gPerUnit: 3785 },
+    'inv-12': { gPerCup: 227, packUnit: 'stick (1/4 lb)', gPerUnit: 113.5 },
+    'inv-13': { gPerCup: 112, packUnit: '5 lb bag', gPerUnit: 2268 },
+    'inv-14': { gPerCup: 140, packUnit: 'chicken breast (~6 oz)', gPerUnit: 170 },
+    'inv-15': { gPerCup: 225, packUnit: '1 lb pack', gPerUnit: 454 },
+    'inv-16': { gPerCup: 45, packUnit: 'breadstick', gPerUnit: 45 },
+    'inv-17': { gPerCup: 45, packUnit: 'dinner roll', gPerUnit: 45 },
+    'inv-18': { gPerCup: 55, packUnit: 'biscuit', gPerUnit: 55 }
+  };
+
+  function toNiceFraction(val) {
+    const whole = Math.floor(val);
+    const frac = val - whole;
+    const snaps = [[0, ''], [0.25, '1/4'], [0.333, '1/3'], [0.5, '1/2'], [0.667, '2/3'], [0.75, '3/4'], [1, '']];
+    let best = snaps[0];
+    let minDiff = 99;
+    snaps.forEach(s => {
+      const d = Math.abs(frac - s[0]);
+      if (d < minDiff) { minDiff = d; best = s; }
+    });
+    if (best[0] === 1) return String(whole + 1);
+    if (!best[1]) return whole === 0 && val > 0 ? val.toFixed(1) : String(whole);
+    return whole > 0 ? `${whole} ${best[1]}` : best[1];
+  }
+
+  function formatKitchenVolume(item, grams) {
+    const g = Number(grams) || 0;
+    if (state.unitMode !== 'volume') return formatMass(g);
+    const spec = item ? VOLUME_SPECS[item.id] : null;
+    if (!spec) {
+      // Fallback: packs + cups estimate
+      const packs = item && item.packSizeGrams ? (g / item.packSizeGrams) : 0;
+      const cups = g / 150;
+      if (packs >= 0.25) return `${toNiceFraction(packs)} × ${item.packLabel} (~${toNiceFraction(cups)} cups)`;
+      return `${toNiceFraction(cups)} cups`;
+    }
+    // Small spoon measures for salt/yeast/spices
+    if (spec.gPerTbsp && g < spec.gPerCup * 0.5) {
+      const tbsp = g / spec.gPerTbsp;
+      if (tbsp >= 1) return `${toNiceFraction(tbsp)} tbsp`;
+      return `${toNiceFraction(g / (spec.gPerTsp || spec.gPerTbsp / 3))} tsp`;
+    }
+    // Liquid gallons / quarts / cups
+    if (spec.isLiquid) {
+      const cups = g / spec.gPerCup;
+      if (cups >= 16) {
+        const gals = cups / 16;
+        return `${toNiceFraction(gals)} gal (${toNiceFraction(cups)} cups)`;
+      }
+      if (cups >= 4) {
+        const qts = cups / 4;
+        return `${toNiceFraction(qts)} qt (${toNiceFraction(cups)} cups)`;
+      }
+      return `${toNiceFraction(cups)} cups`;
+    }
+    // Pack/Can + Volume
+    const packCount = g / spec.gPerUnit;
+    const cups = g / spec.gPerCup;
+    if (packCount >= 0.5) {
+      const plural = packCount > 1.2 && !spec.packUnit.endsWith('s') ? 's' : '';
+      return `${toNiceFraction(packCount)} ${spec.packUnit}${plural} (${toNiceFraction(cups)} cups)`;
+    }
+    return `${toNiceFraction(cups)} cups`;
   }
 
   function showToast(message, type) {
@@ -576,6 +984,7 @@
   }
 
   function closeModal() {
+    document.body.classList.remove('printing-modal');
     const backdrop = document.getElementById('modal-backdrop');
     backdrop.classList.add('hidden');
     backdrop.classList.remove('flex');
@@ -614,7 +1023,7 @@
   function getOrderSuggestions() {
     const prepDemand = getTomorrowPrepDemandByItem();
     const list = [];
-    state.inventory.forEach(item => {
+    state.inventory.filter(i => !i.discontinued).forEach(item => {
       const reserved = prepDemand[item.id] || 0;
       const projectedStock = item.stockGrams - reserved;
       if (projectedStock < item.parGrams) {
@@ -734,6 +1143,26 @@
     if (btnWaste) btnWaste.classList.toggle('hidden', !allowed.includes('transactions'));
     if (btnBackup) btnBackup.classList.toggle('hidden', user.role !== 'Management');
 
+    const lowCount = getOrderSuggestions().length;
+    const pendingPoCount = (state.purchaseOrders || []).filter(p => p.status === 'PENDING_APPROVAL').length;
+    const dailyLeft = (state.checklists || []).filter(c => c.freq === 'daily' && !c.done).length;
+
+    const baseLabels = {
+      dashboard: 'Dashboard',
+      inventory: 'Living Stock',
+      transactions: 'Check-In & Waste',
+      orders: 'Orders & POs',
+      recipes: 'Recipes (50–80)',
+      menu: 'Menu Planner',
+      prep: 'Next-Day Prep',
+      checklists: 'Checklists',
+      audit: 'Blind Audit',
+      haccp: 'Time & Temp Logs',
+      forecasting: 'Served & Forecasting',
+      users: 'Users & Activity',
+      help: 'Help / Guide'
+    };
+
     document.querySelectorAll('.nav-tab').forEach(btn => {
       const tab = btn.dataset.tab;
       const isAllowed = allowed.includes(tab);
@@ -741,9 +1170,35 @@
       if (!isAllowed) return;
       const active = tab === state.activeTab;
       btn.className = active
-        ? 'nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold bg-red-700 text-white transition'
-        : 'nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition';
+        ? 'nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold bg-red-700 text-white transition shrink-0'
+        : 'nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition shrink-0';
+      if (baseLabels[tab]) {
+        let badge = '';
+        if (tab === 'orders' && (pendingPoCount > 0 || lowCount > 0)) {
+          const n = pendingPoCount || lowCount;
+          badge = ` <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${active ? 'bg-white text-red-700' : 'bg-amber-100 text-amber-800'}">${n}</span>`;
+        } else if (tab === 'checklists' && dailyLeft > 0) {
+          badge = ` <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${active ? 'bg-white text-red-700' : 'bg-red-100 text-red-700'}">${dailyLeft}</span>`;
+        }
+        btn.innerHTML = baseLabels[tab] + badge;
+      }
     });
+
+    const dock = document.getElementById('mobile-quick-dock');
+    if (dock) {
+      const dockItems = [
+        ['dashboard', 'Home'],
+        ['transactions', 'Check-In'],
+        ['prep', 'Prep'],
+        ['checklists', 'Tasks'],
+        ['audit', 'Count'],
+        ['menu', 'Menu']
+      ].filter(([t]) => allowed.includes(t)).slice(0, 5);
+      dock.innerHTML = dockItems.map(([t, lbl]) => {
+        const active = state.activeTab === t;
+        return `<button data-goto="${t}" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${active ? 'bg-red-700 text-white' : 'text-slate-600 hover:bg-slate-100'}">${lbl}</button>`;
+      }).join('');
+    }
   }
 
   function render() {
@@ -836,6 +1291,7 @@
         main.prepend(banner);
       }
     }
+    renderMandatoryOnboarding();
   }
 
   // 1. DASHBOARD
@@ -845,30 +1301,151 @@
     const forecasts = computeForecasts();
     const nextDayPred = forecasts.days[0];
     const flaggedHaccp = state.haccpLogs.filter(h => h.status === 'FLAGGED').length;
+    const allowed = getAllowedTabs(getActiveUser());
+
+    const todayDate = new Date();
+    const todayStr = todayDate.toISOString().slice(0, 10);
+    const weekEnd = new Date(todayDate);
+    weekEnd.setDate(todayDate.getDate() + 7);
+    const weekEndStr = weekEnd.toISOString().slice(0, 10);
+    const upcomingWeek = (state.menuPlan || [])
+      .filter(mp => mp.date >= todayStr && mp.date <= weekEndStr)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const kpiCard = (tab, label, val, sub, valCls) => {
+      const canGo = allowed.includes(tab);
+      return `
+        <button type="button" ${canGo ? `data-goto="${tab}"` : 'disabled'} class="text-left w-full bg-white rounded-xl border border-slate-200 p-4 shadow-sm transition ${canGo ? 'hover:border-red-400 hover:shadow-md cursor-pointer group' : 'opacity-75 cursor-default'}">
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">${label}</div>
+            ${canGo ? '<span class="text-xs font-semibold text-red-700 opacity-0 group-hover:opacity-100 transition">&rarr;</span>' : ''}
+          </div>
+          <div class="mt-1 text-2xl font-bold ${valCls || 'text-slate-900'}">${val}</div>
+          <div class="mt-1 text-xs text-slate-600">${sub}</div>
+        </button>
+      `;
+    };
+
+    const dailyRemaining = (state.checklists || []).filter(c => c.freq === 'daily' && !c.done).length;
+    const quickActions = [
+      allowed.includes('transactions') ? `<button data-goto="transactions" class="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition">+ Check In / PO</button>` : '',
+      allowed.includes('transactions') ? `<button data-goto="transactions" class="px-3.5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition">- Scan Waste</button>` : '',
+      allowed.includes('checklists') ? `<button data-goto="checklists" class="px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs sm:text-sm font-semibold shadow-sm transition">Daily Checklists (${dailyRemaining} left)</button>` : '',
+      allowed.includes('audit') ? `<button data-goto="audit" class="px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs sm:text-sm font-semibold shadow-sm transition">Start Blind Count</button>` : '',
+      allowed.includes('haccp') ? `<button data-goto="haccp" class="px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs sm:text-sm font-semibold shadow-sm transition">Log Temp Check</button>` : '',
+      allowed.includes('menu') ? `<button data-goto="menu" class="px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs sm:text-sm font-semibold shadow-sm transition">Menu &amp; Print</button>` : ''
+    ].filter(Boolean).join('');
 
     main.innerHTML = `
       <div class="space-y-5">
+        <!-- Today's Quick Actions -->
+        <div class="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 shadow-sm">
+          <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">Quick Actions</div>
+          <div class="flex flex-wrap gap-2">${quickActions}</div>
+        </div>
+
+        <!-- Announcements & Reminders (Color-Coded Urgency + Scheduled Live-Posting) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-bold text-slate-900">Announcements &amp; Reminders</h2>
+            ${['Management', 'Staff'].includes(getActiveUser().role) ? '<button id="btn-new-announcement" class="px-2.5 py-1 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">+ Post Announcement</button>' : ''}
+          </div>
+          <div class="space-y-2">
+            ${(state.purchaseOrders || []).filter(p => p.status === 'APPROVED_ORDERED').map(po => `
+              <div class="p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-xs flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span class="font-bold text-blue-900">Expected Delivery (${escapeHtml(po.poNumber)}):</span>
+                  <span class="text-blue-800">${escapeHtml(po.vendor)} arriving <strong>${escapeHtml(po.expectedArrival || 'TBD')}</strong> (${po.lines.filter(l => l.approvedPacks > 0).length} item(s) ordered)</span>
+                </div>
+                ${allowed.includes('transactions') ? '<button data-goto="transactions" class="font-semibold text-blue-900 underline">Check In on Arrival</button>' : ''}
+              </div>
+            `).join('')}
+            ${(() => {
+              const nowMs = Date.now();
+              const canEditAnn = ['Management', 'Staff'].includes(getActiveUser().role);
+              const allAnns = (state.announcements || []).filter(a => {
+                if (!a.alertAt) return true;
+                const goLiveMs = new Date(a.alertAt).getTime();
+                return isNaN(goLiveMs) || goLiveMs <= nowMs || canEditAnn;
+              });
+              if (!allAnns.length) return '<p class="text-xs text-slate-500">No announcements posted.</p>';
+              return allAnns.map(a => {
+                const goLiveMs = a.alertAt ? new Date(a.alertAt).getTime() : 0;
+                const isScheduled = !!(a.alertAt && !isNaN(goLiveMs) && goLiveMs > nowMs);
+                const cls = a.priority === 'urgent'
+                  ? 'bg-rose-50 border-rose-400 text-rose-950'
+                  : a.priority === 'reminder'
+                    ? 'bg-amber-50 border-amber-300 text-amber-950'
+                    : 'bg-sky-50 border-sky-300 text-sky-950';
+                const badgeCls = a.priority === 'urgent'
+                  ? 'bg-rose-700 text-white'
+                  : a.priority === 'reminder'
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-sky-700 text-white';
+                const tag = a.priority === 'urgent' ? 'Critical / Alert' : a.priority === 'reminder' ? 'Reminder' : 'Info';
+                return `
+                  <div class="p-3 rounded-lg border ${cls} ${isScheduled ? 'opacity-75 border-dashed' : ''} text-xs flex items-start justify-between gap-2">
+                    <div>
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="font-bold uppercase text-[10px] px-1.5 py-0.5 rounded ${badgeCls} inline-flex items-center gap-1">
+                          ${a.priority === 'urgent' && !isScheduled ? '<span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>' : ''}${tag}
+                        </span>
+                        ${isScheduled ? `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-white">Scheduled: ${escapeHtml(a.alertAt.replace('T', ' '))}</span>` : ''}
+                        <strong class="text-sm">${escapeHtml(a.title)}</strong>
+                      </div>
+                      <p class="mt-1 leading-relaxed">${escapeHtml(a.body)}</p>
+                      <div class="text-[11px] opacity-75 mt-1">Posted by ${escapeHtml(a.author)} &bull; ${escapeHtml(a.createdAt)}</div>
+                    </div>
+                    ${canEditAnn ? `
+                      <div class="flex items-center gap-2 shrink-0">
+                        <button data-edit-announcement="${a.id}" class="text-xs font-semibold underline hover:opacity-80">Edit</button>
+                        <button data-del-announcement="${a.id}" class="text-xs font-bold text-rose-700 hover:underline">Delete</button>
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('');
+            })()}
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Tracked Stock Items</div>
-            <div class="mt-1 text-2xl font-bold text-slate-900">${state.inventory.length}</div>
-            <div class="mt-1 text-xs text-slate-600">${orders.length} items below par (${criticalCount} critical)</div>
+          ${kpiCard('inventory', 'Tracked Stock Items', state.inventory.length, `${orders.length} items below par (${criticalCount} critical)`)}
+          ${kpiCard('prep', "Tomorrow's Prep Queue", `${state.prepQueue.length} Recipes`, `${state.prepQueue.filter(p => !p.deducted).length} pending stock deduction`)}
+          ${kpiCard('forecasting', 'Next Service Forecast', `${nextDayPred ? nextDayPred.predicted : 65} Patrons`, `Rec. batch: ${nextDayPred ? nextDayPred.recommendedPrep : 70} portions (${nextDayPred ? nextDayPred.label : ''})`, 'text-red-700')}
+          ${kpiCard('haccp', 'HACCP Time &amp; Temp', flaggedHaccp ? flaggedHaccp + ' Flagged' : 'All Passing', `${state.haccpLogs.length} total compliance checks`, flaggedHaccp ? 'text-rose-700' : 'text-emerald-700')}
+        </div>
+
+        <!-- Upcoming Week Menu Section -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900">Upcoming Week Menu (Next 7 Days)</h2>
+              <p class="text-xs text-slate-500">Scheduled lunch service (11:30 AM – 12:30 PM)</p>
+            </div>
+            ${allowed.includes('menu') ? '<button data-goto="menu" class="text-xs font-semibold text-red-700 hover:underline">Open Menu Planner &rarr;</button>' : ''}
           </div>
-          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Tomorrow's Prep Queue</div>
-            <div class="mt-1 text-2xl font-bold text-slate-900">${state.prepQueue.length} Recipes</div>
-            <div class="mt-1 text-xs text-slate-600">${state.prepQueue.filter(p => !p.deducted).length} pending stock deduction</div>
-          </div>
-          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Next Service Forecast</div>
-            <div class="mt-1 text-2xl font-bold text-red-700">${nextDayPred ? nextDayPred.predicted : 65} Patrons</div>
-            <div class="mt-1 text-xs text-slate-600">Rec. batch: ${nextDayPred ? nextDayPred.recommendedPrep : 70} portions (${nextDayPred ? nextDayPred.label : ''})</div>
-          </div>
-          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">HACCP Time &amp; Temp</div>
-            <div class="mt-1 text-2xl font-bold ${flaggedHaccp ? 'text-rose-700' : 'text-emerald-700'}">${flaggedHaccp ? flaggedHaccp + ' Flagged' : 'All Passing'}</div>
-            <div class="mt-1 text-xs text-slate-600">${state.haccpLogs.length} total compliance checks</div>
-          </div>
+          ${upcomingWeek.length === 0
+            ? '<p class="text-sm text-slate-500">No meals scheduled for the next 7 days. Open Menu Planner to schedule recipes.</p>'
+            : `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                ${upcomingWeek.map(mp => {
+                  const d = new Date(mp.date + 'T12:00:00');
+                  const rec = state.recipes.find(r => r.id === mp.recipeId);
+                  const isToday = mp.date === todayStr;
+                  return `
+                    <button type="button" ${allowed.includes('menu') ? 'data-goto="menu"' : ''} class="text-left p-3 rounded-xl border ${isToday ? 'border-red-300 bg-red-50/50' : 'border-slate-200 bg-slate-50'} hover:border-red-400 transition">
+                      <div class="flex items-center justify-between gap-1 text-xs">
+                        <span class="font-bold ${isToday ? 'text-red-700' : 'text-slate-600'}">${dayNames[d.getDay()]} &bull; ${escapeHtml(mp.date.slice(5))}${isToday ? ' (Today)' : ''}</span>
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${mp.status === 'CLOSED' ? 'bg-slate-200 text-slate-700' : mp.status === 'DEDUCTED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${mp.status === 'CLOSED' ? 'Closed' : mp.status === 'DEDUCTED' ? 'Deducted' : 'Planned'}</span>
+                      </div>
+                      <div class="font-semibold text-sm text-slate-900 mt-1 line-clamp-2">${escapeHtml(mp.customTitle || (rec ? rec.name : 'Scheduled Meal'))}</div>
+                      <div class="text-xs text-slate-500 mt-1">${mp.status === 'CLOSED' ? 'No Meal Service' : mp.portions + ' portions'}</div>
+                    </button>
+                  `;
+                }).join('')}
+              </div>`
+          }
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -876,7 +1453,7 @@
           <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
             <div class="flex items-center justify-between mb-3">
               <h2 class="text-sm font-bold text-slate-900">Priority Reorder Suggestions</h2>
-              <button data-goto="orders" class="text-xs font-semibold text-red-700 hover:underline">View Full Order Sheet &rarr;</button>
+              <button data-goto="orders" class="text-xs font-semibold text-red-700 hover:underline">View Order &amp; PO Sheet &rarr;</button>
             </div>
             ${orders.length === 0
               ? '<p class="text-sm text-emerald-700 bg-emerald-50 rounded-lg p-3">All stock levels are at or above par.</p>'
@@ -921,12 +1498,16 @@
   function renderInventory(main) {
     const searchVal = (document.getElementById('inv-search')?.value || '').toLowerCase();
     const zoneVal = document.getElementById('inv-zone')?.value || 'ALL';
+    const showDisc = document.getElementById('inv-show-disc')?.checked || false;
 
     const filtered = state.inventory.filter(i => {
+      if (!showDisc && i.discontinued) return false;
       const matchText = !searchVal || i.name.toLowerCase().includes(searchVal) || i.sku.toLowerCase().includes(searchVal) || i.vendor.toLowerCase().includes(searchVal);
       const matchZone = zoneVal === 'ALL' || i.zone === zoneVal;
       return matchText && matchZone;
     });
+
+    const canManage = ['Management', 'Staff'].includes(getActiveUser().role);
 
     main.innerHTML = `
       <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
@@ -937,14 +1518,15 @@
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <button id="btn-toggle-units" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium bg-slate-50 hover:bg-slate-100">
-              Units: <strong>${state.unitMode === 'grams' ? 'Metric (g / kg)' : 'US (lb / oz)'}</strong>
+              Units: <strong>${state.unitMode === 'volume' ? 'Volume &amp; Packs' : state.unitMode === 'us' ? 'US (lb / oz)' : 'Metric (g / kg)'}</strong>
             </button>
             <button id="btn-print-qr-labels" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-medium">Print QR Labels</button>
-            <button id="btn-add-inv-item" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-medium">+ New Inventory Item</button>
+            ${canManage ? '<button id="btn-bulk-par" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold">Set Par Levels</button>' : ''}
+            ${canManage ? '<button id="btn-add-inv-item" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-medium">+ New Item</button>' : ''}
           </div>
         </div>
 
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-3 items-center">
           <input id="inv-search" type="text" value="${escapeHtml(searchVal)}" placeholder="Search SKU, item name, or vendor..." class="flex-1 min-w-[200px] px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
           <select id="inv-zone" class="px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
             <option value="ALL" ${zoneVal === 'ALL' ? 'selected' : ''}>All Storage Zones</option>
@@ -952,6 +1534,10 @@
             <option value="Walk-In Cooler" ${zoneVal === 'Walk-In Cooler' ? 'selected' : ''}>Walk-In Cooler</option>
             <option value="Walk-In Freezer" ${zoneVal === 'Walk-In Freezer' ? 'selected' : ''}>Walk-In Freezer</option>
           </select>
+          <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+            <input id="inv-show-disc" type="checkbox" ${showDisc ? 'checked' : ''} class="accent-red-700 rounded" />
+            <span>Show Discontinued</span>
+          </label>
         </div>
 
         <div class="overflow-x-auto">
@@ -965,24 +1551,36 @@
                 <th class="py-2.5 pr-3">Running Stock</th>
                 <th class="py-2.5 pr-3">Par Level</th>
                 <th class="py-2.5 pr-3">Status</th>
-                <th class="py-2.5 text-right">Quick Adjust</th>
+                <th class="py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
               ${filtered.map(item => {
-                const st = getStockStatus(item);
+                const st = item.discontinued
+                  ? { label: 'Discontinued', cls: 'bg-slate-200 text-slate-700 border-slate-300' }
+                  : getStockStatus(item);
+                const parDisplay = (state.unitMode === 'volume' && item.packSizeGrams)
+                  ? `${(item.parGrams / item.packSizeGrams).toFixed(1)} &times; ${escapeHtml(item.packLabel)}`
+                  : formatShortMass(item.parGrams);
                 return `
-                  <tr class="hover:bg-slate-50">
+                  <tr class="hover:bg-slate-50 ${item.discontinued ? 'opacity-60' : ''}">
                     <td class="py-2.5 pr-3 font-mono text-xs text-slate-500">${escapeHtml(item.sku)}</td>
                     <td class="py-2.5 pr-3 font-medium text-slate-900">${escapeHtml(item.name)}</td>
                     <td class="py-2.5 pr-3 text-xs text-slate-600">${escapeHtml(item.zone)}</td>
                     <td class="py-2.5 pr-3 text-xs text-slate-600">${escapeHtml(item.vendor)}</td>
-                    <td class="py-2.5 pr-3 font-semibold text-slate-900">${formatMass(item.stockGrams)}</td>
-                    <td class="py-2.5 pr-3 text-slate-600">${formatShortMass(item.parGrams)}</td>
+                    <td class="py-2.5 pr-3 font-semibold text-slate-900">${formatVendorStock(item)}</td>
+                    <td class="py-2.5 pr-3 text-slate-600">${parDisplay}</td>
                     <td class="py-2.5 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium border ${st.cls}">${st.label}</span></td>
                     <td class="py-2.5 text-right space-x-1 whitespace-nowrap">
-                      <button data-adj="${item.id}" data-delta="1000" class="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold">+1kg</button>
-                      <button data-adj="${item.id}" data-delta="-500" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">-500g</button>
+                      ${!item.discontinued ? `
+                        <button data-adj="${item.id}" data-delta="${item.packSizeGrams || 1000}" class="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold">+1 pk</button>
+                        <button data-adj="${item.id}" data-delta="-${Math.round((item.packSizeGrams || 1000) / 2)}" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">-1/2</button>
+                      ` : ''}
+                      ${canManage ? `
+                        <button data-edit-inv="${item.id}" class="px-2 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Edit</button>
+                        <button data-toggle-disc="${item.id}" class="px-2 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">${item.discontinued ? 'Reactivate' : 'Discontinue'}</button>
+                        <button data-delete-inv="${item.id}" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Delete</button>
+                      ` : ''}
                     </td>
                   </tr>
                 `;
@@ -995,11 +1593,14 @@
 
     document.getElementById('inv-search').addEventListener('input', () => renderInventory(main));
     document.getElementById('inv-zone').addEventListener('change', () => renderInventory(main));
+    document.getElementById('inv-show-disc').addEventListener('change', () => renderInventory(main));
   }
 
   // 3. CHECK-IN & WASTE SCAN-OUT
   function renderTransactions(main) {
-    const itemOptions = state.inventory.map(i => `<option value="${i.id}">${escapeHtml(i.sku)} — ${escapeHtml(i.name)} (${formatShortMass(i.stockGrams)})</option>`).join('');
+    const itemOptions = state.inventory.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${escapeHtml(i.sku)} — ${escapeHtml(i.name)} [${escapeHtml(i.packLabel)} &bull; ${escapeHtml(i.vendor)}]</option>`).join('');
+    const firstInv = state.inventory[0];
+    const firstPackLbl = firstInv ? `${firstInv.packLabel} (${firstInv.vendor})` : 'Vendor Case / Pack';
     main.innerHTML = `
       <div class="space-y-5">
         <!-- Fast Scan Terminal (Camera / USB-Bluetooth Barcode & RFID / NFC) -->
@@ -1027,6 +1628,60 @@
             <p id="cam-status" class="text-xs text-center text-slate-500 mt-1">Point camera at a QR label or barcode...</p>
           </div>
         </div>
+        <!-- Expected PO Deliveries (Reconcile & Check In) -->
+        <div class="bg-white rounded-xl border border-blue-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold text-blue-900">Expected PO Deliveries (Reconcile &amp; Check In)</h2>
+              <p class="text-xs text-slate-500">Verify actual packs received against approved Purchase Orders before adding to Living Stock (adjust if short or backordered).</p>
+            </div>
+            <button type="button" data-goto="orders" class="text-xs font-semibold text-red-700 hover:underline">Manage POs &rarr;</button>
+          </div>
+          ${(() => {
+            const expectedPos = (state.purchaseOrders || []).filter(p => p.status === 'APPROVED_ORDERED');
+            if (!expectedPos.length) {
+              return '<p class="text-xs text-slate-500">No approved Purchase Orders awaiting delivery right now.</p>';
+            }
+            return expectedPos.map(po => `
+              <form class="form-reconcile-po border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50 space-y-3" data-po-id="${escapeHtml(po.id)}">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span class="font-mono text-xs font-bold text-blue-800">${escapeHtml(po.poNumber)}</span>
+                    <span class="text-sm font-bold text-slate-900 ml-1.5">${escapeHtml(po.vendor)}</span>
+                    <span class="text-xs text-slate-500 ml-2">ETA: <strong>${escapeHtml(po.expectedArrival || 'TBD')}</strong></span>
+                  </div>
+                  <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Reconcile &amp; Check In PO</button>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr class="border-b border-slate-200 text-slate-500 uppercase">
+                        <th class="py-1.5 pr-3">Item</th>
+                        <th class="py-1.5 pr-3">Approved / Ordered</th>
+                        <th class="py-1.5">Actually Received</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200/70">
+                      ${po.lines.filter(l => l.approvedPacks > 0).map(ln => `
+                        <tr>
+                          <td class="py-1.5 pr-3 font-medium text-slate-900">${escapeHtml(ln.itemName)}</td>
+                          <td class="py-1.5 pr-3">${ln.approvedPacks} &times; ${escapeHtml(ln.packLabel)}</td>
+                          <td class="py-1.5">
+                            <div class="flex items-center gap-1.5">
+                              <input type="number" name="rec_${escapeHtml(ln.itemId)}" min="0" step="0.5" value="${ln.approvedPacks}" class="w-16 px-2 py-1 rounded border border-slate-300 font-bold text-slate-900 bg-white" />
+                              <span class="text-slate-600">&times; ${escapeHtml(ln.packLabel)}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </form>
+            `).join('');
+          })()}
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <!-- Check-In New Goods -->
           <form id="form-checkin" class="bg-white rounded-xl border border-emerald-200 p-4 sm:p-5 shadow-sm space-y-3">
@@ -1038,16 +1693,16 @@
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-slate-700 mb-1">Quantity</label>
-                <input name="qty" type="number" step="0.01" min="0.01" required placeholder="e.g. 5000" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                <label class="block text-xs font-medium text-slate-700 mb-1">Quantity Received</label>
+                <input name="qty" type="number" step="0.25" min="0.01" value="1" required placeholder="e.g. 1" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-700 mb-1">Unit</label>
-                <select name="unit" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
-                  <option value="g">Grams (g)</option>
-                  <option value="kg">Kilograms (kg)</option>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Vendor Pack / Unit</label>
+                <select id="checkin-unit-select" name="unit" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                  <option id="checkin-pack-option" value="pack" selected>${escapeHtml(firstPackLbl)}</option>
                   <option value="lb">Pounds (lb)</option>
-                  <option value="pack">Vendor Case / Pack</option>
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="g">Grams (g)</option>
                 </select>
               </div>
             </div>
@@ -1142,67 +1797,175 @@
     `;
   }
 
-  // 4. ORDER SUGGESTIONS
+  // 4. ORDER SUGGESTIONS & PO APPROVAL WORKFLOW
   function renderOrders(main) {
-    const orders = getOrderSuggestions();
+    const allOrders = getOrderSuggestions();
+    const cadenceFilter = state.orderCadenceFilter || 'ALL';
+    const isWeeklyItem = (item) => item.vendor.toLowerCase().includes('marberger') || item.category === 'Produce';
+    const orders = allOrders.filter(o => {
+      if (cadenceFilter === 'WEEKLY') return isWeeklyItem(o.item);
+      if (cadenceFilter === 'MONTHLY') return !isWeeklyItem(o.item);
+      return true;
+    });
     const byVendor = {};
     orders.forEach(o => {
-      if (!byVendor[o.item.vendor]) byVendor[o.item.vendor] = [];
-      byVendor[o.item.vendor].push(o);
+      const grpKey = `${o.item.vendor} (${isWeeklyItem(o.item) ? 'Weekly — Dairy/Produce' : 'Monthly — Dry/Frozen'})`;
+      if (!byVendor[grpKey]) byVendor[grpKey] = { vendor: o.item.vendor, isWeekly: isWeeklyItem(o.item), items: [] };
+      byVendor[grpKey].items.push(o);
     });
+    const pos = (state.purchaseOrders || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const approverOpts = (state.users || [])
+      .filter(u => u.active !== false && ['Management', 'Staff'].includes(normalizeRole(u.role)))
+      .map(u => `<option value="${escapeHtml(u.name)}">${escapeHtml(u.name)} (${escapeHtml(normalizeRole(u.role))})</option>`)
+      .join('');
 
     main.innerHTML = `
-      <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-base font-bold text-slate-900">Smart Order Suggestions (Grouped by Vendor)</h2>
-            <p class="text-xs text-slate-500">Calculated from Living Stock minus un-deducted Next-Day Prep demand compared against Par Levels.</p>
+      <div class="space-y-5">
+        <!-- Suggested Items -> Send PO for Approval -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Smart Order Suggestions &amp; Purchase Orders</h2>
+              <p class="text-xs text-slate-500">Select items and send a PO for approval. Inventory is only updated when an <strong>Approved &amp; Ordered</strong> delivery is checked in.</p>
+            </div>
+            <div class="flex flex-wrap gap-2 items-center">
+              <select id="order-cadence-filter" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-medium">
+                <option value="ALL" ${cadenceFilter === 'ALL' ? 'selected' : ''}>All Orders (Weekly + Monthly)</option>
+                <option value="WEEKLY" ${cadenceFilter === 'WEEKLY' ? 'selected' : ''}>Weekly Only (Marberger &amp; Produce)</option>
+                <option value="MONTHLY" ${cadenceFilter === 'MONTHLY' ? 'selected' : ''}>Monthly Only (Dry &amp; Frozen — 3rd Fri)</option>
+              </select>
+              <button id="btn-export-orders-csv" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">Export CSV</button>
+              <button id="btn-print-orders" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-medium hover:bg-slate-900">Print Sheet</button>
+            </div>
           </div>
-          <div class="flex gap-2">
-            <button id="btn-export-orders-csv" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">Export Order CSV</button>
-            <button id="btn-print-orders" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-medium hover:bg-slate-900">Print Order Sheet</button>
-          </div>
+
+          ${orders.length === 0
+            ? '<div class="p-4 rounded-lg bg-emerald-50 text-emerald-800 text-sm font-medium">All inventory items meet or exceed Par Levels after accounting for queued prep &amp; menu plans.</div>'
+            : Object.keys(byVendor).map(grpKey => {
+              const grp = byVendor[grpKey];
+              return `
+              <form class="form-create-po border border-slate-200 rounded-xl overflow-hidden" data-vendor="${escapeHtml(grp.vendor)}">
+                <div class="bg-slate-100 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h3 class="text-sm font-bold text-slate-900">${escapeHtml(grp.vendor)}</h3>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${grp.isWeekly ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${grp.isWeekly ? 'Weekly Order (Marberger / Produce)' : 'Monthly Order (3rd Friday)'}</span>
+                    </div>
+                    <span class="text-xs text-slate-600">${grp.items.length} item(s) below par</span>
+                  </div>
+                  <div class="flex items-center gap-2 flex-wrap no-print">
+                    <label class="text-xs text-slate-600">Approver:</label>
+                    <select name="approver" class="px-2 py-1 rounded border border-slate-300 text-xs bg-white">${approverOpts}</select>
+                    <button type="submit" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">Send PO for Approval</button>
+                  </div>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase bg-white">
+                        <th class="py-2 px-3 no-print">Include</th>
+                        <th class="py-2 px-3">Item</th>
+                        <th class="py-2 px-3">On Hand</th>
+                        <th class="py-2 px-3">Prep/Menu Reserved</th>
+                        <th class="py-2 px-3">Par Level</th>
+                        <th class="py-2 px-3">Request Packs</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      ${grp.items.map(o => `
+                        <tr>
+                          <td class="py-2.5 px-3 no-print">
+                            <input type="checkbox" name="inc_${o.item.id}" checked class="accent-red-700 rounded" />
+                          </td>
+                          <td class="py-2.5 px-3 font-medium text-slate-900">${escapeHtml(o.item.name)} <span class="text-xs text-slate-400">(${escapeHtml(o.item.sku)})</span></td>
+                          <td class="py-2.5 px-3">${formatShortMass(o.item.stockGrams)}</td>
+                          <td class="py-2.5 px-3 text-amber-700">${o.reserved > 0 ? '-' + formatShortMass(o.reserved) : '—'}</td>
+                          <td class="py-2.5 px-3">${formatShortMass(o.item.parGrams)}</td>
+                          <td class="py-2.5 px-3">
+                            <div class="flex items-center gap-1.5">
+                              <input type="number" name="qty_${o.item.id}" min="1" value="${o.suggestedPacks}" class="w-16 px-2 py-1 rounded border border-slate-300 text-xs font-bold text-red-700" />
+                              <span class="text-xs text-slate-600">&times; ${escapeHtml(o.item.packLabel)}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </form>
+            `; }).join('')
+          }
         </div>
 
-        ${orders.length === 0
-          ? '<div class="p-4 rounded-lg bg-emerald-50 text-emerald-800 text-sm font-medium">All inventory items meet or exceed Par Levels after accounting for queued prep.</div>'
-          : Object.keys(byVendor).map(vendor => `
-            <div class="border border-slate-200 rounded-xl overflow-hidden">
-              <div class="bg-slate-100 px-4 py-2.5 flex items-center justify-between">
-                <h3 class="text-sm font-bold text-slate-900">Vendor: ${escapeHtml(vendor)}</h3>
-                <span class="text-xs font-medium text-slate-600">${byVendor[vendor].length} items to order</span>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase bg-white">
-                      <th class="py-2 px-4">Item</th>
-                      <th class="py-2 px-3">On Hand</th>
-                      <th class="py-2 px-3">Prep Reserved</th>
-                      <th class="py-2 px-3">Par Level</th>
-                      <th class="py-2 px-3">Suggested Order</th>
-                      <th class="py-2 px-4 text-right no-print">Quick Receive</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-100">
-                    ${byVendor[vendor].map(o => `
-                      <tr>
-                        <td class="py-2.5 px-4 font-medium text-slate-900">${escapeHtml(o.item.name)} <span class="text-xs text-slate-400">(${escapeHtml(o.item.sku)})</span></td>
-                        <td class="py-2.5 px-3">${formatShortMass(o.item.stockGrams)}</td>
-                        <td class="py-2.5 px-3 text-amber-700">${o.reserved > 0 ? '-' + formatShortMass(o.reserved) : '—'}</td>
-                        <td class="py-2.5 px-3">${formatShortMass(o.item.parGrams)}</td>
-                        <td class="py-2.5 px-3 font-bold text-red-700">${o.suggestedPacks} &times; ${escapeHtml(o.item.packLabel)}</td>
-                        <td class="py-2.5 px-4 text-right no-print">
-                          <button data-receive-item="${o.item.id}" data-receive-grams="${o.suggestedGrams}" data-receive-label="${o.suggestedPacks}x ${escapeHtml(o.item.packLabel)}" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Receive Order</button>
-                        </td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          `).join('')
-        }
+        <!-- Purchase Orders Pipeline (Pending Approval -> Approved/Ordered w/ ETA -> Received) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Purchase Orders (Approval &amp; Delivery Tracking)</h3>
+            <p class="text-xs text-slate-500">Approvers confirm exact quantities ordered and expected arrival dates. Unapproved or skipped items cannot be added to stock.</p>
+          </div>
+          ${pos.length === 0
+            ? '<p class="text-sm text-slate-500">No purchase orders created yet. Use "Send PO for Approval" above.</p>'
+            : `<div class="space-y-3">
+                ${pos.map(po => {
+                  const badgeCls = po.status === 'RECEIVED'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : po.status === 'APPROVED_ORDERED'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-amber-100 text-amber-800';
+                  const statusLbl = po.status === 'RECEIVED'
+                    ? 'Received into Stock'
+                    : po.status === 'APPROVED_ORDERED'
+                      ? `Approved & Ordered (ETA: ${po.expectedArrival || 'TBD'})`
+                      : `Pending Approval (${po.approver})`;
+                  return `
+                    <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-3">
+                      <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-mono text-xs font-bold text-slate-700">${escapeHtml(po.poNumber)}</span>
+                            <span class="text-sm font-bold text-slate-900">${escapeHtml(po.vendor)}</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeCls}">${escapeHtml(statusLbl)}</span>
+                          </div>
+                          <div class="text-xs text-slate-500 mt-0.5">Requested by ${escapeHtml(po.requestedBy)} on ${escapeHtml(po.createdAt)}${po.approvedBy ? ` &bull; Approved by ${escapeHtml(po.approvedBy)}` : ''}</div>
+                          ${po.approverNotes ? `<div class="text-xs text-slate-700 mt-1 italic">Note: "${escapeHtml(po.approverNotes)}"</div>` : ''}
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap no-print">
+                          ${po.status === 'PENDING_APPROVAL' ? `<button data-review-po="${po.id}" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">Review &amp; Approve Order</button>` : ''}
+                          ${po.status === 'APPROVED_ORDERED' ? `<button data-receive-po="${po.id}" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Check In Approved Delivery</button>` : ''}
+                          <button data-copy-po="${po.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-medium">Copy Summary</button>
+                          ${po.status !== 'RECEIVED' ? `<button data-delete-po="${po.id}" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Cancel</button>` : ''}
+                        </div>
+                      </div>
+                      <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr class="border-b border-slate-200 text-slate-500 uppercase">
+                              <th class="py-1.5 pr-3">Item</th>
+                              <th class="py-1.5 pr-3">Requested</th>
+                              <th class="py-1.5 pr-3">Approved / Ordered</th>
+                              <th class="py-1.5">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-slate-200/70">
+                            ${po.lines.map(ln => `
+                              <tr class="${po.status !== 'PENDING_APPROVAL' && ln.approvedPacks === 0 ? 'opacity-50 line-through' : ''}">
+                                <td class="py-1.5 pr-3 font-medium text-slate-900">${escapeHtml(ln.itemName)}</td>
+                                <td class="py-1.5 pr-3">${ln.requestedPacks} &times; ${escapeHtml(ln.packLabel)}</td>
+                                <td class="py-1.5 pr-3 font-bold ${ln.approvedPacks > 0 ? 'text-blue-800' : 'text-slate-500'}">
+                                  ${po.status === 'PENDING_APPROVAL' ? 'Awaiting approval' : `${ln.approvedPacks} × ${escapeHtml(ln.packLabel)}`}
+                                </td>
+                                <td class="py-1.5">${po.status === 'RECEIVED' ? (ln.approvedPacks > 0 ? 'Added to Stock' : 'Skipped') : (po.status === 'APPROVED_ORDERED' ? (ln.approvedPacks > 0 ? 'On Order' : 'Not Ordered') : 'Pending')}</td>
+                              </tr>
+                            `).join('')}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>`
+          }
+        </div>
       </div>
     `;
   }
@@ -1242,9 +2005,15 @@
                 <h2 class="text-lg font-bold text-slate-900">${escapeHtml(selected.name)}</h2>
                 <p class="text-xs text-slate-500 mt-0.5">Prep: ${selected.prepMin} min &bull; Cook: ${selected.cookMin} min &bull; Complete: ${selected.prepMin + selected.cookMin} min &bull; Yield: <strong>${portions} portions</strong></p>
               </div>
-              <button id="btn-toggle-units-rec" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">
-                ${state.unitMode === 'grams' ? 'Showing Grams (Switch to US)' : 'Showing US (Switch to Grams)'}
-              </button>
+              <div class="flex items-center gap-2 flex-wrap">
+                <button id="btn-toggle-units-rec" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">
+                  Units: <strong>${state.unitMode === 'volume' ? 'Volume &amp; Packs/Cans' : state.unitMode === 'us' ? 'US Weight (lb/oz)' : 'Metric (g/kg)'}</strong>
+                </button>
+                ${['Management', 'Staff'].includes(getActiveUser().role) ? `
+                  <button id="btn-edit-recipe" data-edit-recipe="${selected.id}" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-800">Edit</button>
+                  <button id="btn-delete-recipe" data-delete-recipe="${selected.id}" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700">Delete</button>
+                ` : ''}
+              </div>
             </div>
 
             <!-- 50-80 Scaler Control -->
@@ -1282,7 +2051,7 @@
                       <tr>
                         <td class="py-2 pr-3 font-medium text-slate-900">${inv ? escapeHtml(inv.name) : 'Unknown Item'}</td>
                         <td class="py-2 pr-3 text-xs text-slate-500">${inv ? escapeHtml(inv.zone) : '—'}</td>
-                        <td class="py-2 pr-3 font-bold text-slate-900">${formatMass(scaledG)}</td>
+                        <td class="py-2 pr-3 font-bold text-slate-900">${formatKitchenVolume(inv, scaledG)}</td>
                         ${selected.isBakers ? `<td class="py-2 pr-3 text-xs font-mono text-slate-600">${bakersPct}</td>` : ''}
                         <td class="py-2 text-xs font-semibold ${enough ? 'text-emerald-700' : 'text-rose-700'}">${inv ? formatShortMass(inv.stockGrams) + (enough ? ' (OK)' : ' (Short)') : 'N/A'}</td>
                       </tr>
@@ -1334,6 +2103,7 @@
         byZone[zone].push({
           prepId: pq.id,
           key: pq.id + '_' + inv.id,
+          item: inv,
           recipeName: rec.name,
           itemName: inv.name,
           grams: ing.grams * factor,
@@ -1384,7 +2154,7 @@
                   <label class="flex items-start gap-2.5 py-1.5 text-sm cursor-pointer">
                     <input type="checkbox" data-prep-check="${row.key}" ${row.checked ? 'checked' : ''} class="mt-0.5 accent-red-700 rounded" />
                     <div class="${row.checked ? 'line-through text-slate-400' : 'text-slate-800'}">
-                      <div class="font-medium">${escapeHtml(row.itemName)} — <span class="font-bold">${formatMass(row.grams)}</span></div>
+                      <div class="font-medium">${escapeHtml(row.itemName)} — <span class="font-bold">${formatKitchenVolume(row.item, row.grams)}</span></div>
                       <div class="text-xs text-slate-500">For: ${escapeHtml(row.recipeName)}</div>
                     </div>
                   </label>
@@ -1630,9 +2400,18 @@
               <h3 class="text-base font-bold text-slate-900">Scheduled Menu &amp; Inventory Impact</h3>
               <p class="text-xs text-slate-500">Click <strong>Commit &amp; Deduct Stock</strong> when ready to pull ingredients from Living Stock and queue Next-Day Prep.</p>
             </div>
-            ${canEdit && sortedPlan.some(m => m.status !== 'DEDUCTED')
-              ? `<button id="btn-commit-all-menu" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold">Commit All Planned &amp; Deduct Stock</button>`
-              : ''}
+            <div class="flex flex-wrap items-center gap-2 no-print">
+              <select id="menu-print-range" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
+                <option value="daily">Daily Menu</option>
+                <option value="weekly" selected>Weekly Menu</option>
+                <option value="monthly">Monthly Menu</option>
+              </select>
+              <input id="menu-print-date" type="date" value="${today}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white" />
+              <button id="btn-print-menu-range" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Print Menu</button>
+              ${canEdit && sortedPlan.some(m => m.status !== 'DEDUCTED')
+                ? `<button id="btn-commit-all-menu" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Commit All Planned &amp; Deduct Stock</button>`
+                : ''}
+            </div>
           </div>
 
           ${sortedPlan.length === 0
@@ -1642,18 +2421,19 @@
                   const rec = state.recipes.find(r => r.id === mp.recipeId);
                   const factor = rec ? mp.portions / rec.basePortions : 1;
                   const isDeducted = mp.status === 'DEDUCTED';
+                  const isClosed = mp.status === 'CLOSED';
                   return `
-                    <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/70 space-y-2">
+                    <div class="border border-slate-200 rounded-xl p-4 ${isClosed ? 'bg-slate-100/80' : 'bg-slate-50/70'} space-y-2">
                       <div class="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <span class="text-xs font-mono font-semibold text-slate-500">${escapeHtml(mp.date)} &bull; ${escapeHtml(mp.mealSlot)}</span>
-                          <h4 class="text-sm sm:text-base font-bold text-slate-900">${rec ? escapeHtml(rec.name) : 'Removed Recipe'} <span class="text-red-700">(${mp.portions} portions)</span></h4>
+                          <h4 class="text-sm sm:text-base font-bold text-slate-900">${escapeHtml(mp.customTitle || (rec ? rec.name : 'Removed Recipe'))} ${!isClosed ? `<span class="text-red-700">(${mp.portions} portions)</span>` : ''}</h4>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
-                          <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDeducted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                            ${isDeducted ? 'Deducted from Stock' : 'Planned (Reserved for Orders)'}
+                          <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${isClosed ? 'bg-slate-200 text-slate-700' : isDeducted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                            ${isClosed ? 'Office Closed' : isDeducted ? 'Deducted from Stock' : 'Planned (Reserved for Orders)'}
                           </span>
-                          ${canEdit && !isDeducted ? `<button data-commit-menu="${mp.id}" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Commit &amp; Deduct Stock</button>` : ''}
+                          ${canEdit && !isDeducted && !isClosed ? `<button data-commit-menu="${mp.id}" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Commit &amp; Deduct Stock</button>` : ''}
                           ${canEdit ? `<button data-remove-menu="${mp.id}" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Remove</button>` : ''}
                         </div>
                       </div>
@@ -1876,7 +2656,7 @@
     if (!draft.packs) draft.packs = {};
     if (!draft.partials) draft.partials = {};
     const zone = draft.zone || 'ALL';
-    const items = state.inventory.filter(i => zone === 'ALL' || i.zone === zone);
+    const items = state.inventory.filter(i => !i.discontinued && (zone === 'ALL' || i.zone === zone));
     const user = getActiveUser();
     const canReconcile = ['Management', 'Staff'].includes(user.role);
     const isRevealed = canReconcile && !!draft.revealed;
@@ -2055,6 +2835,7 @@
     state.haccpLogs.forEach(h => feed.push({ timestamp: h.timestamp, user: h.staff, category: 'HACCP ' + h.status, detail: `${h.type}: ${h.target} @ ${h.tempF}°F` }));
     state.auditLogs.forEach(a => feed.push({ timestamp: a.timestamp, user: a.userName, category: 'BLIND AUDIT', detail: `${a.itemName}: System ${formatShortMass(a.systemGrams)} → Physical ${formatShortMass(a.physicalGrams)} (${a.varianceGrams >= 0 ? '+' : ''}${formatShortMass(a.varianceGrams)})` }));
     (state.checklistLogs || []).forEach(c => feed.push({ timestamp: c.timestamp, user: c.user, category: 'CHECKLIST (' + c.freq.toUpperCase() + ')', detail: `[${c.category}] ${c.title}` }));
+    (state.trainingLogs || []).forEach(t => feed.push({ timestamp: t.timestamp, user: t.user, category: 'TRAINING COMPLETE', detail: `Completed mandatory onboarding (${t.modulesCount} modules)` }));
     feed.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
     main.innerHTML = `
@@ -2084,17 +2865,33 @@
               </div>
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Password / PIN</label>
-              <input name="pin" type="password" required placeholder="e.g. 4321" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              <label class="block text-xs font-medium text-slate-700 mb-1">Starting PIN (Defaults to ${escapeHtml(state.defaultNewUserPin || '0000')})</label>
+              <input name="pin" type="text" required value="${escapeHtml(state.defaultNewUserPin || '0000')}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-mono" />
             </div>
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input name="mustChangePin" type="checkbox" checked class="accent-red-700 rounded" />
+              <span>Require user to change PIN on first login</span>
+            </label>
             <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Add User</button>
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span class="text-[11px] text-slate-500">Default PIN for new accounts: <strong class="font-mono">${escapeHtml(state.defaultNewUserPin || '0000')}</strong></span>
+              <button type="button" id="btn-set-default-pin" class="text-xs font-semibold text-red-700 hover:underline">Change Default</button>
+            </div>
           </form>
 
           <!-- User Roster -->
           <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <h2 class="text-base font-bold text-slate-900">Staff Roster &amp; Auto-Accountability</h2>
-              <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">Active: ${escapeHtml(activeUser.name)}</span>
+              <div class="flex items-center gap-2 flex-wrap">
+                <label class="text-xs text-slate-600 flex items-center gap-1.5">
+                  <span>Auto-Lock:</span>
+                  <select id="select-autolock-mins" class="px-2 py-1 rounded border border-slate-300 text-xs bg-white font-semibold">
+                    ${[[1, '1 min'], [2, '2 min'], [5, '5 min'], [10, '10 min'], [15, '15 min'], [30, '30 min'], [0, 'Never']].map(([m, lbl]) => `<option value="${m}" ${Number(state.autoLockMinutes ?? 5) === m ? 'selected' : ''}>${lbl}</option>`).join('')}
+                  </select>
+                </label>
+                <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">Active: ${escapeHtml(activeUser.name)}</span>
+              </div>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left border-collapse text-sm">
@@ -2118,15 +2915,70 @@
                         <td class="py-2.5 pr-3 text-xs font-bold text-slate-800">${count}</td>
                         <td class="py-2.5 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${u.active !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${u.active !== false ? 'Active' : 'Inactive'}</span></td>
                         <td class="py-2.5 text-right space-x-1 whitespace-nowrap">
+                          <button data-edit-user="${u.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Edit</button>
                           <button data-edit-pin="${u.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Set PIN</button>
+                          <button data-reset-user-training="${u.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Re-Train</button>
                           ${!isCur && u.active !== false ? `<button data-switch-user="${u.id}" class="px-2.5 py-1 rounded bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">Switch</button>` : ''}
                           ${state.users.length > 1 ? `<button data-toggle-user="${u.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">${u.active !== false ? 'Deactivate' : 'Reactivate'}</button>` : ''}
+                          ${!isCur && state.users.length > 1 ? `<button data-delete-user="${u.id}" class="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Delete</button>` : ''}
                         </td>
                       </tr>
                     `;
                   }).join('')}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Management Training Editor (First-Login Mandatory Pop-Up Modules) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <form id="form-add-training" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+            <h3 class="text-sm font-bold text-slate-900">Add First-Login Training Module</h3>
+            <p class="text-xs text-slate-500">New accounts (or users clicked "Re-Train") must complete these pop-up steps before using the app.</p>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Training Title</label>
+              <input name="title" type="text" required placeholder="e.g. Fryer Oil Safety Protocol" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Target Role</label>
+              <select name="role" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                <option value="ALL">All Roles</option>
+                <option value="Volunteer">Volunteer Only</option>
+                <option value="Staff">Staff Only</option>
+                <option value="Management">Management Only</option>
+                <option value="Other">Other Only</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Training Instructions</label>
+              <textarea name="content" rows="3" required placeholder="Write the required training steps or rules..." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"></textarea>
+            </div>
+            <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Add Training Module</button>
+          </form>
+
+          <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-slate-900">Active Mandatory Training Modules (${(state.trainingModules || []).length})</h3>
+              <button id="btn-require-all-retrain" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">Require All Users to Re-Train on Next Login</button>
+            </div>
+            <div class="divide-y divide-slate-100">
+              ${(state.trainingModules || []).map((m, idx) => `
+                <div class="py-2.5 flex items-start justify-between gap-3">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-bold text-slate-400">#${idx + 1}</span>
+                      <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">${escapeHtml(m.role === 'ALL' ? 'All Roles' : m.role)}</span>
+                      <span class="font-semibold text-sm text-slate-900">${escapeHtml(m.title)}</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mt-1 whitespace-pre-line">${escapeHtml(m.content)}</p>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <button data-edit-training="${m.id}" class="text-xs font-medium text-slate-700 hover:underline">Edit</button>
+                    <button data-del-training="${m.id}" class="text-xs text-rose-600 hover:underline">Delete</button>
+                  </div>
+                </div>
+              `).join('')}
             </div>
           </div>
         </div>
@@ -2335,48 +3187,100 @@
     `);
   }
 
-  function showAddRecipeModal() {
-    const invOpts = state.inventory.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
-    openModal('Add Standardized Recipe', `
-      <form id="form-new-recipe" class="space-y-3">
+  function buildRecipeIngredientRowHtml(itemId, qty, unit) {
+    const invOpts = state.inventory.map(i => `<option value="${i.id}" ${i.id === itemId ? 'selected' : ''}>${escapeHtml(i.name)}</option>`).join('');
+    return `
+      <div class="rec-ing-row grid grid-cols-12 gap-1.5 items-center">
+        <select class="rec-ing-item col-span-6 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">${invOpts}</select>
+        <input type="number" step="0.25" min="0" value="${qty}" placeholder="Qty" class="rec-ing-qty col-span-2 px-2 py-1.5 rounded border border-slate-300 text-xs" />
+        <select class="rec-ing-unit col-span-3 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">
+          <option value="cup" ${unit === 'cup' ? 'selected' : ''}>Cups</option>
+          <option value="gal" ${unit === 'gal' ? 'selected' : ''}>Gallons</option>
+          <option value="can10" ${unit === 'can10' ? 'selected' : ''}>#10 Cans</option>
+          <option value="pack" ${unit === 'pack' ? 'selected' : ''}>Packs/Bags</option>
+          <option value="tbsp" ${unit === 'tbsp' ? 'selected' : ''}>Tbsp</option>
+          <option value="lb" ${unit === 'lb' ? 'selected' : ''}>Pounds</option>
+          <option value="g" ${unit === 'g' ? 'selected' : ''}>Grams</option>
+        </select>
+        <button type="button" class="btn-remove-ing-row col-span-1 text-center text-rose-600 hover:text-rose-800 font-bold text-sm">&times;</button>
+      </div>
+    `;
+  }
+
+  function showRecipeEditorModal(recipeId) {
+    const rec = recipeId ? state.recipes.find(r => r.id === recipeId) : null;
+    const isEdit = !!rec;
+    const ingRowsHtml = isEdit && rec.ingredients.length
+      ? rec.ingredients.map(ing => {
+          const spec = VOLUME_SPECS[ing.itemId];
+          if (spec && spec.gPerUnit === 3000) {
+            return buildRecipeIngredientRowHtml(ing.itemId, +(ing.grams / 3000).toFixed(2), 'can10');
+          }
+          if (spec && spec.isLiquid) {
+            return buildRecipeIngredientRowHtml(ing.itemId, +(ing.grams / spec.gPerCup).toFixed(2), 'cup');
+          }
+          if (spec && spec.gPerTbsp && ing.grams < spec.gPerCup * 0.5) {
+            return buildRecipeIngredientRowHtml(ing.itemId, +(ing.grams / spec.gPerTbsp).toFixed(2), 'tbsp');
+          }
+          if (spec) {
+            return buildRecipeIngredientRowHtml(ing.itemId, +(ing.grams / spec.gPerCup).toFixed(2), 'cup');
+          }
+          return buildRecipeIngredientRowHtml(ing.itemId, ing.grams, 'g');
+        }).join('')
+      : [buildRecipeIngredientRowHtml(state.inventory[0]?.id, 10, 'cup'), buildRecipeIngredientRowHtml(state.inventory[1]?.id, 4, 'cup')].join('');
+
+    openModal(isEdit ? `Edit Recipe — ${rec.name}` : 'Add Standardized Recipe', `
+      <form id="form-save-recipe" class="space-y-3">
+        <input type="hidden" name="recipeId" value="${isEdit ? escapeHtml(rec.id) : ''}" />
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Recipe Name</label>
-          <input name="name" type="text" required placeholder="e.g. Classic Chili & Cornbread" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          <input name="name" type="text" required value="${isEdit ? escapeHtml(rec.name) : ''}" placeholder="e.g. Classic Chili & Cornbread" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
         </div>
-        <div class="grid grid-cols-3 gap-3">
-          <div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div class="col-span-2 sm:col-span-1">
             <label class="block text-xs font-medium text-slate-700 mb-1">Category</label>
-            <input name="category" type="text" value="Main Entree" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            <input name="category" type="text" value="${isEdit ? escapeHtml(rec.category) : 'Main Entree'}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">Base Portions</label>
-            <input name="basePortions" type="number" min="10" value="50" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            <input name="basePortions" type="number" min="10" value="${isEdit ? rec.basePortions : 50}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Prep / Cook (min)</label>
-            <input name="totalMin" type="number" min="5" value="60" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            <label class="block text-xs font-medium text-slate-700 mb-1">Prep (min)</label>
+            <input name="prepMin" type="number" min="0" value="${isEdit ? rec.prepMin : 30}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Cook (min)</label>
+            <input name="cookMin" type="number" min="0" value="${isEdit ? rec.cookMin : 40}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
           </div>
         </div>
         <div class="border border-slate-200 rounded-lg p-3 space-y-2 bg-slate-50">
-          <div class="text-xs font-bold text-slate-700">Primary Ingredients (Grams at Base Yield)</div>
-          <div class="grid grid-cols-3 gap-2">
-            <select name="ing1" class="col-span-2 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">${invOpts}</select>
-            <input name="g1" type="number" min="1" value="5000" placeholder="Grams" class="px-2 py-1.5 rounded border border-slate-300 text-xs" />
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-700">Ingredients (At Base Yield)</span>
+            <button type="button" id="btn-add-ing-row" class="text-xs font-semibold text-red-700 hover:underline">+ Add Ingredient</button>
           </div>
-          <div class="grid grid-cols-3 gap-2">
-            <select name="ing2" class="col-span-2 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">${invOpts}</select>
-            <input name="g2" type="number" min="0" value="2000" placeholder="Grams" class="px-2 py-1.5 rounded border border-slate-300 text-xs" />
-          </div>
-          <div class="grid grid-cols-3 gap-2">
-            <select name="ing3" class="col-span-2 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">${invOpts}</select>
-            <input name="g3" type="number" min="0" value="500" placeholder="Grams" class="px-2 py-1.5 rounded border border-slate-300 text-xs" />
-          </div>
+          <div id="rec-ing-rows" class="space-y-2 max-h-52 overflow-y-auto">${ingRowsHtml}</div>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Method &amp; Food Safety Notes</label>
-          <textarea name="instructions" rows="3" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Step-by-step instructions and CCP temps..."></textarea>
+          <textarea name="instructions" rows="3" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Step-by-step instructions and CCP temps...">${isEdit ? escapeHtml(rec.instructions) : ''}</textarea>
         </div>
-        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save to Recipe Book</button>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">${isEdit ? 'Save Recipe Changes' : 'Save to Recipe Book'}</button>
+      </form>
+    `);
+  }
+
+  function showDeleteRecipeModal(recipeId) {
+    const rec = state.recipes.find(r => r.id === recipeId);
+    if (!rec) return;
+    openModal('Delete Recipe', `
+      <form id="form-delete-recipe" class="space-y-4">
+        <input type="hidden" name="recipeId" value="${escapeHtml(rec.id)}" />
+        <p class="text-sm text-slate-700">Are you sure you want to delete <strong>${escapeHtml(rec.name)}</strong> from the Standardized Recipe Book?</p>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="btn-cancel-del-recipe" class="px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Delete Recipe</button>
+        </div>
       </form>
     `);
   }
@@ -2418,9 +3322,13 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">New Password / PIN</label>
-          <input name="pin" type="password" required placeholder="Enter new PIN or password" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          <label class="block text-xs font-medium text-slate-700 mb-1">New / Reset Password or PIN</label>
+          <input name="pin" type="password" required placeholder="Enter new or temporary PIN" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
         </div>
+        <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+          <input name="mustChangePin" type="checkbox" checked class="accent-red-700 rounded" />
+          <span>Require user to change PIN on next login</span>
+        </label>
         <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save Credentials</button>
       </form>
     `);
@@ -2444,7 +3352,13 @@
     const targetMode = document.getElementById('quick-scan-target')?.value || 'checkin';
     const sel = document.getElementById(targetMode === 'waste' ? 'waste-item-select' : 'checkin-item-select');
     const form = document.getElementById(targetMode === 'waste' ? 'form-waste' : 'form-checkin');
-    if (sel) sel.value = match.id;
+    if (sel) {
+      sel.value = match.id;
+      if (targetMode !== 'waste') {
+        const packOpt = document.getElementById('checkin-pack-option');
+        if (packOpt) packOpt.textContent = `${match.packLabel} (${match.vendor})`;
+      }
+    }
     const qtyInput = form ? form.querySelector('input[name="qty"]') : null;
     if (qtyInput) qtyInput.focus();
     showToast(`Scanned: ${match.name} (${match.sku}) → ready for ${targetMode === 'waste' ? 'Waste' : 'Check-In'}`);
@@ -2512,6 +3426,371 @@
           <button id="btn-force-push" class="px-3.5 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">Push Local Data to Cloud</button>
         </div>
       </div>
+    `);
+  }
+
+
+  function showPrintableMenuModal(range, refDateStr) {
+    const ref = new Date((refDateStr || new Date().toISOString().slice(0, 10)) + 'T12:00:00');
+    const y = ref.getFullYear();
+    const m = ref.getMonth();
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+    let startStr = refDateStr;
+    let endStr = refDateStr;
+    let titleLabel = `Daily Menu — ${dayNames[ref.getDay()]}, ${refDateStr}`;
+
+    if (range === 'weekly') {
+      const dayNum = (ref.getDay() + 6) % 7; // Mon=0
+      const mon = new Date(ref); mon.setDate(ref.getDate() - dayNum);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      startStr = mon.toISOString().slice(0, 10);
+      endStr = sun.toISOString().slice(0, 10);
+      titleLabel = `Weekly Menu — ${startStr} to ${endStr}`;
+    } else if (range === 'monthly') {
+      const first = new Date(y, m, 1);
+      const last = new Date(y, m + 1, 0);
+      startStr = first.toISOString().slice(0, 10);
+      endStr = last.toISOString().slice(0, 10);
+      titleLabel = `Monthly Menu — ${monthNames[m]} ${y}`;
+    }
+
+    const filtered = (state.menuPlan || [])
+      .filter(mp => mp.date >= startStr && mp.date <= endStr)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const rowsHtml = filtered.length === 0
+      ? '<p class="text-sm text-slate-500 py-4">No meals scheduled for this period yet. Add meals in Menu Planner first.</p>'
+      : `<table class="w-full text-left border-collapse text-sm border border-slate-300">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-300 text-xs uppercase text-slate-700">
+              <th class="py-2 px-3 border-r border-slate-300">Date</th>
+              <th class="py-2 px-3 border-r border-slate-300">Day</th>
+              <th class="py-2 px-3 border-r border-slate-300">Service</th>
+              <th class="py-2 px-3 border-r border-slate-300">Menu Item</th>
+              <th class="py-2 px-3">Portions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            ${filtered.map(mp => {
+              const d = new Date(mp.date + 'T12:00:00');
+              const rec = state.recipes.find(r => r.id === mp.recipeId);
+              return `
+                <tr>
+                  <td class="py-2 px-3 border-r border-slate-200 font-mono text-xs">${escapeHtml(mp.date)}</td>
+                  <td class="py-2 px-3 border-r border-slate-200 font-medium">${dayNames[d.getDay()]}</td>
+                  <td class="py-2 px-3 border-r border-slate-200 text-xs text-slate-600">${escapeHtml(mp.mealSlot)}</td>
+                  <td class="py-2 px-3 border-r border-slate-200 font-bold text-slate-900">${escapeHtml(mp.customTitle || (rec ? rec.name : 'Scheduled Meal'))}</td>
+                  <td class="py-2 px-3 text-xs font-semibold">${mp.status === 'CLOSED' ? 'Closed' : mp.portions}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>`;
+
+    document.body.classList.add('printing-modal');
+    openModal(titleLabel, `
+      <div class="space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div>
+            <h2 class="text-lg font-bold text-red-700">The Salvation Army Community Meals</h2>
+            <p class="text-xs text-slate-600">${escapeHtml(titleLabel)} &bull; Lunch Service: 11:30 AM – 12:30 PM (MTWF)</p>
+          </div>
+          <button id="btn-print-menu-now" class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold no-print">Print Now</button>
+        </div>
+        ${rowsHtml}
+      </div>
+    `);
+  }
+
+
+  function showSelectRetrainModal(targetUserId) {
+    const isAll = targetUserId === 'ALL';
+    const targetUser = isAll ? null : state.users.find(u => u.id === targetUserId);
+    const title = isAll ? 'Select Training Modules for All Users' : `Select Re-Training Modules — ${targetUser ? targetUser.name : ''}`;
+    const mods = state.trainingModules || [];
+    openModal(title, `
+      <form id="form-select-retrain" class="space-y-3">
+        <input type="hidden" name="targetUserId" value="${escapeHtml(targetUserId)}" />
+        <p class="text-xs text-slate-600">Check the specific training modules to show again on next login:</p>
+        <div class="divide-y divide-slate-100 border border-slate-200 rounded-lg max-h-64 overflow-y-auto">
+          ${mods.map(m => `
+            <label class="flex items-start gap-2.5 p-2.5 text-sm cursor-pointer hover:bg-slate-50">
+              <input type="checkbox" name="modIds" value="${escapeHtml(m.id)}" checked class="mt-0.5 accent-red-700 rounded" />
+              <div>
+                <div class="font-semibold text-slate-900">${escapeHtml(m.title)}</div>
+                <div class="text-[11px] text-slate-500">Target: ${escapeHtml(m.role === 'ALL' ? 'All Roles' : m.role)}</div>
+              </div>
+            </label>
+          `).join('')}
+        </div>
+        <div class="flex justify-end gap-2 pt-1">
+          <button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold">Queue Selected Training</button>
+        </div>
+      </form>
+    `);
+  }
+
+  function showDefaultPinModal() {
+    openModal('Set Default PIN for New Accounts', `
+      <form id="form-default-pin" class="space-y-3">
+        <p class="text-xs text-slate-600">Any new user account created will pre-fill this default PIN and prompt the user to set their own personal PIN upon first login.</p>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Default New-Account PIN</label>
+          <input name="defaultPin" type="text" required minlength="4" value="${escapeHtml(state.defaultNewUserPin || '0000')}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-mono" />
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save Default PIN</button>
+      </form>
+    `);
+  }
+
+
+  function showEditUserModal(userId) {
+    const u = state.users.find(x => x.id === userId);
+    if (!u) return;
+    openModal(`Edit User Account — ${u.name}`, `
+      <form id="form-edit-user" class="space-y-3">
+        <input type="hidden" name="userId" value="${escapeHtml(u.id)}" />
+        <div class="grid grid-cols-3 gap-2">
+          <div class="col-span-2">
+            <label class="block text-xs font-medium text-slate-700 mb-1">Full Name</label>
+            <input name="name" type="text" required value="${escapeHtml(u.name)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Initials</label>
+            <input name="initials" type="text" maxlength="4" required value="${escapeHtml(u.initials)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm uppercase" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Access Role</label>
+          <select name="role" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+            ${['Management', 'Staff', 'Volunteer', 'Other'].map(r => `<option value="${r}" ${normalizeRole(u.role) === r ? 'selected' : ''}>${r}</option>`).join('')}
+          </select>
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save User Changes</button>
+      </form>
+    `);
+  }
+
+  function showDeleteUserModal(userId) {
+    const u = state.users.find(x => x.id === userId);
+    if (!u) return;
+    openModal('Delete User Account', `
+      <form id="form-delete-user" class="space-y-4">
+        <input type="hidden" name="userId" value="${escapeHtml(u.id)}" />
+        <p class="text-sm text-slate-700">Are you sure you want to permanently delete <strong>${escapeHtml(u.name)}</strong> (${escapeHtml(u.role)})? Their historical activity logs will remain in the audit trail.</p>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="btn-cancel-del-user" class="px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Delete Account</button>
+        </div>
+      </form>
+    `);
+  }
+
+  function showEditTrainingModal(modId) {
+    const m = (state.trainingModules || []).find(x => x.id === modId);
+    if (!m) return;
+    openModal('Edit Training Module', `
+      <form id="form-edit-training" class="space-y-3">
+        <input type="hidden" name="modId" value="${escapeHtml(m.id)}" />
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Training Title</label>
+          <input name="title" type="text" required value="${escapeHtml(m.title)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Target Role</label>
+          <select name="role" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+            ${[['ALL', 'All Roles'], ['Volunteer', 'Volunteer Only'], ['Staff', 'Staff Only'], ['Management', 'Management Only'], ['Other', 'Other Only']].map(([v, lbl]) => `<option value="${v}" ${m.role === v ? 'selected' : ''}>${lbl}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Training Instructions</label>
+          <textarea name="content" rows="4" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">${escapeHtml(m.content)}</textarea>
+        </div>
+        <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+          <input name="requeueAll" type="checkbox" class="accent-red-700 rounded" />
+          <span>Require matching users to re-acknowledge this updated module</span>
+        </label>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save Training Module</button>
+      </form>
+    `);
+  }
+
+
+  function showApprovePoModal(poId) {
+    const po = (state.purchaseOrders || []).find(p => p.id === poId);
+    if (!po) return;
+    const defaultEta = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+    openModal(`Review & Approve ${po.poNumber} (${po.vendor})`, `
+      <form id="form-approve-po" class="space-y-3">
+        <input type="hidden" name="poId" value="${escapeHtml(po.id)}" />
+        <p class="text-xs text-slate-600">Adjust the <strong>Approved / Ordered</strong> packs (enter <strong>0</strong> for anything you decided not to order) and set the expected arrival date.</p>
+        <div class="divide-y divide-slate-100 border border-slate-200 rounded-lg max-h-60 overflow-y-auto">
+          ${po.lines.map(ln => `
+            <div class="p-2.5 flex items-center justify-between gap-2 text-xs">
+              <div>
+                <div class="font-semibold text-slate-900">${escapeHtml(ln.itemName)}</div>
+                <div class="text-slate-500">Requested: ${ln.requestedPacks} &times; ${escapeHtml(ln.packLabel)}</div>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <label class="text-slate-500">Ordered:</label>
+                <input type="number" name="app_${escapeHtml(ln.itemId)}" min="0" value="${ln.requestedPacks}" class="w-16 px-2 py-1 rounded border border-slate-300 font-bold text-slate-900" />
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Expected Arrival Date</label>
+            <input name="expectedArrival" type="date" required value="${defaultEta}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Approver Note (Optional)</label>
+            <input name="approverNotes" type="text" placeholder="e.g. Skipped flour, arriving Thu AM" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">Approve &amp; Mark Ordered</button>
+      </form>
+    `);
+  }
+
+
+  function showBulkParModal() {
+    const activeItems = state.inventory.filter(i => !i.discontinued);
+    openModal('Set Par Levels (All Items & Individual)', `
+      <form id="form-bulk-par" class="space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+          <span class="text-xs font-semibold text-slate-700">Apply to ALL items at once (packs):</span>
+          <div class="flex items-center gap-1.5">
+            <input id="bulk-par-all-val" type="number" step="0.5" min="0.5" value="2" class="w-16 px-2 py-1 rounded border border-slate-300 text-xs font-bold" />
+            <button type="button" id="btn-apply-all-par" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Set All</button>
+          </div>
+        </div>
+        <div class="divide-y divide-slate-100 border border-slate-200 rounded-lg max-h-72 overflow-y-auto">
+          ${activeItems.map(item => {
+            const curPacks = item.packSizeGrams ? +(item.parGrams / item.packSizeGrams).toFixed(2) : 1;
+            return `
+              <div class="p-2.5 flex items-center justify-between gap-2 text-xs">
+                <div>
+                  <div class="font-semibold text-slate-900">${escapeHtml(item.name)}</div>
+                  <div class="text-slate-500">${escapeHtml(item.vendor)} &bull; 1 pack = ${escapeHtml(item.packLabel)}</div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <input type="number" name="par_${escapeHtml(item.id)}" step="0.25" min="0" value="${curPacks}" class="bulk-par-input w-16 px-2 py-1 rounded border border-slate-300 font-bold text-slate-900" />
+                  <span class="text-slate-600">packs</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save All Par Levels</button>
+      </form>
+    `);
+  }
+
+  function showEditInventoryModal(itemId) {
+    const item = state.inventory.find(i => i.id === itemId);
+    if (!item) return;
+    const stockPacks = item.packSizeGrams ? +(item.stockGrams / item.packSizeGrams).toFixed(2) : 0;
+    const parPacks = item.packSizeGrams ? +(item.parGrams / item.packSizeGrams).toFixed(2) : 1;
+    openModal(`Edit Inventory Item — ${item.name}`, `
+      <form id="form-edit-inv" class="space-y-3">
+        <input type="hidden" name="itemId" value="${escapeHtml(item.id)}" />
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">SKU</label>
+            <input name="sku" type="text" required value="${escapeHtml(item.sku)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Item Name</label>
+            <input name="name" type="text" required value="${escapeHtml(item.name)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Storage Zone</label>
+            <select name="zone" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+              ${['Dry Storage', 'Walk-In Cooler', 'Walk-In Freezer'].map(z => `<option value="${z}" ${item.zone === z ? 'selected' : ''}>${z}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Vendor</label>
+            <input name="vendor" type="text" required value="${escapeHtml(item.vendor)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Vendor Pack Label</label>
+            <input name="packLabel" type="text" required value="${escapeHtml(item.packLabel)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Pack Weight (grams)</label>
+            <input name="packSizeGrams" type="number" min="1" required value="${item.packSizeGrams || 1000}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Current Stock (Packs)</label>
+            <input name="stockPacks" type="number" step="0.25" min="0" required value="${stockPacks}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Par Level (Packs)</label>
+            <input name="parPacks" type="number" step="0.25" min="0" required value="${parPacks}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save Item Changes</button>
+      </form>
+    `);
+  }
+
+  function showDeleteInventoryModal(itemId) {
+    const item = state.inventory.find(i => i.id === itemId);
+    if (!item) return;
+    openModal('Delete Inventory Item', `
+      <form id="form-delete-inv" class="space-y-4">
+        <input type="hidden" name="itemId" value="${escapeHtml(item.id)}" />
+        <p class="text-sm text-slate-700">Permanently delete <strong>${escapeHtml(item.name)}</strong> (${escapeHtml(item.sku)})? If you want to keep historical records instead, use <strong>Discontinue</strong>.</p>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="btn-cancel-del-inv" class="px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Delete Item</button>
+        </div>
+      </form>
+    `);
+  }
+
+
+  function showAnnouncementEditorModal(annId) {
+    const a = annId ? (state.announcements || []).find(x => x.id === annId) : null;
+    const isEdit = !!a;
+    openModal(isEdit ? 'Edit Announcement / Reminder' : 'Post Kitchen Announcement or Reminder', `
+      <form id="form-save-announcement" class="space-y-3">
+        <input type="hidden" name="annId" value="${isEdit ? escapeHtml(a.id) : ''}" />
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Title</label>
+          <input name="title" type="text" required value="${isEdit ? escapeHtml(a.title) : ''}" placeholder="e.g. Christmas Eve Closing / Delivery Time" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Color-Coded Urgency</label>
+            <select name="priority" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+              <option value="urgent" ${isEdit && a.priority === 'urgent' ? 'selected' : ''}>Red — Critical / Holiday Alert</option>
+              <option value="reminder" ${!isEdit || a.priority === 'reminder' ? 'selected' : ''}>Amber — Important Reminder</option>
+              <option value="info" ${isEdit && a.priority === 'info' ? 'selected' : ''}>Blue — General Info</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Alert / Go-Live Time (Optional)</label>
+            <input name="alertAt" type="datetime-local" value="${isEdit && a.alertAt ? escapeHtml(a.alertAt) : ''}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-500">Leave Alert Time blank to post immediately, or set a date &amp; time for it to automatically go live on everyone's Dashboard.</p>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Message</label>
+          <textarea name="body" rows="3" required placeholder="Details for staff and volunteers..." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">${isEdit ? escapeHtml(a.body) : ''}</textarea>
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">${isEdit ? 'Save Announcement' : 'Post / Schedule Announcement'}</button>
+      </form>
     `);
   }
 
@@ -2664,8 +3943,8 @@
       closeModal();
       return;
     }
-    if (e.target.id === 'btn-toggle-units' || e.target.id === 'btn-toggle-units-rec') {
-      state.unitMode = state.unitMode === 'grams' ? 'us' : 'grams';
+    if (e.target.closest('#btn-toggle-units') || e.target.closest('#btn-toggle-units-rec')) {
+      state.unitMode = state.unitMode === 'volume' ? 'us' : state.unitMode === 'us' ? 'grams' : 'volume';
       saveState();
       render();
       return;
@@ -2731,12 +4010,91 @@
       }
       return;
     }
+    if (e.target.id === 'btn-new-announcement') {
+      showAnnouncementEditorModal(null);
+      return;
+    }
+    const editAnnBtn = e.target.closest('[data-edit-announcement]');
+    if (editAnnBtn) {
+      showAnnouncementEditorModal(editAnnBtn.dataset.editAnnouncement);
+      return;
+    }
+    const delAnnBtn = e.target.closest('[data-del-announcement]');
+    if (delAnnBtn) {
+      state.announcements = (state.announcements || []).filter(a => a.id !== delAnnBtn.dataset.delAnnouncement);
+      saveState();
+      render();
+      showToast('Announcement removed');
+      return;
+    }
+    if (e.target.id === 'btn-bulk-par') {
+      showBulkParModal();
+      return;
+    }
+    if (e.target.id === 'btn-apply-all-par') {
+      const val = document.getElementById('bulk-par-all-val')?.value;
+      if (val !== undefined && val !== '') {
+        document.querySelectorAll('.bulk-par-input').forEach(inp => { inp.value = val; });
+      }
+      return;
+    }
+    const editInvBtn = e.target.closest('[data-edit-inv]');
+    if (editInvBtn) {
+      showEditInventoryModal(editInvBtn.dataset.editInv);
+      return;
+    }
+    const toggleDiscBtn = e.target.closest('[data-toggle-disc]');
+    if (toggleDiscBtn) {
+      const item = state.inventory.find(i => i.id === toggleDiscBtn.dataset.toggleDisc);
+      if (item) {
+        item.discontinued = !item.discontinued;
+        saveState();
+        render();
+        showToast(`${item.name} ${item.discontinued ? 'discontinued' : 'reactivated'}`);
+      }
+      return;
+    }
+    const delInvBtn = e.target.closest('[data-delete-inv]');
+    if (delInvBtn) {
+      showDeleteInventoryModal(delInvBtn.dataset.deleteInv);
+      return;
+    }
+    if (e.target.id === 'btn-cancel-del-inv') {
+      closeModal();
+      return;
+    }
     if (e.target.id === 'btn-add-inv-item') {
       showAddItemModal();
       return;
     }
     if (e.target.id === 'btn-new-recipe') {
-      showAddRecipeModal();
+      showRecipeEditorModal(null);
+      return;
+    }
+    const editRecBtn = e.target.closest('[data-edit-recipe]');
+    if (editRecBtn) {
+      showRecipeEditorModal(editRecBtn.dataset.editRecipe);
+      return;
+    }
+    const delRecBtn = e.target.closest('[data-delete-recipe]');
+    if (delRecBtn) {
+      showDeleteRecipeModal(delRecBtn.dataset.deleteRecipe);
+      return;
+    }
+    if (e.target.id === 'btn-cancel-del-recipe') {
+      closeModal();
+      return;
+    }
+    if (e.target.id === 'btn-add-ing-row') {
+      const container = document.getElementById('rec-ing-rows');
+      if (container) {
+        container.insertAdjacentHTML('beforeend', buildRecipeIngredientRowHtml(state.inventory[0]?.id, 1, 'cup'));
+      }
+      return;
+    }
+    if (e.target.classList && e.target.classList.contains('btn-remove-ing-row')) {
+      const row = e.target.closest('.rec-ing-row');
+      if (row) row.remove();
       return;
     }
 
@@ -2850,7 +4208,7 @@
     if (e.target.id === 'btn-commit-all-menu') {
       let committed = 0;
       (state.menuPlan || []).forEach(mp => {
-        if (mp.status === 'DEDUCTED') return;
+        if (mp.status === 'DEDUCTED' || mp.status === 'CLOSED') return;
         const rec = state.recipes.find(r => r.id === mp.recipeId);
         if (!rec) return;
         deductRecipeFromInventory(rec, mp.portions, `Menu Plan (${mp.date})`);
@@ -2885,6 +4243,75 @@
       state.prepQueue = state.prepQueue.filter(p => p.id !== removePrepBtn.dataset.removePrep);
       saveState();
       render();
+      return;
+    }
+
+    const reviewPoBtn = e.target.closest('[data-review-po]');
+    if (reviewPoBtn) {
+      showApprovePoModal(reviewPoBtn.dataset.reviewPo);
+      return;
+    }
+    const receivePoBtn = e.target.closest('[data-receive-po]');
+    if (receivePoBtn) {
+      const po = (state.purchaseOrders || []).find(p => p.id === receivePoBtn.dataset.receivePo);
+      if (po && po.status === 'APPROVED_ORDERED') {
+        const user = getActiveUser();
+        let addedCount = 0;
+        po.lines.forEach(ln => {
+          if (!ln.approvedPacks || ln.approvedPacks <= 0) return;
+          const item = state.inventory.find(i => i.id === ln.itemId);
+          if (!item) return;
+          const addG = Math.round(ln.approvedPacks * (ln.packSizeGrams || item.packSizeGrams || 1000));
+          item.stockGrams += addG;
+          item.lastUpdated = new Date().toISOString().slice(0, 10);
+          state.transactions.unshift({
+            id: uid('tx'),
+            timestamp: nowStamp(),
+            type: 'INCOMING',
+            itemId: item.id,
+            itemName: item.name,
+            grams: addG,
+            note: `Received ${po.poNumber} (${ln.approvedPacks}x ${ln.packLabel})`,
+            staff: user.name
+          });
+          addedCount++;
+        });
+        po.status = 'RECEIVED';
+        po.receivedBy = user.name;
+        po.receivedAt = nowStamp();
+        saveState();
+        render();
+        showToast(`Checked in ${addedCount} approved item(s) from ${po.poNumber}`);
+      }
+      return;
+    }
+    const copyPoBtn = e.target.closest('[data-copy-po]');
+    if (copyPoBtn) {
+      const po = (state.purchaseOrders || []).find(p => p.id === copyPoBtn.dataset.copyPo);
+      if (po) {
+        const txt = `${po.poNumber} — ${po.vendor} (${po.status})\nRequested by: ${po.requestedBy} | Approver: ${po.approver}\n` +
+          po.lines.map(l => `- ${l.itemName}: Req ${l.requestedPacks}x ${l.packLabel}` + (po.status !== 'PENDING_APPROVAL' ? ` | Ordered: ${l.approvedPacks}` : '')).join('\n') +
+          (po.expectedArrival ? `\nExpected Arrival: ${po.expectedArrival}` : '');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).catch(() => {});
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = txt;
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); } catch (err) {}
+          ta.remove();
+        }
+        showToast(`Copied ${po.poNumber} summary to clipboard`);
+      }
+      return;
+    }
+    const delPoBtn = e.target.closest('[data-delete-po]');
+    if (delPoBtn) {
+      state.purchaseOrders = (state.purchaseOrders || []).filter(p => p.id !== delPoBtn.dataset.deletePo);
+      saveState();
+      render();
+      showToast('Purchase order cancelled');
       return;
     }
 
@@ -2950,7 +4377,13 @@
       return;
     }
 
-    if (e.target.id === 'btn-print-prep' || e.target.id === 'btn-print-orders' || e.target.id === 'btn-print-haccp' || e.target.id === 'btn-print-help' || e.target.id === 'btn-print-qr-now' || e.target.id === 'btn-print-checklists') {
+    if (e.target.id === 'btn-print-menu-range') {
+      const range = document.getElementById('menu-print-range')?.value || 'weekly';
+      const refDate = document.getElementById('menu-print-date')?.value || new Date().toISOString().slice(0, 10);
+      showPrintableMenuModal(range, refDate);
+      return;
+    }
+    if (e.target.id === 'btn-print-prep' || e.target.id === 'btn-print-orders' || e.target.id === 'btn-print-haccp' || e.target.id === 'btn-print-help' || e.target.id === 'btn-print-qr-now' || e.target.id === 'btn-print-checklists' || e.target.id === 'btn-print-menu-now') {
       window.print();
       return;
     }
@@ -3089,6 +4522,29 @@
       render();
       return;
     }
+    if (e.target.id === 'btn-set-default-pin') {
+      showDefaultPinModal();
+      return;
+    }
+    const editUserBtn = e.target.closest('[data-edit-user]');
+    if (editUserBtn) {
+      showEditUserModal(editUserBtn.dataset.editUser);
+      return;
+    }
+    const delUserBtn = e.target.closest('[data-delete-user]');
+    if (delUserBtn) {
+      showDeleteUserModal(delUserBtn.dataset.deleteUser);
+      return;
+    }
+    if (e.target.id === 'btn-cancel-del-user') {
+      closeModal();
+      return;
+    }
+    const editTrnBtn = e.target.closest('[data-edit-training]');
+    if (editTrnBtn) {
+      showEditTrainingModal(editTrnBtn.dataset.editTraining);
+      return;
+    }
     const editPinBtn = e.target.closest('[data-edit-pin]');
     if (editPinBtn) {
       showEditPinModal(editPinBtn.dataset.editPin);
@@ -3111,6 +4567,56 @@
         saveState();
         render();
       }
+      return;
+    }
+    if (e.target.id === 'btn-onb-prev') {
+      if (onboardingStepIdx > 0) {
+        onboardingStepIdx--;
+        renderMandatoryOnboarding();
+      }
+      return;
+    }
+    if (e.target.id === 'btn-onb-next') {
+      const user = getActiveUser();
+      const mods = getUserTrainingModules(user);
+      if (onboardingStepIdx < mods.length - 1) {
+        onboardingStepIdx++;
+        renderMandatoryOnboarding();
+      } else {
+        if (!Array.isArray(user.completedTrainingIds)) user.completedTrainingIds = [];
+        mods.forEach(m => {
+          if (!user.completedTrainingIds.includes(m.id)) user.completedTrainingIds.push(m.id);
+        });
+        user.onboardingCompleted = true;
+        if (!Array.isArray(state.trainingLogs)) state.trainingLogs = [];
+        state.trainingLogs.unshift({
+          id: uid('tlg'),
+          timestamp: nowStamp(),
+          user: user.name,
+          role: user.role,
+          modulesCount: mods.length
+        });
+        onboardingStepIdx = 0;
+        saveState();
+        render();
+        showToast(`Training completed and logged for ${user.name}`);
+      }
+      return;
+    }
+    const retrainBtn = e.target.closest('[data-reset-user-training]');
+    if (retrainBtn) {
+      showSelectRetrainModal(retrainBtn.dataset.resetUserTraining);
+      return;
+    }
+    if (e.target.id === 'btn-require-all-retrain') {
+      showSelectRetrainModal('ALL');
+      return;
+    }
+    const delTrnBtn = e.target.closest('[data-del-training]');
+    if (delTrnBtn) {
+      state.trainingModules = (state.trainingModules || []).filter(m => m.id !== delTrnBtn.dataset.delTraining);
+      saveState();
+      render();
       return;
     }
     if (e.target.id === 'btn-reset-demo') {
@@ -3145,6 +4651,24 @@
       saveState();
       render();
       showToast(`Active user: ${getActiveUser().name}`);
+      return;
+    }
+    if (e.target.id === 'checkin-item-select') {
+      const item = state.inventory.find(i => i.id === e.target.value);
+      const packOpt = document.getElementById('checkin-pack-option');
+      if (item && packOpt) packOpt.textContent = `${item.packLabel} (${item.vendor})`;
+      return;
+    }
+    if (e.target.id === 'order-cadence-filter') {
+      state.orderCadenceFilter = e.target.value;
+      render();
+      return;
+    }
+    if (e.target.id === 'select-autolock-mins') {
+      state.autoLockMinutes = Number(e.target.value);
+      saveState();
+      resetInactivityTimer();
+      showToast(state.autoLockMinutes > 0 ? `Auto-lock set to ${state.autoLockMinutes} min` : 'Auto-lock disabled');
       return;
     }
     if (e.target.id === 'audit-zone-filter') {
@@ -3224,6 +4748,7 @@
       const rawQty = Number(fd.get('qty'));
       const unit = fd.get('unit');
       const grams = unit === 'kg' ? rawQty * 1000 : unit === 'lb' ? rawQty * 453.592 : unit === 'pack' ? rawQty * (item.packSizeGrams || 1000) : rawQty;
+      const qtyLabel = unit === 'pack' ? `${rawQty} × ${item.packLabel}` : formatShortMass(grams);
       item.stockGrams += Math.round(grams);
       item.lastUpdated = new Date().toISOString().slice(0, 10);
       state.transactions.unshift({
@@ -3233,12 +4758,12 @@
         itemId: item.id,
         itemName: item.name,
         grams: Math.round(grams),
-        note: (fd.get('note') || 'Delivery Check-In') + ` | Vendor: ${item.vendor}`,
+        note: (fd.get('note') || 'Delivery Check-In') + ` | ${qtyLabel} (${item.vendor})`,
         staff: fd.get('staff')
       });
       saveState();
       render();
-      showToast(`Checked in +${formatShortMass(grams)} of ${item.name}`);
+      showToast(`Checked in ${qtyLabel} of ${item.name}`);
       return;
     }
 
@@ -3265,6 +4790,89 @@
       return;
     }
 
+    if (e.target.id === 'form-save-announcement') {
+      const existingId = fd.get('annId');
+      const alertAt = (fd.get('alertAt') || '').trim();
+      if (existingId) {
+        const a = (state.announcements || []).find(x => x.id === existingId);
+        if (a) {
+          a.title = fd.get('title').trim();
+          a.priority = fd.get('priority') || 'reminder';
+          a.alertAt = alertAt;
+          a.body = fd.get('body').trim();
+          a.liveAnnounced = false;
+          saveState();
+          closeModal();
+          render();
+          showToast(`Updated announcement: ${a.title}`);
+        }
+      } else {
+        const ann = {
+          id: uid('ann'),
+          priority: fd.get('priority') || 'reminder',
+          title: fd.get('title').trim(),
+          body: fd.get('body').trim(),
+          alertAt,
+          liveAnnounced: !alertAt || new Date(alertAt).getTime() <= Date.now(),
+          author: getActiveUser().name,
+          createdAt: new Date().toISOString().slice(0, 10)
+        };
+        if (!Array.isArray(state.announcements)) state.announcements = [];
+        state.announcements.unshift(ann);
+        saveState();
+        closeModal();
+        render();
+        showToast(alertAt && new Date(alertAt).getTime() > Date.now() ? `Scheduled "${ann.title}" for ${alertAt.replace('T', ' ')}` : `Posted: ${ann.title}`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-bulk-par') {
+      state.inventory.filter(i => !i.discontinued).forEach(item => {
+        const val = Number(fd.get('par_' + item.id));
+        if (!isNaN(val) && val >= 0) {
+          item.parGrams = Math.round(val * (item.packSizeGrams || 1000));
+        }
+      });
+      saveState();
+      closeModal();
+      render();
+      showToast('Updated Par Levels for all items');
+      return;
+    }
+
+    if (e.target.id === 'form-edit-inv') {
+      const item = state.inventory.find(i => i.id === fd.get('itemId'));
+      if (item) {
+        const packG = Math.max(1, Number(fd.get('packSizeGrams')) || 1000);
+        item.sku = fd.get('sku').trim();
+        item.name = fd.get('name').trim();
+        item.zone = fd.get('zone');
+        item.vendor = fd.get('vendor').trim();
+        item.packLabel = fd.get('packLabel').trim();
+        item.packSizeGrams = packG;
+        item.stockGrams = Math.round(Number(fd.get('stockPacks') || 0) * packG);
+        item.parGrams = Math.round(Number(fd.get('parPacks') || 0) * packG);
+        item.lastUpdated = new Date().toISOString().slice(0, 10);
+        saveState();
+        closeModal();
+        render();
+        showToast(`Updated ${item.name}`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-delete-inv') {
+      const targetId = fd.get('itemId');
+      const removed = state.inventory.find(i => i.id === targetId);
+      state.inventory = state.inventory.filter(i => i.id !== targetId);
+      saveState();
+      closeModal();
+      render();
+      showToast(`Deleted ${removed ? removed.name : 'item'}`);
+      return;
+    }
+
     if (e.target.id === 'form-new-inv') {
       const newItem = {
         id: uid('inv'),
@@ -3288,29 +4896,73 @@
       return;
     }
 
-    if (e.target.id === 'form-new-recipe') {
+    if (e.target.id === 'form-save-recipe') {
       const ings = [];
-      [[fd.get('ing1'), Number(fd.get('g1'))], [fd.get('ing2'), Number(fd.get('g2'))], [fd.get('ing3'), Number(fd.get('g3'))]].forEach(([id, g]) => {
-        if (id && g > 0) ings.push({ itemId: id, grams: g });
+      e.target.querySelectorAll('.rec-ing-row').forEach(row => {
+        const id = row.querySelector('.rec-ing-item')?.value;
+        const qty = Number(row.querySelector('.rec-ing-qty')?.value);
+        const unit = row.querySelector('.rec-ing-unit')?.value;
+        if (!id || !qty || qty <= 0) return;
+        const item = state.inventory.find(i => i.id === id);
+        const spec = VOLUME_SPECS[id];
+        let grams = qty;
+        if (unit === 'cup') grams = qty * (spec ? spec.gPerCup : 150);
+        else if (unit === 'gal') grams = qty * 16 * (spec ? spec.gPerCup : 240);
+        else if (unit === 'can10') grams = qty * 3000;
+        else if (unit === 'pack') grams = qty * (spec ? spec.gPerUnit : (item ? item.packSizeGrams : 454));
+        else if (unit === 'tbsp') grams = qty * (spec && spec.gPerTbsp ? spec.gPerTbsp : 15);
+        else if (unit === 'lb') grams = qty * 453.592;
+        ings.push({ itemId: id, grams: Math.round(grams) });
       });
-      const totalMin = Number(fd.get('totalMin')) || 60;
-      const newRec = {
-        id: uid('rec'),
-        name: fd.get('name'),
-        category: fd.get('category'),
-        basePortions: Number(fd.get('basePortions')) || 50,
-        prepMin: Math.round(totalMin * 0.4),
-        cookMin: Math.round(totalMin * 0.6),
-        isBakers: false,
-        instructions: fd.get('instructions'),
-        ingredients: ings
-      };
-      state.recipes.push(newRec);
-      state.selectedRecipeId = newRec.id;
+      const existingId = fd.get('recipeId');
+      if (existingId) {
+        const rec = state.recipes.find(r => r.id === existingId);
+        if (rec) {
+          rec.name = fd.get('name').trim();
+          rec.category = fd.get('category').trim();
+          rec.basePortions = Number(fd.get('basePortions')) || 50;
+          rec.prepMin = Number(fd.get('prepMin')) || 0;
+          rec.cookMin = Number(fd.get('cookMin')) || 0;
+          rec.instructions = fd.get('instructions').trim();
+          rec.ingredients = ings;
+          saveState();
+          closeModal();
+          render();
+          showToast(`Updated recipe: ${rec.name}`);
+        }
+      } else {
+        const newRec = {
+          id: uid('rec'),
+          name: fd.get('name').trim(),
+          category: fd.get('category').trim(),
+          basePortions: Number(fd.get('basePortions')) || 50,
+          prepMin: Number(fd.get('prepMin')) || 0,
+          cookMin: Number(fd.get('cookMin')) || 0,
+          isBakers: false,
+          instructions: fd.get('instructions').trim(),
+          ingredients: ings
+        };
+        state.recipes.push(newRec);
+        state.selectedRecipeId = newRec.id;
+        saveState();
+        closeModal();
+        render();
+        showToast(`Saved recipe: ${newRec.name}`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-delete-recipe') {
+      const targetId = fd.get('recipeId');
+      const removed = state.recipes.find(r => r.id === targetId);
+      state.recipes = state.recipes.filter(r => r.id !== targetId);
+      if (state.selectedRecipeId === targetId) {
+        state.selectedRecipeId = state.recipes[0] ? state.recipes[0].id : '';
+      }
       saveState();
       closeModal();
       render();
-      showToast(`Saved recipe: ${newRec.name}`);
+      showToast(`Deleted recipe: ${removed ? removed.name : ''}`);
       return;
     }
 
@@ -3367,6 +5019,7 @@
       }
       state.activeUserId = targetUser.id;
       state.isLocked = false;
+      onboardingStepIdx = 0;
       const allowed = getAllowedTabs(targetUser);
       if (!allowed.includes(state.activeTab)) state.activeTab = allowed[0];
       saveState();
@@ -3376,15 +5029,206 @@
       return;
     }
 
+    if (e.target.id === 'form-default-pin') {
+      state.defaultNewUserPin = String(fd.get('defaultPin') || '0000').trim();
+      saveState();
+      closeModal();
+      render();
+      showToast(`Default new-account PIN updated to ${state.defaultNewUserPin}`);
+      return;
+    }
+
+    if (e.target.id === 'form-force-pin-change') {
+      const newPin = String(fd.get('newPin') || '').trim();
+      const confirmPin = String(fd.get('confirmPin') || '').trim();
+      const errEl = document.getElementById('force-pin-error');
+      const user = getActiveUser();
+      if (newPin.length < 4) {
+        if (errEl) { errEl.textContent = 'PIN/password must be at least 4 characters.'; errEl.classList.remove('hidden'); }
+        return;
+      }
+      if (newPin !== confirmPin) {
+        if (errEl) { errEl.textContent = 'PINs do not match.'; errEl.classList.remove('hidden'); }
+        return;
+      }
+      if (newPin === String(user.pin)) {
+        if (errEl) { errEl.textContent = 'Please choose a new PIN different from your temporary PIN.'; errEl.classList.remove('hidden'); }
+        return;
+      }
+      if (errEl) errEl.classList.add('hidden');
+      user.pin = newPin;
+      user.mustChangePin = false;
+      saveState();
+      e.target.reset();
+      render();
+      showToast(`Personal PIN saved for ${user.name}`);
+      return;
+    }
+
+    if (e.target.classList && e.target.classList.contains('form-reconcile-po')) {
+      const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.poId);
+      if (po && po.status === 'APPROVED_ORDERED') {
+        const user = getActiveUser();
+        let addedCount = 0;
+        let shortCount = 0;
+        po.lines.forEach(ln => {
+          if (!ln.approvedPacks || ln.approvedPacks <= 0) {
+            ln.receivedPacks = 0;
+            return;
+          }
+          const recVal = Number(fd.get('rec_' + ln.itemId));
+          const actualPacks = isNaN(recVal) ? ln.approvedPacks : Math.max(0, recVal);
+          ln.receivedPacks = actualPacks;
+          if (actualPacks < ln.approvedPacks) shortCount++;
+          if (actualPacks <= 0) return;
+          const item = state.inventory.find(i => i.id === ln.itemId);
+          if (!item) return;
+          const addG = Math.round(actualPacks * (ln.packSizeGrams || item.packSizeGrams || 1000));
+          item.stockGrams += addG;
+          item.lastUpdated = new Date().toISOString().slice(0, 10);
+          const diffNote = actualPacks !== ln.approvedPacks ? ` (Ordered ${ln.approvedPacks}, Received ${actualPacks})` : '';
+          state.transactions.unshift({
+            id: uid('tx'),
+            timestamp: nowStamp(),
+            type: 'INCOMING',
+            itemId: item.id,
+            itemName: item.name,
+            grams: addG,
+            note: `PO Check-In ${po.poNumber}: ${actualPacks}x ${ln.packLabel}${diffNote}`,
+            staff: user.name
+          });
+          addedCount++;
+        });
+        po.status = 'RECEIVED';
+        po.receivedBy = user.name;
+        po.receivedAt = nowStamp();
+        saveState();
+        render();
+        showToast(`Reconciled ${po.poNumber}: ${addedCount} item(s) checked in${shortCount ? ` (${shortCount} short/adjusted)` : ''}`);
+      }
+      return;
+    }
+
+    if (e.target.classList && e.target.classList.contains('form-create-po')) {
+      const vendor = e.target.dataset.vendor;
+      const approver = fd.get('approver') || 'Management';
+      const lines = [];
+      state.inventory.filter(i => i.vendor === vendor).forEach(item => {
+        if (!fd.get('inc_' + item.id)) return;
+        const reqPacks = Number(fd.get('qty_' + item.id) || 0);
+        if (reqPacks <= 0) return;
+        lines.push({
+          itemId: item.id,
+          itemName: item.name,
+          packLabel: item.packLabel,
+          packSizeGrams: item.packSizeGrams || 1000,
+          requestedPacks: reqPacks,
+          approvedPacks: reqPacks
+        });
+      });
+      if (!lines.length) {
+        showToast('Select at least one item to include in the PO', 'warn');
+        return;
+      }
+      const user = getActiveUser();
+      const po = {
+        id: uid('po'),
+        poNumber: 'PO-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + String((state.purchaseOrders || []).length + 1).padStart(2, '0'),
+        vendor,
+        requestedBy: user.name,
+        approver,
+        status: 'PENDING_APPROVAL',
+        createdAt: nowStamp(),
+        expectedArrival: '',
+        approverNotes: '',
+        lines
+      };
+      if (!Array.isArray(state.purchaseOrders)) state.purchaseOrders = [];
+      state.purchaseOrders.unshift(po);
+      saveState();
+      render();
+      showToast(`Sent ${po.poNumber} to ${approver} for approval`);
+      return;
+    }
+
+    if (e.target.id === 'form-approve-po') {
+      const po = (state.purchaseOrders || []).find(p => p.id === fd.get('poId'));
+      if (po) {
+        po.lines.forEach(ln => {
+          const val = Number(fd.get('app_' + ln.itemId));
+          ln.approvedPacks = isNaN(val) ? 0 : Math.max(0, val);
+        });
+        po.expectedArrival = fd.get('expectedArrival') || '';
+        po.approverNotes = (fd.get('approverNotes') || '').trim();
+        po.approvedBy = getActiveUser().name;
+        po.approvedAt = nowStamp();
+        po.status = 'APPROVED_ORDERED';
+        saveState();
+        closeModal();
+        render();
+        showToast(`Approved ${po.poNumber} — ETA ${po.expectedArrival}`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-edit-user') {
+      const u = state.users.find(x => x.id === fd.get('userId'));
+      if (u) {
+        u.name = fd.get('name').trim();
+        u.initials = fd.get('initials').trim().toUpperCase();
+        u.role = fd.get('role');
+        saveState();
+        closeModal();
+        render();
+        showToast(`Updated user account: ${u.name}`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-delete-user') {
+      const targetId = fd.get('userId');
+      if (targetId && targetId !== state.activeUserId && state.users.length > 1) {
+        const removed = state.users.find(x => x.id === targetId);
+        state.users = state.users.filter(x => x.id !== targetId);
+        saveState();
+        closeModal();
+        render();
+        showToast(`Deleted user account: ${removed ? removed.name : ''}`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-edit-training') {
+      const m = (state.trainingModules || []).find(x => x.id === fd.get('modId'));
+      if (m) {
+        m.title = fd.get('title').trim();
+        m.role = fd.get('role');
+        m.content = fd.get('content').trim();
+        if (fd.get('requeueAll')) {
+          (state.users || []).forEach(u => {
+            if (Array.isArray(u.completedTrainingIds)) {
+              u.completedTrainingIds = u.completedTrainingIds.filter(id => id !== m.id);
+            }
+          });
+        }
+        saveState();
+        closeModal();
+        render();
+        showToast(`Updated training module: ${m.title}`);
+      }
+      return;
+    }
+
     if (e.target.id === 'form-edit-pin') {
       const u = state.users.find(x => x.id === fd.get('userId'));
       if (u) {
         u.role = fd.get('role');
         u.pin = String(fd.get('pin'));
+        u.mustChangePin = !!fd.get('mustChangePin');
         saveState();
         closeModal();
         render();
-        showToast(`Updated role & password for ${u.name}`);
+        showToast(`Updated role & PIN for ${u.name}${u.mustChangePin ? ' (will prompt to change on next login)' : ''}`);
       }
       return;
     }
@@ -3426,19 +5270,60 @@
       return;
     }
 
+    if (e.target.id === 'form-select-retrain') {
+      const targetUserId = fd.get('targetUserId');
+      const selectedIds = fd.getAll('modIds');
+      if (!selectedIds.length) {
+        showToast('Select at least one training module', 'warn');
+        return;
+      }
+      const targets = targetUserId === 'ALL' ? (state.users || []) : (state.users || []).filter(u => u.id === targetUserId);
+      targets.forEach(u => {
+        if (!Array.isArray(u.completedTrainingIds)) {
+          u.completedTrainingIds = u.onboardingCompleted ? (state.trainingModules || []).map(m => m.id) : [];
+        }
+        u.completedTrainingIds = u.completedTrainingIds.filter(id => !selectedIds.includes(id));
+        u.onboardingCompleted = false;
+      });
+      onboardingStepIdx = 0;
+      saveState();
+      closeModal();
+      render();
+      showToast(`Queued ${selectedIds.length} training module(s) for ${targetUserId === 'ALL' ? 'all users' : (targets[0] ? targets[0].name : 'user')}`);
+      return;
+    }
+
+    if (e.target.id === 'form-add-training') {
+      const mod = {
+        id: uid('trn'),
+        title: fd.get('title').trim(),
+        role: fd.get('role'),
+        content: fd.get('content').trim()
+      };
+      if (!Array.isArray(state.trainingModules)) state.trainingModules = [];
+      state.trainingModules.push(mod);
+      saveState();
+      render();
+      showToast(`Added training module: ${mod.title}`);
+      return;
+    }
+
     if (e.target.id === 'form-add-user') {
       const newUser = {
         id: uid('usr'),
         name: fd.get('name').trim(),
         role: fd.get('role'),
         initials: fd.get('initials').trim().toUpperCase(),
-        pin: String(fd.get('pin') || '1234'),
-        active: true
+        pin: String(fd.get('pin') || state.defaultNewUserPin || '0000'),
+        active: true,
+        mustChangePin: !!fd.get('mustChangePin'),
+        onboardingCompleted: false,
+        completedTrainingIds: []
       };
       state.users.push(newUser);
       saveState();
       render();
-      showToast(`Added ${newUser.name} (${newUser.role})`);
+      showToast(`Added ${newUser.name} (${newUser.role}) — PIN change & training queued for first login`);
     }
   });
 
@@ -3462,7 +5347,54 @@
   });
 
   // Initial render + start Supabase real-time sync
+  let inactivityTimerId = null;
+  let lastActivityAt = 0;
+
+  function resetInactivityTimer() {
+    const now = Date.now();
+    if (now - lastActivityAt < 1000 && inactivityTimerId) return;
+    lastActivityAt = now;
+    if (inactivityTimerId) {
+      clearTimeout(inactivityTimerId);
+      inactivityTimerId = null;
+    }
+    const mins = Number(state.autoLockMinutes ?? 5);
+    if (!mins || mins <= 0 || state.isLocked) return;
+    inactivityTimerId = setTimeout(() => {
+      if (!state.isLocked) {
+        state.isLocked = true;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        render();
+        showToast('Session auto-locked due to inactivity', 'warn');
+      }
+    }, mins * 60 * 1000);
+  }
+
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
+    document.addEventListener(ev, resetInactivityTimer, { passive: true });
+  });
+
+  setInterval(() => {
+    const nowMs = Date.now();
+    let wentLive = null;
+    (state.announcements || []).forEach(a => {
+      if (a.alertAt && !a.liveAnnounced) {
+        const t = new Date(a.alertAt).getTime();
+        if (!isNaN(t) && t <= nowMs) {
+          a.liveAnnounced = true;
+          wentLive = a;
+        }
+      }
+    });
+    if (wentLive) {
+      saveState();
+      if (state.activeTab === 'dashboard') render();
+      showToast(`Live Alert: ${wentLive.title}`, wentLive.priority === 'urgent' ? 'warn' : 'info');
+    }
+  }, 15000);
+
   function bootApp() {
+    resetInactivityTimer();
     autoResetChecklistsIfNeeded(false);
     render();
     initSupabaseSync();
