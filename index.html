@@ -258,6 +258,270 @@
   }
 
   // --- Initial Seed Data ---
+  function buildHolidayFeastRecipes() {
+    return [
+      {
+        id: 'rec-hol-christmas',
+        name: 'Christmas Feast (Roast Turkey, Mash, Stuffing, Green Beans, Rolls & Pie)',
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 45,
+        cookMin: 90,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-19', grams: 13608 },
+          { itemId: 'inv-20', grams: 13608 },
+          { itemId: 'inv-21', grams: 4536 },
+          { itemId: 'inv-22', grams: 9000 },
+          { itemId: 'inv-23', grams: 4500 },
+          { itemId: 'inv-17', grams: 6750 },
+          { itemId: 'inv-24', grams: 10800 },
+          { itemId: 'inv-12', grams: 908 },
+          { itemId: 'inv-11', grams: 3785 }
+        ],
+        instructions: '1. Thaw turkey & pumpkin pies overnight in Walk-In Cooler. 2. Roast turkey to ≥165°F. 3. Prepare mashed potatoes, stuffing, and #10 green beans. 4. Bake frozen dinner rolls at 375°F for 12–15 min. 5. Serve with Daily Salad Bar & pie.'
+      },
+      {
+        id: 'rec-hol-newyear',
+        name: "New Year's Feast (Sausage, Potatoes, Mixed Veg, Rolls & Pie)",
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 25,
+        cookMin: 55,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-41', grams: 9072 },
+          { itemId: 'inv-20', grams: 11340 },
+          { itemId: 'inv-38', grams: 6804 },
+          { itemId: 'inv-17', grams: 6750 },
+          { itemId: 'inv-12', grams: 680 },
+          { itemId: 'inv-24', grams: 8100 }
+        ],
+        instructions: '1. Thaw sausage overnight in Walk-In Cooler. 2. Roast sausage & diced potatoes on sheet pans at 375°F until ≥165°F. 3. Steam mixed vegetables, bake frozen dinner rolls, and serve with pie & Daily Salad Bar.'
+      },
+      {
+        id: 'rec-hol-mlk',
+        name: 'MLK Jr. Day Feast (Baked Chicken, Mac & Cheese, Green Beans & Biscuits)',
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 25,
+        cookMin: 55,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-14', grams: 11340 },
+          { itemId: 'inv-31', grams: 5000 },
+          { itemId: 'inv-36', grams: 3500 },
+          { itemId: 'inv-11', grams: 3785 },
+          { itemId: 'inv-22', grams: 9000 },
+          { itemId: 'inv-18', grams: 5400 }
+        ],
+        instructions: '1. Thaw chicken overnight; season and bake at 375°F until ≥165°F. 2. Prepare baked mac & cheese and heat #10 green beans. 3. Bake frozen biscuits at 375°F for 12–15 min; hold hot ≥135°F.'
+      },
+      {
+        id: 'rec-hol-pres',
+        name: "Presidents' Day Feast (Hearty Beef & Potato Stew, Rolls & Salad Bar)",
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 20,
+        cookMin: 60,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-15', grams: 9072 },
+          { itemId: 'inv-20', grams: 11340 },
+          { itemId: 'inv-8', grams: 4536 },
+          { itemId: 'inv-35', grams: 3500 },
+          { itemId: 'inv-17', grams: 6750 }
+        ],
+        instructions: '1. Brown beef with carrots, potatoes, and broth in kettle until ≥165°F. 2. Bake frozen dinner rolls at 375°F. 3. Hold stew ≥135°F and serve with Daily Salad Bar.'
+      },
+      {
+        id: 'rec-hol-memorial',
+        name: 'Memorial Day Cookout (Burgers, Hot Dogs, Baked Beans, Potato Salad & Chips)',
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 20,
+        cookMin: 30,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-42', grams: 11340 },
+          { itemId: 'inv-43', grams: 4500 },
+          { itemId: 'inv-32', grams: 9000 },
+          { itemId: 'inv-20', grams: 6804 },
+          { itemId: 'inv-48', grams: 2250 },
+          { itemId: 'inv-47', grams: 1500 }
+        ],
+        instructions: '1. Bake burgers and hot dogs on sheet pans at 375°F until ≥165°F. 2. Heat #10 beans; chill potato salad ≤41°F. 3. Serve on buns with chips, condiments & Daily Salad Bar.'
+      },
+      {
+        id: 'rec-hol-juneteenth',
+        name: 'Juneteenth Celebration Feast (BBQ Pulled Pork, Mac & Cheese, Green Beans & Biscuits)',
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 20,
+        cookMin: 45,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-40', grams: 9072 },
+          { itemId: 'inv-47', grams: 3000 },
+          { itemId: 'inv-31', grams: 5000 },
+          { itemId: 'inv-36', grams: 3500 },
+          { itemId: 'inv-22', grams: 9000 },
+          { itemId: 'inv-18', grams: 5400 }
+        ],
+        instructions: '1. Thaw precooked pulled pork; toss with BBQ sauce and heat covered at 350°F until ≥165°F. 2. Prepare mac & cheese and green beans. 3. Bake frozen biscuits and serve with Daily Salad Bar.'
+      },
+      {
+        id: 'rec-hol-july4',
+        name: 'Independence Day Cookout (Burgers, Hot Dogs, Beans, Fruit & Chips)',
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 20,
+        cookMin: 30,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-42', grams: 11340 },
+          { itemId: 'inv-43', grams: 4500 },
+          { itemId: 'inv-32', grams: 9000 },
+          { itemId: 'inv-27', grams: 4536 },
+          { itemId: 'inv-48', grams: 2250 }
+        ],
+        instructions: '1. Bake burgers and hot dogs on sheet pans at 375°F until ≥165°F. 2. Warm beans ≥135°F. 3. Serve with chilled fresh fruit, chips, and Daily Salad Bar.'
+      },
+      {
+        id: 'rec-hol-labor',
+        name: 'Labor Day Cookout Feast (Italian Sausage, Burgers, Beans, Rolls & Chips)',
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 20,
+        cookMin: 35,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-41', grams: 6804 },
+          { itemId: 'inv-42', grams: 6804 },
+          { itemId: 'inv-43', grams: 4500 },
+          { itemId: 'inv-32', grams: 9000 },
+          { itemId: 'inv-48', grams: 2250 }
+        ],
+        instructions: '1. Roast sausage and burgers on sheet pans at 375°F until ≥165°F. 2. Heat beans ≥135°F. 3. Serve on buns with chips and Daily Salad Bar.'
+      },
+      {
+        id: 'rec-hol-columbus',
+        name: 'Autumn Harvest Feast (Baked Ziti, Meatballs, Green Beans & Breadsticks)',
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 20,
+        cookMin: 40,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-5', grams: 6000 },
+          { itemId: 'inv-34', grams: 12000 },
+          { itemId: 'inv-39', grams: 6804 },
+          { itemId: 'inv-13', grams: 2500 },
+          { itemId: 'inv-22', grams: 9000 },
+          { itemId: 'inv-16', grams: 4500 }
+        ],
+        instructions: '1. Boil penne, mix with marinara and thawed meatballs, top with mozzarella, and bake at 350°F until ≥165°F. 2. Heat green beans and bake frozen breadsticks at 375°F for 12 min.'
+      },
+      {
+        id: 'rec-hol-veterans',
+        name: 'Veterans Day Appreciation Dinner (Roast Turkey, Mash, Green Beans & Rolls)',
+        category: 'Holiday Feast',
+        skillLevel: 'Beginner / Easy Group Prep',
+        basePortions: 75,
+        prepMin: 30,
+        cookMin: 75,
+        isBakers: false,
+        ingredients: [
+          { itemId: 'inv-19', grams: 13608 },
+          { itemId: 'inv-20', grams: 13608 },
+          { itemId: 'inv-22', grams: 9000 },
+          { itemId: 'inv-17', grams: 6750 },
+          { itemId: 'inv-12', grams: 680 },
+          { itemId: 'inv-11', grams: 3785 }
+        ],
+        instructions: '1. Thaw turkey overnight; roast until ≥165°F. 2. Prepare mashed potatoes and heat #10 green beans. 3. Bake frozen dinner rolls at 375°F and serve with Daily Salad Bar.'
+      }
+    ];
+  }
+
+  function buildExtendedRecipeBank() {
+    // 188 beginner-friendly, large-batch community kitchen recipes (total 200 with 12 core recipes)
+    const templates = [
+      ['Pasta & Baked Casseroles', 15, 35,
+        [{ itemId: 'inv-5', grams: 5000 }, { itemId: 'inv-34', grams: 9000 }, { itemId: 'inv-39', grams: 5500 }, { itemId: 'inv-13', grams: 2200 }],
+        '1. Thaw precooked meatballs overnight in Walk-In Cooler. 2. Boil pasta, drain, and mix with marinara in hotel pans. 3. Top with mozzarella, cover with foil, and bake at 350°F until ≥165°F. 4. Serve with Daily Salad Bar.',
+        ['Baked Ziti with Meatballs', 'One-Pan Marinara Pasta Bake', 'Mozzarella Meatball Rotini', 'Italian Baked Penne', 'Cheesy Tomato Pasta Casserole', 'Three-Cheese Baked Pasta', 'Homestyle Spaghetti & Meatballs', 'Garlic Herb Pasta & Meatballs', 'Easy Meatball Mostaccioli', 'Country Baked Penne', 'Classic Red Sauce Pasta Bake', 'Sunday Pasta & Meatballs', 'No-Fuss Italian Pasta Tray', 'Oven-Baked Rigatoni & Cheese', 'Tomato Basil Penne Bake', 'Quick Meatball Marinara Bowl', 'Hearty Pasta & Cheese Bake', 'Family-Style Baked Ziti', 'Simple Mozzarella Pasta', 'Savory Meatball Pasta Bake', 'Pantry Marinara Penne', 'Warm Italian Noodle Bake', 'Easy Crowd Spaghetti Bake', 'Cheesy Meatball Casserole']
+      ],
+      ['Pasta & Baked Casseroles', 15, 35,
+        [{ itemId: 'inv-31', grams: 5000 }, { itemId: 'inv-36', grams: 3500 }, { itemId: 'inv-11', grams: 3800 }, { itemId: 'inv-12', grams: 450 }, { itemId: 'inv-37', grams: 3000 }],
+        '1. Boil elbow macaroni and drain well. 2. Stir in milk, butter, soup base, and shredded cheddar in hotel pans until smooth. 3. Bake at 350°F for 25–30 min until bubbling and ≥165°F. 4. Hold ≥135°F on steam table.',
+        ['Creamy Baked Mac & Cheese', 'Cheesy Ham & Macaroni Bake', 'Chili Mac Casserole', 'Tuna Noodle Casserole', 'Chicken Broccoli Cheddar Bake', 'Country Macaroni & Beef', 'Cheesy Taco Mac Bake', 'Turkey Tetrazzini Bake', 'Easy Tuna & Cheddar Pasta', 'Beefy Hamburger Helper Bake', 'Creamy Chicken Noodle Casserole', 'Bacon-Style Cheddar Mac', 'Golden Crust Mac & Cheese', 'Sausage & Cheddar Macaroni', 'No-Boil Creamy Pasta Bake', 'Smoked Sausage Mac Bake', 'Cheesy Vegetable Pasta Bake', 'Homestyle Beef & Noodle Bake', 'Creamy Alfredo-Style Chicken Pasta', 'Classic Comfort Mac & Cheese', 'Southwest Corn & Mac Bake', 'Cheesy Ranch Chicken Pasta', 'Quick Skillet Beef Macaroni', 'Buttery Cheddar Noodle Bake']
+      ],
+      ['Slow-Cooker & One-Pot Stews', 15, 45,
+        [{ itemId: 'inv-15', grams: 6500 }, { itemId: 'inv-32', grams: 9000 }, { itemId: 'inv-33', grams: 9000 }, { itemId: 'inv-7', grams: 1200 }, { itemId: 'inv-35', grams: 2000 }],
+        '1. Brown beef with diced onions (or use precooked protein). 2. Open #10 cans of beans and diced tomatoes; pour into kettle with broth. 3. Simmer 35–45 min stirring occasionally until ≥165°F. 4. Serve with Frozen Dinner Rolls or Biscuits.',
+        ['Classic Beef & Bean Chili', 'Three-Bean Homestyle Chili', 'Cowboy Beef & Bean Stew', 'Southwest Ground Beef Chili', 'Easy Kettle Beef Chili', 'Mild Pantry Taco Chili', 'Hearty Sausage & Bean Stew', 'Slow-Simmered Chili Con Carne', 'Turkey & White Bean Chili', 'Country Hamburger Vegetable Soup', 'Quick One-Pot Bean & Beef', 'Smoky BBQ Bean & Beef Bake', 'Campfire Beef & Bean Pot', 'Tex-Mex Chili Bowl', 'Thick & Mild Community Chili', 'Black Bean & Beef Skillet', 'Pinto Bean & Sausage Pot', 'Simple Kettle Taco Soup', 'Loaded Chili over Rice', 'Winter Warmer Beef Chili', 'Easy Pantry Chili Mac', 'Mild Beef & Corn Chili', 'Hearty Kidney Bean Chili', 'All-American Kettle Chili']
+      ],
+      ['Slow-Cooker & One-Pot Stews', 15, 40,
+        [{ itemId: 'inv-14', grams: 6500 }, { itemId: 'inv-38', grams: 5000 }, { itemId: 'inv-37', grams: 6000 }, { itemId: 'inv-29', grams: 4000 }, { itemId: 'inv-35', grams: 2500 }],
+        '1. Thaw chicken overnight in Walk-In Cooler; dice or shred. 2. Simmer chicken, broth, soup base, and frozen mixed vegetables in kettle until ≥165°F. 3. Stir in cooked egg noodles or ladle over biscuits/rice. 4. Hold ≥135°F.',
+        ['Chicken & Dumpling-Style Noodles', 'Creamy Chicken Pot Pie over Biscuits', 'Easy Chicken & Rice Stew', 'Homestyle Chicken Noodle Soup', 'Turkey & Gravy over Noodles', 'Creamy Chicken & Mixed Veg', 'Chicken Ala King over Biscuits', 'Comfort Chicken & Stuffing Bake', 'One-Pot Chicken & Veg Soup', 'Creamy Turkey & Noodle Pot', 'Hearty Chicken Stew & Rolls', 'Country Chicken & Biscuits', 'Simple Shredded Chicken Gravy', 'Golden Chicken & Rice Pot', 'Vegetable Beef & Barley-Style Soup', 'Loaded Potato & Chicken Soup', 'Easy Chicken Corn Chowder', 'Creamy Sausage & Potato Soup', 'Warm Chicken & Bean Soup', 'Old-Fashioned Beef & Noodle Soup', 'Quick Poultry Gravy & Mash', 'Homestyle Shepherd\'s-Style Stew', 'Taco Chicken Rice Soup', 'Sunday Chicken & Noodles']
+      ],
+      ['Taco & Rice Bowls', 15, 30,
+        [{ itemId: 'inv-30', grams: 5500 }, { itemId: 'inv-15', grams: 6000 }, { itemId: 'inv-32', grams: 6000 }, { itemId: 'inv-36', grams: 2500 }, { itemId: 'inv-44', grams: 2500 }],
+        '1. Steam or bake white rice in hotel pans with water/broth. 2. Brown seasoned beef or warm precooked chicken/pork with black/pinto beans until ≥165°F. 3. Serve over rice or in warm flour tortillas with shredded cheese & Daily Salad Bar.',
+        ['Beef & Bean Taco Bowls', 'Chicken Fajita Rice Bowls', 'Build-Your-Own Soft Tacos', 'Pulled Pork Burrito Bowls', 'Cheesy Beef & Rice Skillet', 'Southwest Chicken & Black Beans', 'Easy Tex-Mex Rice Bake', 'Taco Beef & Nacho-Style Bowls', 'Salsa Chicken & Rice', 'Mild Beef Burrito Bake', 'Spanish-Style Rice & Beef', 'BBQ Pulled Pork Rice Bowls', 'Cheesy Chicken Enchilada Bake', 'Sausage & Dirty-Style Rice', 'Turkey Taco Rice Skillet', 'Pinto Bean & Cheese Burritos', 'Easy Quesadilla-Style Bake', 'Chicken Teriyaki-Style Rice Bowl', 'Sweet & Savory Meatball Rice Bowl', 'Pork & Mixed Veg Rice Stir', 'Homestyle Beef & Rice Casserole', 'Cheesy Broccoli Chicken & Rice', 'Cajun-Style Mild Sausage & Rice', 'Quick Pantry Burrito Tray']
+      ],
+      ['Sandwiches, Wraps & Cold Salads', 15, 10,
+        [{ itemId: 'inv-45', grams: 5500 }, { itemId: 'inv-43', grams: 3000 }, { itemId: 'inv-36', grams: 2000 }, { itemId: 'inv-48', grams: 1500 }, { itemId: 'inv-47', grams: 1200 }],
+        '1. Portion sliced deli meat and cheese onto buns/bread or tortillas (no cooking required; keep cold ≤41°F). 2. Serve with individual chips and Daily Salad Bar. 3. For hot melts/sliders, bake covered at 350°F until ≥165°F.',
+        ['Deli Turkey & Cheese Sandwiches', 'Ham & Cheddar Sub Sandwiches', 'Baked Ham & Cheese Sliders', 'Turkey & Cheese Pinwheel Wraps', 'BBQ Pulled Pork Sandwiches', 'Sloppy Joe Buns & Chips', 'Hot Meatball Sub Sandwiches', 'Italian Sausage & Pepper Subs', 'Classic Cheeseburgers & Chips', 'Grilled-Style Hot Dogs & Beans', 'Crispy Chicken Patty Sandwiches', 'Warm Roast Turkey & Gravy Subs', 'Tuna Salad Croissant/Bun Tray', 'Chicken Salad Lettuce Wraps', 'Cold Cut Club-Style Subs', 'Patty Melt-Style Sliders', 'BBQ Shredded Chicken Buns', 'Cheesy Beef Philly-Style Subs', 'Ham Salad & Crackers/Buns', 'Egg Salad-Style Sandwich Tray', 'Turkey Bacon-Style Club Wraps', 'Pastrami/Roast-Style Hot Subs', 'Easy Meatloaf-Style Sandwiches', 'Sausage & Cheese Biscuit Melts']
+      ],
+      ['Sheet-Pan Roasts & Easy Mains', 15, 40,
+        [{ itemId: 'inv-41', grams: 6000 }, { itemId: 'inv-20', grams: 8000 }, { itemId: 'inv-22', grams: 6000 }, { itemId: 'inv-12', grams: 450 }, { itemId: 'inv-4', grams: 90 }],
+        '1. Arrange precooked sausage, turkey, or chicken on sheet pans with cubed potatoes or green beans. 2. Toss lightly with butter/oil & salt; roast at 375°F until ≥165°F. 3. Serve with Frozen Dinner Rolls.',
+        ['Sheet-Pan Sausage & Potatoes', 'Roast Turkey & Green Beans', 'Sheet-Pan Chicken & Carrots', 'Baked Meatloaf-Style Beef & Mash', 'BBQ Chicken Quarters/Breasts & Corn', 'Herb-Roasted Chicken & Potatoes', 'Sausage, Peppers & Onions Tray', 'Glazed Ham-Style Roast & Mash', 'Sheet-Pan Meatballs & Potatoes', 'Garlic Butter Chicken & Green Beans', 'Country Pork & Stuffing Bake', 'Baked Chicken Tenders & Potato Salad', 'Oven-Roasted Turkey & Cranberry', 'Simple Beef Tips & Noodles', 'Sheet-Pan Kielbasa & Beans', 'Crispy Baked Fish-Style / Chicken & Chips', 'Honey-Mustard Glazed Chicken Tray', 'Savory Pork Roast & Carrots', 'Easy Salisbury-Style Beef & Gravy', 'Baked Italian Chicken & Pasta', 'Ranch Seasoned Chicken & Potatoes', 'Lemon-Herb Baked Chicken Breast']
+      ],
+      ['Breakfast-for-Lunch & Comfort Sides', 15, 25,
+        [{ itemId: 'inv-18', grams: 4500 }, { itemId: 'inv-41', grams: 4500 }, { itemId: 'inv-20', grams: 7000 }, { itemId: 'inv-36', grams: 2200 }, { itemId: 'inv-12', grams: 450 }],
+        '1. Bake frozen biscuits at 375°F for 12–15 min. 2. Warm sausage, diced potatoes, and cheese in sheet pans until ≥165°F. 3. Hold all hot items ≥135°F; serve with Daily Salad Bar & Yogurt/Fruit.',
+        ['Sausage Gravy & Frozen Biscuits', 'Cheesy Hashbrown & Sausage Bake', 'Breakfast-for-Lunch Biscuit Tray', 'Loaded Baked Potato Bar', 'Chili Cheese Baked Potatoes', 'Pulled Pork Stuffed Potatoes', 'Cheesy Broccoli Baked Potatoes', 'Taco-Stuffed Baked Potatoes', 'Country Sausage & Potato Skillet', 'Cheesy Scalloped-Style Potatoes & Ham', 'Warm Biscuit & Turkey Sandwiches', 'Garlic Herb Mashed Potato Bowls', 'Beef Gravy & Biscuits', 'Creamy Chicken & Biscuit Pie', 'Three-Bean & Rice Comfort Bowl', 'Cheesy Corn & Potato Chowder', 'Easy Tater/Potato & Beef Bake', 'Southern-Style Green Beans & Potatoes', 'Loaded Mac & Pulled Pork Bowl', 'Warm Stuffing & Turkey Bowl', 'Simple Oatmeal & Fruit Bar (Side)', 'Cinnamon Sugar Biscuit Bites (Side)']
+      ]
+    ];
+
+    const out = [];
+    let idx = 1;
+    for (const [cat, prep, cook, ings, inst, names] of templates) {
+      for (const name of names) {
+        if (idx > 188) break;
+        out.push({
+          id: `rec-ext-${String(idx).padStart(3, '0')}`,
+          name,
+          category: cat,
+          skillLevel: 'Beginner / No Experience',
+          basePortions: 65,
+          prepMin: prep,
+          cookMin: cook,
+          isBakers: false,
+          ingredients: ings.map(x => ({ ...x })),
+          instructions: inst
+        });
+        idx++;
+      }
+      if (idx > 188) break;
+    }
+    return out;
+  }
+
   function getDefaultState() {
     const today = new Date().toISOString().slice(0, 10);
     return {
@@ -290,10 +554,30 @@
         { id: 'inv-22', sku: 'DRY-109', name: 'Green Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18000, parGrams: 18000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
         { id: 'inv-23', sku: 'DRY-110', name: 'Cranberry Sauce (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9000, parGrams: 9000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
         { id: 'inv-24', sku: 'FRZ-504', name: 'Pumpkin Pies (Frozen 10")', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 10800, parGrams: 10800, unitLabel: 'pack', packSizeGrams: 5400, packLabel: 'case (6 pies)', lastUpdated: today },
-        { id: 'inv-25', sku: 'DAI-304', name: 'Yogurt Cups (Individual 6 oz)', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 6120, parGrams: 8160, unitLabel: 'pack', packSizeGrams: 2040, packLabel: '12 ct case', lastUpdated: today },
-        { id: 'inv-26', sku: 'DRY-111', name: 'Pudding Cups (Individual 4 oz)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 5443, parGrams: 5443, unitLabel: 'pack', packSizeGrams: 5443, packLabel: '48 ct case', lastUpdated: today },
-        { id: 'inv-27', sku: 'PRO-206', name: 'Fresh / Chilled Fruit (Salad Bar)', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 4536, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
-        { id: 'inv-28', sku: 'DRY-112', name: 'Salad Dressing & Toppings', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 7570, parGrams: 7570, unitLabel: 'pack', packSizeGrams: 15140, packLabel: '4x 1 gal case', lastUpdated: today }
+        { id: 'inv-25', sku: 'DAI-304', name: 'Yogurt Cups (Individual 6 oz)', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 2040, packLabel: '12 ct case', lastUpdated: today },
+        { id: 'inv-26', sku: 'DRY-111', name: 'Pudding Cups (Individual 4 oz)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 5443, packLabel: '48 ct case', lastUpdated: today },
+        { id: 'inv-27', sku: 'PRO-206', name: 'Fresh / Chilled Fruit (Salad Bar)', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-28', sku: 'DRY-112', name: 'Salad Dressing & Toppings', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 15140, packLabel: '4x 1 gal case', lastUpdated: today },
+        { id: 'inv-29', sku: 'DRY-113', name: 'Egg Noodles (Wide)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-30', sku: 'DRY-114', name: 'Long-Grain White Rice', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
+        { id: 'inv-31', sku: 'DRY-115', name: 'Elbow Macaroni', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
+        { id: 'inv-32', sku: 'DRY-116', name: 'Black / Pinto / Kidney Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-33', sku: 'DRY-117', name: 'Diced Tomatoes (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-34', sku: 'DRY-118', name: 'Marinara / Pasta Sauce (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-35', sku: 'DRY-119', name: 'Chicken & Beef Broth / Base', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '12x 32 oz case', lastUpdated: today },
+        { id: 'inv-36', sku: 'DAI-305', name: 'Shredded Cheddar Cheese', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
+        { id: 'inv-37', sku: 'DRY-120', name: 'Cream of Chicken / Mushroom Soup (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-38', sku: 'FRZ-505', name: 'Frozen Mixed Vegetables', category: 'Frozen Produce', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
+        { id: 'inv-39', sku: 'FRZ-506', name: 'Frozen Beef Meatballs (Precooked)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb bag', lastUpdated: today },
+        { id: 'inv-40', sku: 'FRZ-507', name: 'Pulled Pork / BBQ Beef (Precooked)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-41', sku: 'FRZ-508', name: 'Italian Sausage / Smoked Sausage', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-42', sku: 'FRZ-509', name: 'Hot Dogs & Hamburger Patties', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-43', sku: 'DRY-121', name: 'Hot Dog, Burger & Sandwich Buns', category: 'Bakery / Bread', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '48 ct case', lastUpdated: today },
+        { id: 'inv-44', sku: 'DRY-122', name: 'Flour Tortillas (10")', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '72 ct case', lastUpdated: today },
+        { id: 'inv-45', sku: 'PRO-404', name: 'Deli Turkey / Ham (Sliced)', category: 'Protein', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-46', sku: 'DRY-123', name: 'Canned Tuna (#10 / 66.5 oz)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 11340, packLabel: '6x 66.5 oz case', lastUpdated: today },
+        { id: 'inv-47', sku: 'DRY-124', name: 'BBQ Sauce, Mayo & Mustard', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 15140, packLabel: '4x 1 gal case', lastUpdated: today },
+        { id: 'inv-48', sku: 'DRY-125', name: 'Individual Potato Chips', category: 'Sides / Snacks', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 1500, packLabel: '50 ct case', lastUpdated: today }
       ],
       recipes: [
         {
@@ -497,7 +781,9 @@
             { itemId: 'inv-13', grams: 1500 },
             { itemId: 'inv-4', grams: 80 }
           ]
-        }
+        },
+        ...buildHolidayFeastRecipes(),
+        ...buildExtendedRecipeBank()
       ],
       prepQueue: [
         {
@@ -527,12 +813,12 @@
       ],
       trainingModules: [
         { id: 'trn-1', role: 'ALL', title: 'Welcome, Role Boundaries, Auto-Lock & Navigation', content: 'Welcome to The Salvation Army Community Meals Kitchen OS.\n\nEvery action is stamped with your name and time. Shared tablets auto-lock after 5 minutes of inactivity—enter your PIN to resume.\n\nRole Access Summary:\n• Management / Admin: Full control — PO approvals, Par Levels, Storage Zones, Recipes, Inventory Item edits/deletes, Forecasting edits, Users, PINs & Daily Reports.\n• Staff: Daily operations — Menu scheduling/commits, Check-In & PO Receiving, Draft PO requests, Blind Audit reconciliation, People Served & Leftover logging, Checklists & Temps.\n• Volunteer: Guided floor tasks — View Recipes, Menu & Next-Day Prep, submit Blind Counts, check off Checklists, log HACCP Temps, and tag/use Leftovers (read-only on recipes & menus).\n• Other: Read-only view of Dashboard, Menu, Prep & Checklists.' },
-        { id: 'trn-2', role: 'ALL', title: 'Today\'s Recipe & To-Do + Food Safety Temps', content: 'Start each morning by tapping "Today\'s Recipe & To-Do" on the Home Dashboard to view today\'s meal, scaled ingredients (40–80 portions in Cups, Quarts, Gallons, #10 Cans, Packs & Pieces), cooking steps, and daily checklists.\n\nWe use Frozen Breadsticks, Dinner Rolls, and Biscuits (bake from frozen at 375°F) instead of scratch bread baking.\n\nAlways verify Cold Holding ≤41°F, Freezer ≤0°F, Cook/Reheat ≥165°F, and Hot Holding ≥135°F in Safety & Tasks → Time & Temp Logs.' },
-        { id: 'trn-3', role: 'ALL', title: 'Storage, Varying Shelf Lives & Daily Salad Bar', content: 'Not everything keeps for the same amount of time! Always pick the matching Food Type when dating leftovers or prepped items in Safety & Tasks → Storage & Date Labels:\n• Cooked Entrees / Meat / Pasta / Soup: 7 days max in Cooler (Prep + 6d)\n• Dairy / Yogurt / Pudding / Tuna or Potato Salad: 3–4 days (or manufacturer exp date if earlier)\n• Cut Salad Greens & Fresh Cut Fruit: 2–3 days max for safety & quality\n• Frozen Items: 90 days in Walk-In / Kitchen Freezer\n\nDaily Salad Bar: Every service day includes Tossed Salad Greens, Dressings, Yogurt Cups, Pudding Cups, and Fresh/Chilled Fruit (when available) held at ≤41°F. Active leftovers appear in Inventory → Leftovers & Prepped Food on Hand.' },
+        { id: 'trn-2', role: 'ALL', title: 'Today\'s Recipe & To-Do + Serving-Day Food Safety Temps', content: 'Start each serving morning by tapping "Today\'s Recipe & To-Do" on the Home Dashboard to view today\'s meal, ingredients auto-scaled to predicted portions (from our 210-recipe bank & Holiday Feasts), cooking steps, and daily checklists.\n\nWe use Frozen Breadsticks, Dinner Rolls, and Biscuits (bake from frozen at 375°F) instead of scratch bread baking.\n\nOn serving days only (open MTWF non-holidays), log all 6 Required Temp Checks in Safety & Tasks → Time & Temp Logs: Walk-In Cooler (≤41°F), Walk-In Freezer (≤0°F), Kitchen Cooler (≤41°F), Kitchen Freezer (≤0°F), Main Entree (≥165°F), and Steam Table (≥135°F).' },
+        { id: 'trn-3', role: 'ALL', title: 'Storage, Varying Shelf Lives & Daily Salad Bar', content: 'Not everything keeps for the same amount of time! Use the 1-Tap Presets or Food Type selector in Safety & Tasks → Storage & Date Labels:\n• Cooked Entrees / Meat / Pasta / Soup: 7 days max in Cooler (Prep + 6d)\n• Dairy / Yogurt / Pudding / Tuna or Potato Salad: 3–4 days (or manufacturer exp date if earlier)\n• Cut Salad Greens & Fresh Cut Fruit: 2–3 days max for safety & quality\n• Frozen Items: 90 days in Walk-In / Kitchen Freezer\n\nDaily Salad Bar (Separate from Meal Leftovers): Every service day includes Tossed Salad Greens, Dressings, Yogurt Cups, Pudding Cups, and Fresh/Chilled Fruit (when available) held at ≤41°F. Meal Leftovers and Daily Salad Bar items appear in separate FIFO tables under Inventory → Living Running Stock.' },
         { id: 'trn-4', role: 'Volunteer', title: 'Volunteer Workflow: Blind Counts, Prep Pulls & Checklists', content: '1. Next-Day Prep: Check Kitchen & Menu → Next-Day Prep for tomorrow\'s pulls grouped by Cooler, Freezer, and Dry Storage.\n2. Blind Audit: Open Inventory & Orders → Blind Audit, tap + / - for full cases/bags and 1/4, 1/2, or 3/4 for open containers, then click Submit Blind Count (Staff/Management reviews before adjusting stock).\n3. Checklists & Tags: Check off assigned tasks in Safety & Tasks → Checklists and print/attach Storage & Date Labels on leftovers.' },
-        { id: 'trn-5', role: 'Staff', title: 'Staff Operations: POs, Receiving & Leftover Predictor', content: '1. Ordering: Build Weekly Draft POs for Marberger (Dairy) & Produce, and Monthly Draft POs (3rd Friday) for Jordan Banana (Dry/Frozen). Management approves quantities.\n2. Receiving: In Check-In & Waste, reconcile Expected PO Deliveries (adjust shorted packs) and click Reconcile & Check In PO.\n3. Post-Service Leftovers: In Safety & Tasks → Served & Forecasting, enter Planned vs. Actual Served. The Leftover Predictor calculates remaining portions/pans, generates the exact ServSafe Date Tag, adds it to today\'s Daily Checklist, and logs it into Leftover Inventory.' },
-        { id: 'trn-6', role: 'ALL', title: 'Daily Checklists, Priority Carryover & Midnight Temp Resets', content: 'Check off Daily, Weekly, and Monthly tasks under Safety & Tasks → Checklists. Any unfinished tasks from the previous day appear as a red PRIORITY CARRYOVER alert at the top of the Dashboard and Checklists until completed.\n\nToday\'s 4 Required Temp Checks in Time & Temp Logs reset automatically at midnight while archiving past days. Open Tools ▾ → Guided Tour anytime for a walkthrough.' },
-        { id: 'trn-7', role: 'Management', title: 'Management / Admin Control: Approvals, Forecasting & Users', content: 'Management / Admin holds exclusive control over structural data so nothing is changed accidentally:\n• Approve POs & set Approved Pack Quantities / Arrival Dates.\n• Manage Storage Zones, Par Levels, Inventory Items (Add/Edit/Discontinue/Delete), and Standardized Recipes.\n• Edit/Delete historical Attendance records and review Daily Reports.\n• Manage User accounts, Role assignments, Default PINs, Auto-Lock timer, and trigger Mandatory Re-Training.' }
+        { id: 'trn-5', role: 'Staff', title: 'Staff Operations: POs, Reorder Alerts & Leftover Predictor', content: '1. Ordering & Reorder Alerts: Watch the Dashboard & Living Stock for 25% (Reorder), 10% (Urgent), and 5% (Emergency) staple alerts. Build Weekly Draft POs for Marberger (Dairy) & Produce, and Monthly Draft POs (3rd Friday) for Jordan Banana (Dry/Frozen). Management approves quantities.\n2. Receiving: In Check-In & Waste, reconcile Expected PO Deliveries (adjust shorted packs) and click Reconcile & Check In PO.\n3. Post-Service Leftovers: In Safety & Tasks → Served & Forecasting, enter Planned vs. Actual Served. The Leftover Predictor calculates remaining portions/pans, generates the exact ServSafe Date Tag, adds it to today\'s Daily Checklist, and logs it into Meal Leftovers Inventory.' },
+        { id: 'trn-6', role: 'ALL', title: 'Daily Checklists, Priority Carryover & Midnight Temp Resets', content: 'Check off Daily, Weekly, and Monthly tasks under Safety & Tasks → Checklists. Any unfinished tasks from the previous day appear as a red PRIORITY CARRYOVER alert at the top of the Dashboard and Checklists until completed.\n\nToday\'s 6 Required Temp Checks (Walk-In & Kitchen Cooler/Freezer, Entree, Steam Table) run every open MTWF non-holiday and reset at midnight while archiving past days. Open Tools ▾ → Guided Tour anytime for a walkthrough.' },
+        { id: 'trn-7', role: 'Management', title: 'Management / Admin Control: Official Init, Approvals & Users', content: 'Management / Admin holds exclusive control over structural data so nothing is changed accidentally:\n• Official Inventory Init (+10% Par): Reset all stock to your official physical count and auto-set Par = Count + 10% (powering 25%/10%/5% staple reorder alerts).\n• Approve POs, Manage Storage Zones, Par Levels, Inventory Items, 210 Recipes & Auto-Schedule Pre-Holiday Feasts.\n• Edit/Delete Attendance records, review Daily Reports, manage Users/PINs/Auto-Lock, and trigger Mandatory Re-Training.' }
       ],
       trainingLogs: [],
       activeUserId: 'usr-1',
@@ -562,7 +848,7 @@
       ],
       checklistFreq: 'daily',
       checklists: [
-        { id: 'chk-1', freq: 'daily', category: 'Food Safety', title: 'Log Walk-In Cooler (≤41°F) & Freezer (≤0°F) morning temps', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-1', freq: 'daily', category: 'Food Safety', title: 'Log Walk-In & Kitchen Cooler (≤41°F) + Walk-In & Kitchen Freezer (≤0°F) morning temps (MTWF)', done: false, doneBy: '', doneAt: '' },
         { id: 'chk-2', freq: 'daily', category: 'Cleaning', title: 'Prepare & test sanitizer buckets (200–400 PPM Quat / 50–100 PPM Chlorine)', done: false, doneBy: '', doneAt: '' },
         { id: 'chk-3', freq: 'daily', category: 'Prep', title: 'Complete Next-Day Prep pulls & thaw protein in Walk-In Cooler', done: false, doneBy: '', doneAt: '' },
         { id: 'chk-4', freq: 'daily', category: 'Food Safety', title: 'Verify cooking temps (≥165°F) & steam table hot-hold (≥135°F) before 11:30 AM', done: false, doneBy: '', doneAt: '' },
@@ -614,7 +900,7 @@
           if (Array.isArray(parsed.recipes)) {
             const idx3 = parsed.recipes.findIndex(r => r.id === 'rec-3' && r.name.includes('Sandwich Loaf'));
             if (idx3 !== -1) parsed.recipes[idx3] = def.recipes.find(r => r.id === 'rec-3');
-            def.inventory.filter(i => ['inv-19','inv-20','inv-21','inv-22','inv-23','inv-24'].includes(i.id)).forEach(ti => {
+            def.inventory.filter(i => ['inv-16','inv-17','inv-18','inv-19','inv-20','inv-21','inv-22','inv-23','inv-24','inv-25','inv-26','inv-27','inv-28','inv-29','inv-30','inv-31','inv-32','inv-33','inv-34','inv-35','inv-36','inv-37','inv-38','inv-39','inv-40','inv-41','inv-42','inv-43','inv-44','inv-45','inv-46','inv-47','inv-48'].includes(i.id)).forEach(ti => {
               if (!parsed.inventory.some(i => i.id === ti.id)) parsed.inventory.push(ti);
             });
             if (Array.isArray(parsed.menuPlan)) {
@@ -671,7 +957,7 @@
   function upgradeTrainingModulesIfNeeded(existing, defaults) {
     if (!Array.isArray(existing) || existing.length === 0) return defaults;
     const byId = new Map(defaults.map(m => [m.id, m]));
-    const hasV3 = existing.some(m => m.id === 'trn-7') && existing.some(m => m.id === 'trn-3' && (m.content || '').includes('Daily Salad Bar'));
+    const hasV3 = existing.some(m => m.id === 'trn-7' && (m.content || '').includes('Official Inventory Init')) && existing.some(m => m.id === 'trn-2' && (m.content || '').includes('210-recipe bank'));
     if (hasV3) return existing;
     const customMods = existing.filter(m => !/^trn-[1-7]$/.test(m.id));
     return [...defaults, ...customMods];
@@ -743,7 +1029,7 @@
     } else if (id === 'inventory' && Array.isArray(data)) {
       const defInv = getDefaultState().inventory;
       let mergedInv = data.filter(i => !(i.id === 'inv-16' && (i.name || '').includes('Yeast')));
-      defInv.filter(i => ['inv-16','inv-17','inv-18','inv-19','inv-20','inv-21','inv-22','inv-23','inv-24','inv-25','inv-26','inv-27','inv-28'].includes(i.id)).forEach(di => {
+      defInv.filter(i => ['inv-16','inv-17','inv-18','inv-19','inv-20','inv-21','inv-22','inv-23','inv-24','inv-25','inv-26','inv-27','inv-28','inv-29','inv-30','inv-31','inv-32','inv-33','inv-34','inv-35','inv-36','inv-37','inv-38','inv-39','inv-40','inv-41','inv-42','inv-43','inv-44','inv-45','inv-46','inv-47','inv-48'].includes(i.id)).forEach(di => {
         if (!mergedInv.some(i => i.id === di.id)) mergedInv.push(di);
       });
       state.inventory = mergedInv;
@@ -759,7 +1045,7 @@
       const defRecs = getDefaultState().recipes;
       const merged = data.slice();
       defRecs.forEach(dr => {
-        if (!dr.id.startsWith('rec-nov-') && dr.id !== 'rec-3') return;
+        if (!dr.id.startsWith('rec-nov-') && !dr.id.startsWith('rec-ext-') && !dr.id.startsWith('rec-hol-') && dr.id !== 'rec-3') return;
         const idx = merged.findIndex(r => r.id === dr.id);
         if (idx === -1) {
           merged.push(dr);
@@ -1077,10 +1363,26 @@
   }
 
   function getStockStatus(item) {
-    if (item.stockGrams <= 0) return { label: 'Out of Stock', cls: 'bg-rose-100 text-rose-800 border-rose-200' };
-    if (item.stockGrams < item.parGrams * 0.5) return { label: 'Critical', cls: 'bg-rose-100 text-rose-800 border-rose-200' };
-    if (item.stockGrams < item.parGrams) return { label: 'Low Stock', cls: 'bg-amber-100 text-amber-800 border-amber-200' };
-    return { label: 'In Stock', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
+    if ((item.parGrams || 0) <= 0 && (item.stockGrams || 0) <= 0) {
+      return { label: 'Placeholder (Unstocked)', cls: 'bg-slate-100 text-slate-600 border-slate-200', tier: 'NONE' };
+    }
+    if (item.stockGrams <= 0) return { label: 'Out of Stock (0%)', cls: 'bg-rose-700 text-white border-rose-800', tier: '0%' };
+    if (item.parGrams > 0) {
+      const ratio = item.stockGrams / item.parGrams;
+      if (ratio <= 0.05) return { label: '5% Emergency Reorder', cls: 'bg-rose-600 text-white border-rose-700', tier: '5%' };
+      if (ratio <= 0.10) return { label: '10% Urgent Reorder', cls: 'bg-red-100 text-red-900 border-red-300', tier: '10%' };
+      if (ratio <= 0.25) return { label: '25% Reorder Alert', cls: 'bg-amber-100 text-amber-900 border-amber-300', tier: '25%' };
+      if (ratio < 1.0) return { label: 'Below Par', cls: 'bg-yellow-50 text-yellow-800 border-yellow-200', tier: 'LOW' };
+    }
+    return { label: 'In Stock', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200', tier: 'OK' };
+  }
+
+  function getStapleReorderAlerts() {
+    return (state.inventory || [])
+      .filter(i => !i.discontinued && i.parGrams > 0)
+      .map(i => ({ item: i, status: getStockStatus(i), pct: Math.max(0, Math.round((i.stockGrams / i.parGrams) * 100)) }))
+      .filter(x => ['0%', '5%', '10%', '25%'].includes(x.status.tier))
+      .sort((a, b) => a.pct - b.pct);
   }
 
   function getTomorrowPrepDemandByItem() {
@@ -1165,7 +1467,7 @@
 
   function getPreHolidayBoostInfo(dateStr) {
     const mp = (state.menuPlan || []).find(m => m.date === dateStr);
-    const isFeast = !!(mp && /thanksgiving|christmas|feast|holiday/i.test(mp.customTitle || ''));
+    const isFeast = !!(mp && ((mp.recipeId && mp.recipeId.startsWith('rec-hol-')) || /thanksgiving|christmas|new year|mlk|president|memorial|juneteenth|independence|labor day|columbus|veteran|feast|holiday/i.test(mp.customTitle || '')));
     if (isFeast) return { mult: 1.25, isFeast: true, label: '+25% Holiday Feast (Peak Baseline)' };
     const base = new Date(dateStr + 'T12:00:00');
     for (let offset = 1; offset <= 2; offset++) {
@@ -1370,6 +1672,26 @@
     });
 
     return updated;
+  }
+
+  function getPredictedPortionsForRecipe(recipeId) {
+    const fc = computeForecasts();
+    const todayStr = localDateStr();
+    const matches = (state.menuPlan || [])
+      .filter(m => m.recipeId === recipeId && m.status !== 'CLOSED')
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const upcoming = matches.find(m => m.date >= todayStr) || matches[matches.length - 1];
+    if (upcoming) {
+      const f = fc.openCount ? forecastPortionsForDate(upcoming.date, fc) : null;
+      const p = (f && f.recommendedPrep > 0) ? f.recommendedPrep : (upcoming.portions || 65);
+      return { portions: p, date: upcoming.date, label: `Predicted for ${upcoming.date}` };
+    }
+    const nextSvc = (fc.days || []).find(d => d.recommendedPrep > 0);
+    if (fc.openCount && nextSvc) {
+      return { portions: nextSvc.recommendedPrep, date: nextSvc.date, label: `Next Service (${nextSvc.date})` };
+    }
+    const rec = (state.recipes || []).find(r => r.id === recipeId);
+    return { portions: rec ? rec.basePortions : 65, date: todayStr, label: 'Base Yield' };
   }
 
   // --- Render Tabs ---
@@ -1595,7 +1917,9 @@
     const forecasts = computeForecasts();
     const nextDayPred = forecasts.days[0];
     const todayHaccpStr = localDateStr();
+    const svcToday = isOpenServiceDay(todayHaccpStr);
     const todayHaccpLogs = state.haccpLogs.filter(h => (h.timestamp || '').startsWith(todayHaccpStr));
+    const completedHaccpSlots = DAILY_HACCP_SLOTS.filter(s => todayHaccpLogs.some(l => l.target === s.target)).length;
     const flaggedHaccp = todayHaccpLogs.filter(h => h.status === 'FLAGGED').length;
     const allowed = getAllowedTabs(getActiveUser());
 
@@ -1675,8 +1999,19 @@
                 </div>
               ` : '';
               const carryTasks = (state.checklists || []).filter(c => c.priorityCarryover && !c.done);
-              if (!carryTasks.length) return expBanner;
-              return expBanner + `
+              const stapleAlerts = getStapleReorderAlerts();
+              const stapleBanner = stapleAlerts.length ? `
+                <div class="p-3 rounded-lg bg-amber-50 border-2 border-amber-400 text-amber-950 text-xs flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span class="font-bold uppercase text-[10px] px-1.5 py-0.5 rounded bg-amber-700 text-white mr-1.5">REORDER ALERTS (25% / 10% / 5%)</span>
+                    <strong>${stapleAlerts.length} Staple(s) Hit Reorder Threshold:</strong>
+                    <span class="ml-1">${stapleAlerts.slice(0, 6).map(a => `${escapeHtml(a.item.name)} (${a.pct}% — ${a.status.label})`).join(' • ')}${stapleAlerts.length > 6 ? ` + ${stapleAlerts.length - 6} more` : ''}</span>
+                  </div>
+                  ${allowed.includes('orders') ? '<button data-goto="orders" class="px-3 py-1 rounded-lg bg-amber-700 text-white font-semibold shrink-0">Open Orders &amp; POs &rarr;</button>' : ''}
+                </div>
+              ` : '';
+              if (!carryTasks.length) return expBanner + stapleBanner;
+              return expBanner + stapleBanner + `
                 <div class="p-3 rounded-lg bg-rose-50 border-2 border-rose-400 text-rose-950 text-xs flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <div class="flex items-center gap-1.5 flex-wrap">
@@ -1756,7 +2091,7 @@
           ${kpiCard('inventory', 'Tracked Stock Items', state.inventory.length, `${orders.length} items below par (${criticalCount} critical)`)}
           ${kpiCard('prep', "Tomorrow's Prep Queue", `${state.prepQueue.length} Recipes`, `${state.prepQueue.filter(p => !p.deducted).length} pending stock deduction`)}
           ${kpiCard('forecasting', 'Next Service Forecast', `${nextDayPred ? nextDayPred.predicted : 65} Patrons`, `Rec. batch: ${nextDayPred ? nextDayPred.recommendedPrep : 70} portions (${nextDayPred ? nextDayPred.label : ''})`, 'text-red-700')}
-          ${kpiCard('haccp', "Today's Time &amp; Temp", flaggedHaccp ? flaggedHaccp + ' Flagged Today' : `${todayHaccpLogs.length} / 4 Logged`, `${todayHaccpLogs.length === 0 ? 'Needs morning checks' : 'Today (' + todayHaccpStr + ')'}`, flaggedHaccp ? 'text-rose-700' : todayHaccpLogs.length >= 4 ? 'text-emerald-700' : 'text-amber-700')}
+          ${kpiCard('haccp', "Today's Time &amp; Temp", !svcToday.open ? 'Not Required Today' : flaggedHaccp ? flaggedHaccp + ' Flagged Today' : `${completedHaccpSlots} / ${DAILY_HACCP_SLOTS.length} Logged`, !svcToday.open ? svcToday.reason : (completedHaccpSlots === 0 ? 'Needs serving-day checks' : 'Today (' + todayHaccpStr + ')'), !svcToday.open ? 'text-slate-600' : flaggedHaccp ? 'text-rose-700' : completedHaccpSlots >= DAILY_HACCP_SLOTS.length ? 'text-emerald-700' : 'text-amber-700')}
         </div>
 
         <!-- Upcoming Week Menu Section -->
@@ -1903,6 +2238,7 @@
             <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">Units: <strong>Packs / Cans / Volume</strong></span>
             <button id="btn-print-qr-labels" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-medium">Print QR Labels</button>
             ${canManage ? '<button id="btn-manage-zones" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-medium">Manage Zones</button>' : ''}
+            ${canManage ? '<button id="btn-init-inventory" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold">Official Inventory Init (+10% Par)</button>' : ''}
             ${canManage ? '<button id="btn-bulk-par" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold">Set Par Levels</button>' : ''}
             ${canManage ? '<button id="btn-add-inv-item" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-medium">+ New Item</button>' : ''}
           </div>
@@ -2467,26 +2803,44 @@
   // 5. RECIPES & 50-80 SCALING
   function renderRecipes(main) {
     const selected = state.recipes.find(r => r.id === state.selectedRecipeId) || state.recipes[0];
-    const portions = state.recipeScalePortions;
+    const predInfo = selected ? getPredictedPortionsForRecipe(selected.id) : { portions: 65, label: 'Predicted' };
+    if (!state._manualRecipeScale && selected) {
+      state.recipeScalePortions = predInfo.portions;
+    }
+    const portions = state.recipeScalePortions || predInfo.portions;
     const factor = selected ? (portions / selected.basePortions) : 1;
     const flourIng = selected && selected.isBakers ? selected.ingredients.find(i => i.itemId === selected.flourItemId) : null;
     const totalFlourGrams = flourIng ? flourIng.grams * factor : 0;
 
     main.innerHTML = `
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <!-- Recipe List -->
+        <!-- Recipe List (200+ Searchable Bank) -->
         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
-          <div class="flex items-center justify-between">
-            <h2 class="text-sm font-bold text-slate-900">Standardized Recipe Book</h2>
-            ${['Management', 'Staff'].includes(getActiveUser().role) ? '<button id="btn-new-recipe" class="px-2.5 py-1 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">+ Add Recipe</button>' : ''}
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-bold text-slate-900">Recipe Book (${state.recipes.length})</h2>
+            ${getActiveUser().role === 'Management' ? '<button id="btn-new-recipe" class="px-2.5 py-1 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">+ Add Recipe</button>' : ''}
           </div>
           <div class="space-y-2">
-            ${state.recipes.map(r => `
-              <button data-select-recipe="${r.id}" class="w-full text-left p-3 rounded-lg border transition ${selected && r.id === selected.id ? 'border-red-600 bg-red-50' : 'border-slate-200 hover:bg-slate-50'}">
-                <div class="font-semibold text-sm text-slate-900">${escapeHtml(r.name)}</div>
-                <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(r.category)} &bull; Base: ${r.basePortions} portions &bull; Total: ${r.prepMin + r.cookMin} min</div>
+            <input id="recipe-search" type="text" value="${escapeHtml(state._recSearch || '')}" placeholder="Search 200 recipes (e.g. chili, taco, pasta)..." class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-red-600" />
+            <select id="recipe-cat-filter" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
+              <option value="ALL">All Categories (${state.recipes.length})</option>
+              ${Array.from(new Set(state.recipes.map(r => r.category))).map(c => `<option value="${escapeHtml(c)}" ${(state._recCat || 'ALL') === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+            </select>
+          </div>
+          <div id="recipe-list-items" class="space-y-2 max-h-[540px] overflow-y-auto pr-1">
+            ${state.recipes.filter(r => {
+              const q = (state._recSearch || '').toLowerCase();
+              const cat = state._recCat || 'ALL';
+              return (!q || r.name.toLowerCase().includes(q) || r.category.toLowerCase().includes(q)) && (cat === 'ALL' || r.category === cat);
+            }).map(r => {
+              const pInfo = getPredictedPortionsForRecipe(r.id);
+              return `
+              <button data-select-recipe="${r.id}" class="w-full text-left p-2.5 rounded-lg border transition ${selected && r.id === selected.id ? 'border-red-600 bg-red-50' : 'border-slate-200 hover:bg-slate-50'}">
+                <div class="font-semibold text-xs sm:text-sm text-slate-900">${escapeHtml(r.name)}</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(r.category)} &bull; <strong class="text-red-700">${pInfo.portions} portions</strong></div>
               </button>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
 
@@ -2508,17 +2862,21 @@
               </div>
             </div>
 
-            <!-- 50-80 Scaler Control -->
+            <!-- Predicted-Day & 40-100 Scaler Control -->
             <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <label class="text-sm font-bold text-slate-900">Scale Portions (40–80): <span class="text-red-700 text-base">${portions}</span></label>
-                <div class="flex gap-1.5 flex-wrap">
-                  ${[50, 55, 60, 65, 70, 75, 80].map(p => `
+                <div>
+                  <label class="text-sm font-bold text-slate-900">Scaled Portions: <span class="text-red-700 text-base">${portions}</span></label>
+                  <div class="text-[11px] text-slate-500">${escapeHtml(predInfo.label)}: <strong>${predInfo.portions} portions</strong></div>
+                </div>
+                <div class="flex gap-1.5 flex-wrap items-center">
+                  <button data-scale-predicted="${predInfo.portions}" class="px-2.5 py-1 rounded text-xs font-semibold ${portions === predInfo.portions && !state._manualRecipeScale ? 'bg-emerald-700 text-white' : 'bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100'}">Predicted (${predInfo.portions})</button>
+                  ${[40, 50, 55, 60, 65, 70, 75, 80].map(p => `
                     <button data-scale-preset="${p}" class="px-2.5 py-1 rounded text-xs font-semibold ${portions === p ? 'bg-red-700 text-white' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}">${p}</button>
                   `).join('')}
                 </div>
               </div>
-              <input id="recipe-scale-slider" type="range" min="40" max="80" step="1" value="${portions}" class="w-full accent-red-700" />
+              <input id="recipe-scale-slider" type="range" min="25" max="120" step="1" value="${portions}" class="w-full accent-red-700" />
             </div>
 
             <!-- Ingredients Table -->
@@ -2570,9 +2928,35 @@
       </div>
     `;
 
+    function updateRecipeListOnly() {
+      const q = (document.getElementById('recipe-search')?.value || '').toLowerCase();
+      const cat = document.getElementById('recipe-cat-filter')?.value || 'ALL';
+      state._recSearch = q;
+      state._recCat = cat;
+      const box = document.getElementById('recipe-list-items');
+      if (!box) return;
+      const filtered = state.recipes.filter(r => (!q || r.name.toLowerCase().includes(q) || r.category.toLowerCase().includes(q)) && (cat === 'ALL' || r.category === cat));
+      box.innerHTML = filtered.length === 0
+        ? '<p class="text-xs text-slate-500 py-3 text-center">No matching recipes found.</p>'
+        : filtered.map(r => {
+            const pInfo = getPredictedPortionsForRecipe(r.id);
+            return `
+              <button data-select-recipe="${r.id}" class="w-full text-left p-2.5 rounded-lg border transition ${selected && r.id === selected.id ? 'border-red-600 bg-red-50' : 'border-slate-200 hover:bg-slate-50'}">
+                <div class="font-semibold text-xs sm:text-sm text-slate-900">${escapeHtml(r.name)}</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(r.category)} &bull; <strong class="text-red-700">${pInfo.portions} portions</strong></div>
+              </button>
+            `;
+          }).join('');
+    }
+    const recSearchEl = document.getElementById('recipe-search');
+    const recCatEl = document.getElementById('recipe-cat-filter');
+    if (recSearchEl) recSearchEl.addEventListener('input', updateRecipeListOnly);
+    if (recCatEl) recCatEl.addEventListener('change', updateRecipeListOnly);
+
     const slider = document.getElementById('recipe-scale-slider');
     if (slider) {
       slider.addEventListener('input', (e) => {
+        state._manualRecipeScale = true;
         state.recipeScalePortions = Number(e.target.value);
         saveState();
         renderRecipes(main);
@@ -2700,33 +3084,52 @@
   const DAILY_HACCP_SLOTS = [
     { key: 'cooler', label: 'Walk-In Cooler (AM)', type: 'Cold Hold (≤41°F)', target: 'Walk-In Cooler', placeholder: 'e.g. 37.5' },
     { key: 'freezer', label: 'Walk-In Freezer (AM)', type: 'Freezer (≤0°F)', target: 'Walk-In Freezer', placeholder: 'e.g. -2.0' },
+    { key: 'kitchen_cooler', label: 'Kitchen Cooler (AM)', type: 'Cold Hold (≤41°F)', target: 'Kitchen Cooler', placeholder: 'e.g. 38.0' },
+    { key: 'kitchen_freezer', label: 'Kitchen Freezer (AM)', type: 'Freezer (≤0°F)', target: 'Kitchen Freezer', placeholder: 'e.g. -1.0' },
     { key: 'cook', label: 'Main Entree Cook / Reheat', type: 'Cook / Reheat (≥165°F)', target: 'Main Entree', placeholder: 'e.g. 168.0' },
     { key: 'hothold', label: 'Steam Table Hot Hold (11:30 AM)', type: 'Hot Hold (≥135°F)', target: 'Steam Table Well #1', placeholder: 'e.g. 148.0' }
   ];
 
+  function isOpenServiceDay(dateStr) {
+    const dStr = dateStr || localDateStr();
+    const mp = (state.menuPlan || []).find(m => m.date === dStr);
+    if (mp && mp.status === 'CLOSED') return { open: false, reason: mp.customTitle || 'Office Closed' };
+    const hol = getFederalHolidayName(dStr);
+    if (hol) return { open: false, reason: `Closed — ${hol}` };
+    if (mp && mp.status !== 'CLOSED') return { open: true, reason: 'Scheduled Service Day' };
+    const dow = new Date(dStr + 'T12:00:00').getDay();
+    if (![1, 2, 3, 5].includes(dow)) return { open: false, reason: 'No Meal Service (MTWF only)' };
+    return { open: true, reason: 'MTWF Service Day' };
+  }
+
   function renderHaccp(main) {
     const todayStr = localDateStr();
+    const svcStatus = isOpenServiceDay(todayStr);
     const viewMode = state.haccpViewMode || 'today';
     const todayLogs = state.haccpLogs.filter(l => (l.timestamp || '').startsWith(todayStr));
     const displayedLogs = viewMode === 'today' ? todayLogs : state.haccpLogs;
+    const completedSlots = DAILY_HACCP_SLOTS.filter(s => todayLogs.some(l => l.target === s.target)).length;
 
     main.innerHTML = `
       <div class="space-y-5">
-        <!-- Today's Required Daily Temp Checks (Resets Automatically Every Day) -->
+        <!-- Today's Required Daily Temp Checks (Resets Automatically Every MTWF Service Day) -->
         <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3 no-print">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 class="text-base font-bold text-slate-900">Today's Required Temp Checks (${escapeHtml(todayStr)})</h2>
-              <p class="text-xs text-slate-500">Resets automatically every morning. Enter today's readings below or use the custom form for extra checks.</p>
+              <p class="text-xs text-slate-500">All time &amp; temperature logs are <strong>only required on days that we serve</strong> (open MTWF &amp; non-holidays). Resets automatically each morning.</p>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="px-2.5 py-1 rounded-full text-xs font-bold ${todayLogs.length >= 4 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${todayLogs.length} logged today</span>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold ${!svcStatus.open ? 'bg-slate-200 text-slate-700' : completedSlots >= DAILY_HACCP_SLOTS.length ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                ${!svcStatus.open ? escapeHtml(svcStatus.reason) : `${completedSlots} / ${DAILY_HACCP_SLOTS.length} required logged`}
+              </span>
               ${['Management', 'Staff'].includes(getActiveUser().role) && todayLogs.length > 0 ? '<button id="btn-reset-today-haccp" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-medium">Reset Today</button>' : ''}
             </div>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          ${!svcStatus.open ? `<div class="p-2.5 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700">Today is marked <strong>${escapeHtml(svcStatus.reason)}</strong> — daily MTWF temp checks are not required, though you can still log readings below if needed.</div>` : ''}
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             ${DAILY_HACCP_SLOTS.map(slot => {
-              const match = todayLogs.find(l => l.target === slot.target || l.type === slot.type);
+              const match = todayLogs.find(l => l.target === slot.target);
               return `
                 <form class="form-quick-haccp p-3 rounded-xl border ${match ? (match.status === 'PASS' ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50 border-rose-200') : 'bg-slate-50 border-slate-200'} flex flex-wrap items-center justify-between gap-2" data-type="${escapeHtml(slot.type)}" data-target="${escapeHtml(slot.target)}">
                   <div>
@@ -3419,6 +3822,7 @@
               </select>
               <input id="menu-print-date" type="date" value="${today}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white" />
               <button id="btn-print-menu-range" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Print Menu</button>
+              ${canEdit ? '<button id="btn-auto-holiday-menus" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">Auto-Schedule Pre-Holiday Feasts</button>' : ''}
               ${canEdit && sortedPlan.some(m => m.status !== 'DEDUCTED')
                 ? `<button id="btn-commit-all-menu" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Commit All Planned &amp; Deduct Stock</button>`
                 : ''}
@@ -4894,6 +5298,59 @@
   }
 
 
+  function showOfficialInitModal() {
+    const activeItems = (state.inventory || []).filter(i => !i.discontinued);
+    const rowsHtml = activeItems.map(item => {
+      const pSize = item.packSizeGrams || 1000;
+      const curPacks = Math.floor((item.stockGrams || 0) / pSize);
+      return `
+        <tr class="border-b border-slate-100">
+          <td class="py-2 pr-2">
+            <div class="font-semibold text-xs text-slate-900">${escapeHtml(item.name)}</div>
+            <div class="text-[11px] text-slate-500">${escapeHtml(item.zone)} &bull; Pack: ${escapeHtml(item.packLabel || 'unit')}</div>
+          </td>
+          <td class="py-2 pr-2">
+            <input name="init_packs_${item.id}" type="number" min="0" step="1" value="${curPacks}" class="w-20 px-2 py-1 rounded border border-slate-300 text-xs" />
+          </td>
+          <td class="py-2 pr-2">
+            <select name="init_part_${item.id}" class="px-2 py-1 rounded border border-slate-300 text-xs bg-white">
+              <option value="0">0</option>
+              <option value="0.25">1/4</option>
+              <option value="0.5">1/2</option>
+              <option value="0.75">3/4</option>
+            </select>
+          </td>
+          <td class="py-2 text-xs text-slate-600">+10% Auto Par</td>
+        </tr>
+      `;
+    }).join('');
+
+    openModal('Official Inventory Initialization (Resets Stock & Sets Par = Count + 10%)', `
+      <form id="form-init-inventory" class="space-y-3">
+        <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
+          <strong>How This Works:</strong> Enter your official physical count (Full Packs + Open Partial) for each item. Submitting resets all running stock to your exact count and automatically sets each item's <strong>Par Level = Official Count + 10%</strong> (triggering 25%, 10%, and 5% staple reorder alerts as stock is used).
+        </div>
+        <div class="max-h-[55vh] overflow-y-auto border border-slate-200 rounded-lg">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 text-[11px] text-slate-500 uppercase">
+              <tr>
+                <th class="py-2 px-2">Item &amp; Pack</th>
+                <th class="py-2 px-2">Full Packs</th>
+                <th class="py-2 px-2">Open Partial</th>
+                <th class="py-2 px-2">Par Rule</th>
+              </tr>
+            </thead>
+            <tbody class="px-2">${rowsHtml}</tbody>
+          </table>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="document.getElementById('modal-close').click()" class="px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">Confirm &amp; Initialize Inventory (+10% Par)</button>
+        </div>
+      </form>
+    `);
+  }
+
   function showBulkParModal() {
     const activeItems = state.inventory.filter(i => !i.discontinued);
     openModal('Set Par Levels (All Items & Individual)', `
@@ -5578,6 +6035,10 @@
       }
       return;
     }
+    if (e.target.id === 'btn-init-inventory') {
+      showOfficialInitModal();
+      return;
+    }
     if (e.target.id === 'btn-bulk-par') {
       showBulkParModal();
       return;
@@ -5689,6 +6150,16 @@
     const recBtn = e.target.closest('[data-select-recipe]');
     if (recBtn) {
       state.selectedRecipeId = recBtn.dataset.selectRecipe;
+      state._manualRecipeScale = false;
+      state.recipeScalePortions = getPredictedPortionsForRecipe(state.selectedRecipeId).portions;
+      saveState();
+      render();
+      return;
+    }
+    const predScaleBtn = e.target.closest('[data-scale-predicted]');
+    if (predScaleBtn) {
+      state._manualRecipeScale = false;
+      state.recipeScalePortions = Number(predScaleBtn.dataset.scalePredicted);
       saveState();
       render();
       return;
@@ -5696,6 +6167,7 @@
 
     const presetBtn = e.target.closest('[data-scale-preset]');
     if (presetBtn) {
+      state._manualRecipeScale = true;
       state.recipeScalePortions = Number(presetBtn.dataset.scalePreset);
       saveState();
       render();
@@ -5767,6 +6239,69 @@
         render();
         showToast(`Committed ${rec.name} (${mp.portions} portions): Stock deducted & added to Prep`);
       }
+      return;
+    }
+
+    if (e.target.id === 'btn-auto-holiday-menus') {
+      const holRecipeMap = [
+        [/New Year/i, 'rec-hol-newyear'],
+        [/MLK/i, 'rec-hol-mlk'],
+        [/President/i, 'rec-hol-pres'],
+        [/Memorial/i, 'rec-hol-memorial'],
+        [/Juneteenth/i, 'rec-hol-juneteenth'],
+        [/Independence/i, 'rec-hol-july4'],
+        [/Labor/i, 'rec-hol-labor'],
+        [/Columbus/i, 'rec-hol-columbus'],
+        [/Veterans/i, 'rec-hol-veterans'],
+        [/Thanksgiving Day/i, 'rec-nov-24'],
+        [/Christmas/i, 'rec-hol-christmas']
+      ];
+      const fc = computeForecasts();
+      const start = new Date();
+      let added = 0;
+      for (let i = 0; i <= 120; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const ds = localDateStr(d);
+        const hol = getFederalHolidayName(ds);
+        if (!hol || /Friday \(Closed\)/i.test(hol)) continue;
+        const mapPair = holRecipeMap.find(([re]) => re.test(hol));
+        if (!mapPair) continue;
+        const rec = (state.recipes || []).find(r => r.id === mapPair[1]);
+        if (!rec) continue;
+        // Find the last open MTWF service day BEFORE the holiday
+        let preDate = '';
+        for (let b = 1; b <= 5; b++) {
+          const pd = new Date(d);
+          pd.setDate(d.getDate() - b);
+          const pds = localDateStr(pd);
+          const dow = pd.getDay();
+          if ([1, 2, 3, 5].includes(dow) && !getFederalHolidayName(pds)) {
+            preDate = pds;
+            break;
+          }
+        }
+        if (!preDate) continue;
+        const existing = (state.menuPlan || []).find(m => m.date === preDate);
+        if (!existing) {
+          const fcRes = fc.openCount ? forecastPortionsForDate(preDate, fc) : { recommendedPrep: 75 };
+          const feastPortions = Math.max(75, Math.ceil(((fcRes.recommendedPrep || 60) * 1.25) / 5) * 5);
+          state.menuPlan.push({
+            id: uid('mp'),
+            date: preDate,
+            mealSlot: 'Lunch (11:30 AM)',
+            recipeId: rec.id,
+            customTitle: rec.name,
+            portions: feastPortions,
+            status: 'PLANNED'
+          });
+          added++;
+        }
+      }
+      syncPlannedPortionsFromForecasts();
+      saveState();
+      render();
+      showToast(added ? `Scheduled ${added} upcoming Pre-Holiday Feast(s) on the service day before each holiday!` : 'All upcoming Pre-Holiday Feasts (next 120 days) are already scheduled.');
       return;
     }
 
@@ -6682,6 +7217,38 @@
       showManageZonesModal();
       render();
       showToast(`Renamed "${oldName}" to "${newName}"`);
+      return;
+    }
+
+    if (e.target.id === 'form-init-inventory') {
+      const user = getActiveUser();
+      const todayStr = localDateStr();
+      let updatedCount = 0;
+      (state.inventory || []).forEach(item => {
+        if (item.discontinued) return;
+        const packs = Math.max(0, Number(fd.get('init_packs_' + item.id) || 0));
+        const part = Math.max(0, Number(fd.get('init_part_' + item.id) || 0));
+        const pSize = item.packSizeGrams || 1000;
+        const newGrams = Math.round((packs + part) * pSize);
+        item.stockGrams = newGrams;
+        item.parGrams = Math.round(newGrams * 1.10);
+        item.lastUpdated = todayStr;
+        updatedCount++;
+      });
+      state.transactions.unshift({
+        id: uid('tx'),
+        timestamp: nowStamp(),
+        type: 'OFFICIAL_INIT',
+        itemId: 'ALL',
+        itemName: `Official Inventory Initialization (${updatedCount} items)`,
+        grams: 0,
+        note: 'Reset all stock to official count & set Par = Count + 10%',
+        staff: user.name
+      });
+      saveState();
+      closeModal();
+      render();
+      showToast(`Initialized ${updatedCount} inventory items with +10% Par & 25%/10%/5% alerts!`);
       return;
     }
 
