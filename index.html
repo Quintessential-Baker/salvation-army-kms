@@ -262,6 +262,7 @@
       activeTab: 'dashboard',
       unitMode: 'volume', // 'volume' | 'grams' | 'us'
       forecastHorizon: 'days', // 'days' | 'weeks' | 'months' | 'years'
+      zones: ['Dry Storage', 'Walk-In Cooler', 'Walk-In Freezer', 'Kitchen Dry Goods / Currently Using', 'Kitchen Cooler', 'Kitchen Freezer'],
       inventory: [
         { id: 'inv-1', sku: 'DRY-101', name: 'All-Purpose Flour', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 25000, unitLabel: 'g', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
         { id: 'inv-2', sku: 'DRY-102', name: 'Rolled Oats', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 11340, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
@@ -603,6 +604,7 @@
               }
             });
           }
+          if (!Array.isArray(parsed.zones) || !parsed.zones.length) parsed.zones = def.zones;
           if (!Array.isArray(parsed.purchaseOrders)) parsed.purchaseOrders = [];
           if (!parsed.manualPoRequests || typeof parsed.manualPoRequests !== 'object') parsed.manualPoRequests = {};
           if (!parsed.lastTaskCheckDate) parsed.lastTaskCheckDate = new Date().toISOString().slice(0, 10);
@@ -663,6 +665,7 @@
 
   function getSyncSlices() {
     return {
+      zones: state.zones,
       inventory: state.inventory,
       recipes: state.recipes,
       prepQueue: state.prepQueue,
@@ -1598,6 +1601,7 @@
           <div class="flex items-center gap-2 flex-wrap">
             <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">Units: <strong>Packs / Cans / Volume</strong></span>
             <button id="btn-print-qr-labels" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-medium">Print QR Labels</button>
+            ${canManage ? '<button id="btn-manage-zones" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-medium">Manage Zones</button>' : ''}
             ${canManage ? '<button id="btn-bulk-par" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold">Set Par Levels</button>' : ''}
             ${canManage ? '<button id="btn-add-inv-item" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-medium">+ New Item</button>' : ''}
           </div>
@@ -1607,9 +1611,7 @@
           <input id="inv-search" type="text" value="${escapeHtml(searchVal)}" placeholder="Search SKU, item name, or vendor..." class="flex-1 min-w-[200px] px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
           <select id="inv-zone" class="px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
             <option value="ALL" ${zoneVal === 'ALL' ? 'selected' : ''}>All Storage Zones</option>
-            <option value="Dry Storage" ${zoneVal === 'Dry Storage' ? 'selected' : ''}>Dry Storage</option>
-            <option value="Walk-In Cooler" ${zoneVal === 'Walk-In Cooler' ? 'selected' : ''}>Walk-In Cooler</option>
-            <option value="Walk-In Freezer" ${zoneVal === 'Walk-In Freezer' ? 'selected' : ''}>Walk-In Freezer</option>
+            ${(state.zones || []).map(z => `<option value="${escapeHtml(z)}" ${zoneVal === z ? 'selected' : ''}>${escapeHtml(z)}</option>`).join('')}
           </select>
           <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
             <input id="inv-show-disc" type="checkbox" ${showDisc ? 'checked' : ''} class="accent-red-700 rounded" />
@@ -2219,7 +2221,8 @@
   // 6. NEXT-DAY PREP LIST
   function renderPrep(main) {
     // Aggregate ingredient pulls by storage zone
-    const byZone = { 'Walk-In Cooler': [], 'Walk-In Freezer': [], 'Dry Storage': [] };
+    const byZone = {};
+    (state.zones || []).forEach(z => { byZone[z] = []; });
     state.prepQueue.forEach(pq => {
       const rec = state.recipes.find(r => r.id === pq.recipeId);
       if (!rec) return;
@@ -2227,7 +2230,7 @@
       rec.ingredients.forEach(ing => {
         const inv = state.inventory.find(i => i.id === ing.itemId);
         if (!inv) return;
-        const zone = byZone[inv.zone] ? inv.zone : 'Dry Storage';
+        const zone = byZone[inv.zone] ? inv.zone : (Object.keys(byZone)[0] || 'Dry Storage');
         byZone[zone].push({
           prepId: pq.id,
           key: pq.id + '_' + inv.id,
@@ -2943,9 +2946,7 @@
             <div class="flex items-center gap-2 flex-wrap">
               <select id="audit-zone-filter" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs sm:text-sm bg-white" ${isRevealed ? 'disabled' : ''}>
                 <option value="ALL" ${zone === 'ALL' ? 'selected' : ''}>All Storage Zones</option>
-                <option value="Dry Storage" ${zone === 'Dry Storage' ? 'selected' : ''}>Dry Storage</option>
-                <option value="Walk-In Cooler" ${zone === 'Walk-In Cooler' ? 'selected' : ''}>Walk-In Cooler</option>
-                <option value="Walk-In Freezer" ${zone === 'Walk-In Freezer' ? 'selected' : ''}>Walk-In Freezer</option>
+                ${(state.zones || []).map(z => `<option value="${escapeHtml(z)}" ${zone === z ? 'selected' : ''}>${escapeHtml(z)}</option>`).join('')}
               </select>
               ${!canReconcile
                 ? `<button id="btn-audit-submit-volunteer" class="px-3.5 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-semibold">Submit Blind Count (${countedItems.length})</button>`
@@ -3422,9 +3423,7 @@
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">Storage Zone</label>
             <select name="zone" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
-              <option value="Dry Storage">Dry Storage</option>
-              <option value="Walk-In Cooler">Walk-In Cooler</option>
-              <option value="Walk-In Freezer">Walk-In Freezer</option>
+              ${(state.zones || []).map(z => `<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -3979,7 +3978,7 @@
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">Storage Zone</label>
             <select name="zone" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
-              ${['Dry Storage', 'Walk-In Cooler', 'Walk-In Freezer'].map(z => `<option value="${z}" ${item.zone === z ? 'selected' : ''}>${z}</option>`).join('')}
+              ${(state.zones || []).map(z => `<option value="${escapeHtml(z)}" ${item.zone === z ? 'selected' : ''}>${escapeHtml(z)}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -4198,6 +4197,33 @@
           <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Delete Record</button>
         </div>
       </form>
+    `);
+  }
+
+
+  function showManageZonesModal() {
+    const zones = state.zones || [];
+    openModal('Manage Storage Zones', `
+      <div class="space-y-4">
+        <form id="form-add-zone" class="flex gap-2">
+          <input name="zoneName" type="text" required placeholder="New zone name (e.g. Pantry / Bake Station)" class="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          <button type="submit" class="px-3.5 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-semibold shrink-0">+ Add Zone</button>
+        </form>
+        <div class="divide-y divide-slate-100 border border-slate-200 rounded-lg max-h-72 overflow-y-auto">
+          ${zones.map((z, idx) => {
+            const count = state.inventory.filter(i => i.zone === z).length;
+            return `
+              <form class="form-rename-zone p-2.5 flex items-center justify-between gap-2 text-xs" data-old-zone="${escapeHtml(z)}">
+                <input type="text" name="newZoneName" required value="${escapeHtml(z)}" class="flex-1 px-2.5 py-1.5 rounded border border-slate-300 text-xs font-medium text-slate-900" />
+                <span class="text-[11px] text-slate-500 shrink-0">${count} item(s)</span>
+                <button type="submit" class="px-2.5 py-1.5 rounded border border-slate-300 hover:bg-slate-100 font-semibold text-slate-700 shrink-0">Save</button>
+                ${zones.length > 1 ? `<button type="button" data-delete-zone="${escapeHtml(z)}" class="px-2.5 py-1.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold shrink-0">Delete</button>` : ''}
+              </form>
+            `;
+          }).join('')}
+        </div>
+        <p class="text-[11px] text-slate-500">Renaming a zone automatically updates all items in that zone. Deleting a zone moves its items to "${escapeHtml(zones[0] || 'Dry Storage')}".</p>
+      </div>
     `);
   }
 
@@ -4483,6 +4509,24 @@
       saveState();
       render();
       showToast('Announcement removed');
+      return;
+    }
+    if (e.target.id === 'btn-manage-zones') {
+      showManageZonesModal();
+      return;
+    }
+    const delZoneBtn = e.target.closest('[data-delete-zone]');
+    if (delZoneBtn) {
+      const targetZ = delZoneBtn.dataset.deleteZone;
+      if ((state.zones || []).length > 1) {
+        state.zones = state.zones.filter(z => z !== targetZ);
+        const fallback = state.zones[0];
+        state.inventory.forEach(i => { if (i.zone === targetZ) i.zone = fallback; });
+        saveState();
+        showManageZonesModal();
+        render();
+        showToast(`Deleted zone "${targetZ}" (items moved to ${fallback})`);
+      }
       return;
     }
     if (e.target.id === 'btn-bulk-par') {
@@ -5354,6 +5398,39 @@
         render();
         showToast(alertAt && new Date(alertAt).getTime() > Date.now() ? `Scheduled "${ann.title}" for ${alertAt.replace('T', ' ')}` : `Posted: ${ann.title}`);
       }
+      return;
+    }
+
+    if (e.target.id === 'form-add-zone') {
+      const name = (fd.get('zoneName') || '').trim();
+      if (!name) return;
+      if (!Array.isArray(state.zones)) state.zones = [];
+      if (state.zones.some(z => z.toLowerCase() === name.toLowerCase())) {
+        showToast('Zone already exists', 'warn');
+        return;
+      }
+      state.zones.push(name);
+      saveState();
+      showManageZonesModal();
+      render();
+      showToast(`Added storage zone: ${name}`);
+      return;
+    }
+
+    if (e.target.classList && e.target.classList.contains('form-rename-zone')) {
+      const oldName = e.target.dataset.oldZone;
+      const newName = (fd.get('newZoneName') || '').trim();
+      if (!newName || newName === oldName) return;
+      if (state.zones.some(z => z !== oldName && z.toLowerCase() === newName.toLowerCase())) {
+        showToast('Another zone already has that name', 'warn');
+        return;
+      }
+      state.zones = state.zones.map(z => z === oldName ? newName : z);
+      state.inventory.forEach(i => { if (i.zone === oldName) i.zone = newName; });
+      saveState();
+      showManageZonesModal();
+      render();
+      showToast(`Renamed "${oldName}" to "${newName}"`);
       return;
     }
 
