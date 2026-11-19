@@ -83,6 +83,7 @@
         <button data-tab="audit" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Blind Audit</button>
         <button data-tab="haccp" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Time &amp; Temp Logs</button>
         <button data-tab="forecasting" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Served &amp; Forecasting</button>
+        <button data-tab="reports" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Daily Reports</button>
         <button data-tab="users" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Users &amp; Activity</button>
         <button data-tab="help" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Help / Guide</button>
       </div>
@@ -636,7 +637,7 @@
   }
 
   const ROLE_TABS = {
-    Management: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'forecasting', 'users', 'help'],
+    Management: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'forecasting', 'reports', 'users', 'help'],
     Staff: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'forecasting', 'help'],
     Volunteer: ['recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'help'],
     Other: ['dashboard', 'menu', 'prep', 'checklists', 'help']
@@ -1174,6 +1175,7 @@
       audit: 'Blind Audit',
       haccp: 'Time & Temp Logs',
       forecasting: 'Served & Forecasting',
+      reports: 'Daily Reports',
       users: 'Users & Activity',
       help: 'Help / Guide'
     };
@@ -1183,7 +1185,7 @@
       stock: ['inventory', 'transactions', 'orders', 'audit'],
       kitchen: ['recipes', 'menu', 'prep'],
       safety: ['checklists', 'haccp', 'forecasting'],
-      admin: ['users', 'help']
+      admin: ['reports', 'users', 'help']
     };
     const activeGroup = Object.keys(NAV_GROUPS).find(g => NAV_GROUPS[g].includes(state.activeTab)) || 'home';
     const groupLabels = {
@@ -1311,6 +1313,7 @@
       case 'audit': renderAudit(main); break;
       case 'haccp': renderHaccp(main); break;
       case 'forecasting': renderForecasting(main); break;
+      case 'reports': renderReports(main); break;
       case 'users': renderUsers(main); break;
       case 'help': renderHelp(main); break;
       default: renderDashboard(main);
@@ -2442,9 +2445,12 @@
     main.innerHTML = `
       <div class="space-y-5">
         <form id="form-served" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
-          <div>
-            <h2 class="text-base font-bold text-slate-900">Log People / Meals Served &amp; Unusual Circumstances</h2>
-            <p class="text-xs text-slate-500">Record attendance plus weather or local events to improve next-year forecasting.</p>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Log People / Meals Served &amp; Unusual Circumstances</h2>
+              <p class="text-xs text-slate-500">Record attendance plus weather or local events to improve next-year forecasting.</p>
+            </div>
+            <button type="button" id="btn-bulk-served" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold">+ Bulk Enter Past Months (Aug–Sep)</button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
             <div>
@@ -3090,6 +3096,178 @@
           }
         </div>
         ` : ''}
+      </div>
+    `;
+  }
+
+
+  // 10b. MANAGEMENT DAILY & HISTORICAL OPERATIONS REPORT
+  function renderReports(main) {
+    const todayStr = localDateStr();
+    const yestDate = new Date();
+    yestDate.setDate(yestDate.getDate() - 1);
+    const yestStr = localDateStr(yestDate);
+
+    const mode = state.reportRangeMode || 'yesterday'; // 'yesterday' | 'today' | '7d' | '30d' | 'custom'
+    const customDate = state.reportCustomDate || yestStr;
+
+    let startStr = yestStr;
+    let endStr = yestStr;
+    let rangeLabel = `Yesterday (${yestStr})`;
+    if (mode === 'today') {
+      startStr = todayStr; endStr = todayStr; rangeLabel = `Today (${todayStr})`;
+    } else if (mode === '7d') {
+      const d = new Date(); d.setDate(d.getDate() - 6);
+      startStr = localDateStr(d); endStr = todayStr; rangeLabel = `Last 7 Days (${startStr} to ${endStr})`;
+    } else if (mode === '30d') {
+      const d = new Date(); d.setDate(d.getDate() - 29);
+      startStr = localDateStr(d); endStr = todayStr; rangeLabel = `Last 30 Days (${startStr} to ${endStr})`;
+    } else if (mode === 'custom') {
+      startStr = customDate; endStr = customDate; rangeLabel = `Date: ${customDate}`;
+    }
+
+    const inRange = (ts) => {
+      const d = String(ts || '').slice(0, 10);
+      return d >= startStr && d <= endStr;
+    };
+
+    const lastAudit = (state.auditLogs || [])[0] || null;
+    const rangeMeals = (state.menuPlan || []).filter(m => inRange(m.date)).sort((a, b) => b.date.localeCompare(a.date));
+    const rangeServed = (state.serviceHistory || []).filter(s => inRange(s.date)).sort((a, b) => b.date.localeCompare(a.date));
+    const totalServed = rangeServed.reduce((sum, s) => sum + (Number(s.served) || 0), 0);
+
+    const rangeTx = (state.transactions || []).filter(t => inRange(t.timestamp));
+    const usageTx = rangeTx.filter(t => t.type === 'USAGE');
+    const wasteTx = rangeTx.filter(t => t.type === 'WASTE');
+    const inTx = rangeTx.filter(t => t.type === 'INCOMING');
+
+    const rangeChecklists = (state.checklistLogs || []).filter(c => inRange(c.timestamp));
+    const rangeHaccp = (state.haccpLogs || []).filter(h => inRange(h.timestamp));
+    const rangeAudits = (state.auditLogs || []).filter(a => inRange(a.timestamp));
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Management Daily &amp; Historical Operations Report</h2>
+              <p class="text-xs text-slate-500">Review meals served, lunch menus, day-to-day usage &amp; waste, cleaning/prep completions, temps, and last blind inventory.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 no-print">
+              ${[['yesterday', 'Yesterday'], ['today', 'Today'], ['7d', 'Last 7 Days'], ['30d', 'Last 30 Days']].map(([k, lbl]) => `
+                <button data-report-mode="${k}" class="px-3 py-1.5 rounded-lg text-xs font-semibold border ${mode === k ? 'bg-red-700 text-white border-red-700' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}">${lbl}</button>
+              `).join('')}
+              <input id="report-custom-date" type="date" value="${escapeHtml(customDate)}" class="px-2.5 py-1 rounded-lg border border-slate-300 text-xs bg-white" />
+              <button id="btn-print-report" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Print Report</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-[11px] font-bold uppercase text-slate-500">Last Blind Inventory</div>
+              <div class="text-sm font-bold text-slate-900 mt-0.5">${lastAudit ? escapeHtml(lastAudit.timestamp) : 'None recorded yet'}</div>
+              <div class="text-xs text-slate-500">${lastAudit ? `By ${escapeHtml(lastAudit.userName)} (${escapeHtml(lastAudit.zone)})` : 'Run one under Blind Audit'}</div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-[11px] font-bold uppercase text-slate-500">Patrons Served (${escapeHtml(rangeLabel)})</div>
+              <div class="text-lg font-bold text-red-700 mt-0.5">${totalServed}</div>
+              <div class="text-xs text-slate-500">${rangeServed.length} service(s) logged</div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-[11px] font-bold uppercase text-slate-500">Usage &amp; Waste Movements</div>
+              <div class="text-lg font-bold text-slate-900 mt-0.5">${usageTx.length} used / ${wasteTx.length} waste</div>
+              <div class="text-xs text-slate-500">${inTx.length} delivery check-in(s)</div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-[11px] font-bold uppercase text-slate-500">Tasks &amp; Temps Completed</div>
+              <div class="text-lg font-bold text-emerald-700 mt-0.5">${rangeChecklists.length} tasks / ${rangeHaccp.length} temps</div>
+              <div class="text-xs text-slate-500">${rangeAudits.length} blind audit line(s)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- 1. Lunch Menu & Patrons Served -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2.5">
+            <h3 class="text-sm font-bold text-slate-900">1. Lunch Menu &amp; Patrons Served</h3>
+            ${rangeMeals.length === 0 && rangeServed.length === 0
+              ? '<p class="text-xs text-slate-500">No menu or attendance records in this date range.</p>'
+              : `<div class="space-y-2 text-xs">
+                  ${rangeMeals.map(m => {
+                    const rec = state.recipes.find(r => r.id === m.recipeId);
+                    const srv = rangeServed.find(s => s.date === m.date);
+                    return `
+                      <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                        <div>
+                          <div class="font-mono text-[11px] text-slate-500">${escapeHtml(m.date)} &bull; ${escapeHtml(m.mealSlot)}</div>
+                          <div class="font-bold text-slate-900">${escapeHtml(m.customTitle || (rec ? rec.name : 'Meal'))}</div>
+                          ${srv && srv.notes ? `<div class="text-amber-800 mt-0.5">${escapeHtml(srv.circumstance || '')}: ${escapeHtml(srv.notes)}</div>` : ''}
+                        </div>
+                        <div class="text-right shrink-0">
+                          <div class="font-bold text-red-700">${srv ? `${srv.served} served` : (m.status === 'CLOSED' ? 'Closed' : `${m.portions} planned`)}</div>
+                          ${srv ? `<div class="text-[11px] text-slate-500">Planned: ${srv.planned}</div>` : ''}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>`
+            }
+          </div>
+
+          <!-- 2. Cleaning, Prep & Checklist Completions -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2.5">
+            <h3 class="text-sm font-bold text-slate-900">2. Cleaning, Prep &amp; Checklist Completions (${rangeChecklists.length})</h3>
+            ${rangeChecklists.length === 0
+              ? '<p class="text-xs text-slate-500">No checklist tasks logged in this date range.</p>'
+              : `<div class="divide-y divide-slate-100 max-h-64 overflow-y-auto text-xs">
+                  ${rangeChecklists.map(c => `
+                    <div class="py-2 flex items-center justify-between gap-2">
+                      <div>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-100 font-bold uppercase text-[10px] mr-1">${escapeHtml(c.freq)}</span>
+                        <span class="font-semibold text-slate-800">${escapeHtml(c.category)}:</span>
+                        <span class="text-slate-700">${escapeHtml(c.title)}</span>
+                      </div>
+                      <span class="text-slate-500 shrink-0">${escapeHtml(c.user)} &bull; ${escapeHtml(c.timestamp.slice(11))}</span>
+                    </div>
+                  `).join('')}
+                </div>`
+            }
+          </div>
+        </div>
+
+        <!-- 3. Day-to-Day Inventory Usage, Waste & Deliveries -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2.5">
+          <h3 class="text-sm font-bold text-slate-900">3. Inventory Usage, Waste &amp; Deliveries (${rangeTx.length})</h3>
+          ${rangeTx.length === 0
+            ? '<p class="text-xs text-slate-500">No inventory movements recorded in this date range.</p>'
+            : `<div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr class="border-b border-slate-200 text-slate-500 uppercase">
+                      <th class="py-1.5 pr-3">Timestamp</th>
+                      <th class="py-1.5 pr-3">Type</th>
+                      <th class="py-1.5 pr-3">Item</th>
+                      <th class="py-1.5 pr-3">Amount</th>
+                      <th class="py-1.5 pr-3">Details</th>
+                      <th class="py-1.5">Staff</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${rangeTx.map(tx => `
+                      <tr>
+                        <td class="py-1.5 pr-3 font-mono text-slate-500">${escapeHtml(tx.timestamp)}</td>
+                        <td class="py-1.5 pr-3 font-bold">${escapeHtml(tx.type)}</td>
+                        <td class="py-1.5 pr-3 font-medium text-slate-900">${escapeHtml(tx.itemName)}</td>
+                        <td class="py-1.5 pr-3 font-bold ${tx.grams >= 0 ? 'text-emerald-700' : 'text-rose-700'}">${tx.grams >= 0 ? '+' : '-'}${formatShortMass(Math.abs(tx.grams), tx.itemId)}</td>
+                        <td class="py-1.5 pr-3 text-slate-600">${escapeHtml(tx.note)}</td>
+                        <td class="py-1.5 text-slate-600">${escapeHtml(tx.staff)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>`
+          }
+        </div>
       </div>
     `;
   }
@@ -4227,6 +4405,54 @@
     `);
   }
 
+
+  function showBulkServedModal(startDate, endDate) {
+    const startStr = startDate || '2026-08-01';
+    const endStr = endDate || '2026-09-30';
+    const dates = [];
+    const cur = new Date(startStr + 'T12:00:00');
+    const end = new Date(endStr + 'T12:00:00');
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    while (cur <= end && dates.length < 90) {
+      const dn = dayNames[cur.getDay()];
+      if (['Mon', 'Tue', 'Wed', 'Fri'].includes(dn)) {
+        const ds = localDateStr(cur);
+        const existing = state.serviceHistory.find(s => s.date === ds);
+        dates.push({ date: ds, dayName: dn, served: existing ? existing.served : '', notes: existing ? (existing.notes || '') : '' });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    openModal('Bulk Enter Past Attendance (MTWF Service Days)', `
+      <div class="space-y-3">
+        <div class="flex flex-wrap items-end gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+          <div>
+            <label class="block text-[11px] font-medium text-slate-600">From</label>
+            <input id="bulk-srv-start" type="date" value="${escapeHtml(startStr)}" class="px-2 py-1 rounded border border-slate-300 text-xs bg-white" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-slate-600">To</label>
+            <input id="bulk-srv-end" type="date" value="${escapeHtml(endStr)}" class="px-2 py-1 rounded border border-slate-300 text-xs bg-white" />
+          </div>
+          <button type="button" id="btn-reload-bulk-dates" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Load MTWF Dates</button>
+        </div>
+
+        <form id="form-bulk-served" class="space-y-3">
+          <div class="divide-y divide-slate-100 border border-slate-200 rounded-lg max-h-72 overflow-y-auto">
+            ${dates.map(d => `
+              <div class="p-2 flex items-center gap-2 text-xs">
+                <span class="font-mono text-slate-600 w-24 shrink-0">${escapeHtml(d.date)} (${d.dayName})</span>
+                <input type="number" min="0" name="srv_${escapeHtml(d.date)}" value="${escapeHtml(d.served)}" placeholder="Served" class="w-20 px-2 py-1 rounded border border-slate-300 font-bold text-slate-900" />
+                <input type="text" name="note_${escapeHtml(d.date)}" value="${escapeHtml(d.notes)}" placeholder="Weather / Event note (optional)" class="flex-1 px-2 py-1 rounded border border-slate-300 text-xs" />
+              </div>
+            `).join('')}
+          </div>
+          <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save All Entered Attendance &amp; Update Forecasts</button>
+        </form>
+      </div>
+    `);
+  }
+
   function showBackupModal() {
     openModal('Backup & Restore Program Data', `
       <div class="space-y-4 text-sm">
@@ -4296,7 +4522,7 @@
         stock: ['inventory', 'transactions', 'orders', 'audit'],
         kitchen: ['recipes', 'menu', 'prep'],
         safety: ['checklists', 'haccp', 'forecasting'],
-        admin: ['users', 'help']
+        admin: ['reports', 'users', 'help']
       };
       const allowed = getAllowedTabs(getActiveUser());
       const first = (map[grp] || []).find(t => allowed.includes(t));
@@ -4885,6 +5111,16 @@
       return;
     }
 
+    if (e.target.id === 'btn-bulk-served') {
+      showBulkServedModal('2026-08-01', '2026-09-30');
+      return;
+    }
+    if (e.target.id === 'btn-reload-bulk-dates') {
+      const s = document.getElementById('bulk-srv-start')?.value || '2026-08-01';
+      const en = document.getElementById('bulk-srv-end')?.value || '2026-09-30';
+      showBulkServedModal(s, en);
+      return;
+    }
     const editSrvBtn = e.target.closest('[data-edit-served]');
     if (editSrvBtn) {
       showEditServedModal(editSrvBtn.dataset.editServed);
@@ -4897,6 +5133,16 @@
     }
     if (e.target.id === 'btn-cancel-del-served') {
       closeModal();
+      return;
+    }
+    const repModeBtn = e.target.closest('[data-report-mode]');
+    if (repModeBtn) {
+      state.reportRangeMode = repModeBtn.dataset.reportMode;
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-print-report') {
+      window.print();
       return;
     }
     const haccpViewBtn = e.target.closest('[data-haccp-view]');
@@ -5220,6 +5466,12 @@
     }
     if (e.target.id === 'order-cadence-filter') {
       state.orderCadenceFilter = e.target.value;
+      render();
+      return;
+    }
+    if (e.target.id === 'report-custom-date') {
+      state.reportRangeMode = 'custom';
+      state.reportCustomDate = e.target.value;
       render();
       return;
     }
@@ -5620,6 +5872,41 @@
       saveState();
       render();
       showToast(pass ? `HACCP Check Passed (${tempF}°F)` : `HACCP Check FLAGGED (${tempF}°F)`, pass ? 'ok' : 'error');
+      return;
+    }
+
+    if (e.target.id === 'form-bulk-served') {
+      let saved = 0;
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      for (const [k, v] of fd.entries()) {
+        if (!k.startsWith('srv_') || v === '') continue;
+        const dateStr = k.slice(4);
+        const count = Number(v);
+        if (isNaN(count) || count < 0) continue;
+        const note = (fd.get('note_' + dateStr) || '').trim();
+        const existing = state.serviceHistory.find(s => s.date === dateStr);
+        if (existing) {
+          existing.served = count;
+          if (note) existing.notes = note;
+        } else {
+          const dObj = new Date(dateStr + 'T12:00:00');
+          state.serviceHistory.push({
+            id: uid('srv'),
+            date: dateStr,
+            dayName: dayNames[dObj.getDay()],
+            meal: 'Community Meal',
+            planned: count,
+            served: count,
+            circumstance: note ? 'Other Unusual' : 'Normal Day',
+            notes: note
+          });
+        }
+        saved++;
+      }
+      saveState();
+      closeModal();
+      render();
+      showToast(`Saved ${saved} attendance record(s) — forecasts updated!`);
       return;
     }
 
