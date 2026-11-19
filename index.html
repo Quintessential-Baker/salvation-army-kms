@@ -1049,6 +1049,8 @@
         }
       });
       state.recipes = merged;
+    } else if (id === 'transactions' && Array.isArray(data)) {
+      state.transactions = data.filter(t => !/^tx-[12]$/.test(String(t.id || '')));
     } else if (id === 'haccpLogs' && Array.isArray(data)) {
       state.haccpLogs = data.filter(h => !/^hac-[123]$/.test(String(h.id || '')));
     } else if (id === 'serviceHistory' && Array.isArray(data)) {
@@ -4622,9 +4624,12 @@
 
         <!-- Real-Time Accountability Feed -->
         <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm">
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 class="text-sm font-bold text-slate-900">Real-Time Accountability Feed (All Actions)</h3>
-            <span class="text-xs text-slate-500">Auto-syncs across open tabs</span>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500">Auto-syncs across open tabs</span>
+              ${getActiveUser().role === 'Management' ? '<button id="btn-reset-accountability" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Reset Accountability</button>' : ''}
+            </div>
           </div>
           <div class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
             ${feed.slice(0, 40).map(f => `
@@ -6999,6 +7004,25 @@
       render();
       return;
     }
+    if (e.target.id === 'btn-reset-accountability') {
+      if (e.target.dataset.confirmed !== '1') {
+        e.target.dataset.confirmed = '1';
+        e.target.textContent = 'Tap Again to Clear Feed';
+        setTimeout(() => { if (e.target.isConnected) { e.target.dataset.confirmed = '0'; e.target.textContent = 'Reset Accountability'; } }, 3500);
+        return;
+      }
+      state.transactions = [];
+      state.trainingLogs = [];
+      state.auditLogs = [];
+      state.checklistLogs = [];
+      state.haccpLogs = [];
+      saveState();
+      if (typeof pushAllToCloud === 'function') pushAllToCloud();
+      render();
+      showToast('Accountability Feed cleared & synced to cloud!');
+      return;
+    }
+
     if (e.target.id === 'btn-fresh-golive-reset') {
       if (e.target.dataset.confirmed !== '1') {
         e.target.dataset.confirmed = '1';

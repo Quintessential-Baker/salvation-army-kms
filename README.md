@@ -9,7 +9,7 @@ A standalone, zero-build, real-time synced Kitchen Management & Inventory Operat
   - **Official Inventory Init (+10% Par)**: Management can enter an official physical count (Full Packs + `1/4`, `1/2`, `3/4` open partials) to reset all stock and auto-set `Par = Count + 10%`.
   - **25% / 10% / 5% Staple Reorder Alerts**: Tiered alerts on the Home Dashboard and Living Stock as staples drop below Par.
 - **210 Standardized Recipes & Auto-Rescaling**:
-  - 12 core/November recipes + 10 US Federal Holiday Feast recipes + 188 beginner-friendly, large-batch recipes.
+  - 10 US Federal Holiday Feast recipes + 200 large-batch recipes.
   - Every recipe automatically rescales to the **predicted portions** for its scheduled service day.
 - **Menu Planner, Next-Day Prep & Ordering**:
   - **Weekly** (`Marberger` Dairy & `Produce`) and **Monthly** (3rd Friday `Jordan Banana` Dry Goods & Frozen) ordering cadence with a 3-step **Request → Management Approval → Expected Delivery Reconciliation** workflow.
