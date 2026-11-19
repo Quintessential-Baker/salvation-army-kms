@@ -1059,27 +1059,106 @@
     return list;
   }
 
-  // --- Forecasting Engine ---
-  function computeForecasts() {
-    const hist = state.serviceHistory.slice().sort((a, b) => a.date.localeCompare(b.date));
-    const avgAll = hist.length ? hist.reduce((s, r) => s + r.served, 0) / hist.length : 65;
-    const recent4 = hist.slice(-4);
-    const avgRecent = recent4.length ? recent4.reduce((s, r) => s + r.served, 0) / recent4.length : avgAll;
-    const trendDelta = avgRecent - avgAll;
+  // --- US Federal Holidays & Multi-Factor Trend Forecasting Engine ---
+  function getFederalHolidayName(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1; // 1-12
+    const day = d.getDate();
+    const dow = d.getDay(); // 0=Sun..6=Sat
 
-    // Day-of-week averages (Mon, Tue, Wed, Fri)
+    if (m === 1 && day === 1) return "New Year's Day";
+    if (m === 1 && dow === 1 && day >= 15 && day <= 21) return 'MLK Jr. Day';
+    if (m === 2 && dow === 1 && day >= 15 && day <= 21) return "Presidents' Day";
+    if (m === 5 && dow === 1 && day >= 25) return 'Memorial Day';
+    if (m === 6 && day === 19) return 'Juneteenth';
+    if (m === 7 && day === 4) return 'Independence Day';
+    if (m === 9 && dow === 1 && day <= 7) return 'Labor Day';
+    if (m === 10 && dow === 1 && day >= 8 && day <= 14) return 'Columbus Day';
+    if (m === 11 && day === 11) return 'Veterans Day';
+    // Thanksgiving (4th Thu of Nov) & Friday after Thanksgiving
+    if (m === 11) {
+      const nov1Dow = new Date(y, 10, 1).getDay();
+      const firstThu = 1 + ((4 - nov1Dow + 7) % 7);
+      const thxDay = firstThu + 21;
+      if (day === thxDay) return 'Thanksgiving Day';
+      if (day === thxDay + 1) return 'Thanksgiving Friday (Closed)';
+    }
+    if (m === 12 && day === 25) return 'Christmas Day';
+    return '';
+  }
+
+  function isPreHolidayMeal(dateStr) {
+    const base = new Date(dateStr + 'T12:00:00');
+    for (let offset = 1; offset <= 2; offset++) {
+      const probe = new Date(base);
+      probe.setDate(base.getDate() + offset);
+      const hol = getFederalHolidayName(localDateStr(probe));
+      if (hol) return hol;
+    }
+    const mp = (state.menuPlan || []).find(m => m.date === dateStr);
+    if (mp && /thanksgiving|christmas|holiday/i.test(mp.customTitle || '')) return 'Holiday Meal';
+    return '';
+  }
+
+  function isNearFederalHoliday(dateStr) {
+    const base = new Date(dateStr + 'T12:00:00');
+    for (let offset = -3; offset <= 3; offset++) {
+      if (offset === 0) continue;
+      const probe = new Date(base);
+      probe.setDate(base.getDate() + offset);
+      const hol = getFederalHolidayName(localDateStr(probe));
+      if (hol) return hol;
+    }
+    return '';
+  }
+
+  function getMonthBucket(dateStr) {
+    const day = Number(String(dateStr).slice(8, 10)) || 15;
+    if (day <= 10) return 'start';
+    if (day <= 20) return 'mid';
+    return 'end';
+  }
+
+  function computeForecasts() {
+    // Only use open operating days (served > 0 and not Closed/Holiday) for averages & trends
+    const allSorted = state.serviceHistory.slice().sort((a, b) => a.date.localeCompare(b.date));
+    const openHist = allSorted.filter(r => r.served > 0 && r.circumstance !== 'Closed / Federal Holiday');
+    const recentWindow = openHist.slice(-40); // Focus trend learning on last few months (~2-3 months of MTWF)
+    const activeSet = recentWindow.length >= 4 ? recentWindow : openHist;
+
+    const avgAll = openHist.length ? openHist.reduce((s, r) => s + r.served, 0) / openHist.length : 35;
+    const recent12 = activeSet.slice(-12);
+    const baseAvg = recent12.length ? recent12.reduce((s, r) => s + r.served, 0) / recent12.length : avgAll;
+    const trendDelta = baseAvg - avgAll;
+
+    // 1. Day-of-week multipliers (Mon, Tue, Wed, Fri)
     const dowMap = { Mon: [], Tue: [], Wed: [], Fri: [] };
-    hist.forEach(r => {
-      if (dowMap[r.dayName]) dowMap[r.dayName].push(r.served);
-    });
+    activeSet.forEach(r => { if (dowMap[r.dayName]) dowMap[r.dayName].push(r.served); });
     const dowFactor = {};
     ['Mon', 'Tue', 'Wed', 'Fri'].forEach(d => {
       const arr = dowMap[d];
-      const dAvg = arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : avgAll;
-      dowFactor[d] = avgAll > 0 ? dAvg / avgAll : 1;
+      const dAvg = arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : baseAvg;
+      dowFactor[d] = baseAvg > 0 ? Math.min(1.4, Math.max(0.6, dAvg / baseAvg)) : 1;
     });
 
-    // Next 7 MTWF service days
+    // 2. Time-of-month multipliers (Beginning 1-10, Mid 11-20, End 21-31)
+    const bucketMap = { start: [], mid: [], end: [] };
+    activeSet.forEach(r => { bucketMap[getMonthBucket(r.date)].push(r.served); });
+    const bucketFactor = {};
+    ['start', 'mid', 'end'].forEach(b => {
+      const arr = bucketMap[b];
+      const bAvg = arr.length >= 2 ? arr.reduce((x, y) => x + y, 0) / arr.length : baseAvg;
+      bucketFactor[b] = baseAvg > 0 ? Math.min(1.3, Math.max(0.75, bAvg / baseAvg)) : 1;
+    });
+
+    // 3. Near-holiday multiplier (within ±3 days of a Federal Holiday)
+    const nearHolArr = activeSet.filter(r => isNearFederalHoliday(r.date)).map(r => r.served);
+    const nearHolAvg = nearHolArr.length >= 2 ? nearHolArr.reduce((a, b) => a + b, 0) / nearHolArr.length : baseAvg;
+    const nearHolFactor = baseAvg > 0 ? Math.min(1.35, Math.max(0.75, nearHolAvg / baseAvg)) : 1;
+
+    // Next 7 MTWF service days (including Federal Holiday detection)
     const days = [];
     let cursor = new Date();
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -1087,57 +1166,82 @@
       cursor.setDate(cursor.getDate() + 1);
       const dn = dayNames[cursor.getDay()];
       if (dn === 'Mon' || dn === 'Tue' || dn === 'Wed' || dn === 'Fri') {
-        const base = avgRecent * (dowFactor[dn] || 1);
-        const pred = Math.min(80, Math.max(40, Math.round(base)));
+        const ds = localDateStr(cursor);
+        const hol = getFederalHolidayName(ds);
+        const manualClosed = (state.menuPlan || []).some(m => m.date === ds && m.status === 'CLOSED');
+        if (hol || manualClosed) {
+          days.push({
+            label: ds.slice(5) + ` (${dn} — ${hol || 'Closed'})`,
+            predicted: 0,
+            recommendedPrep: 0,
+            note: 'Closed (Federal Holiday)'
+          });
+          continue;
+        }
+        const bucket = getMonthBucket(ds);
+        const nearHol = isNearFederalHoliday(ds);
+        const preHol = isPreHolidayMeal(ds);
+        // Blend Day-of-Week + Time-of-Month + Near-Holiday + +10% Pre-Holiday Meal Boost
+        const combined = baseAvg * (dowFactor[dn] || 1) * ((1 + (bucketFactor[bucket] || 1)) / 2) * (nearHol ? nearHolFactor : 1) * (preHol ? 1.10 : 1);
+        const pred = Math.max(0, Math.round(combined));
+        const tags = [];
+        if (preHol) tags.push(`+10% Pre-${preHol}`);
+        if ((dowFactor[dn] || 1) >= 1.06) tags.push(`${dn} +${Math.round((dowFactor[dn] - 1) * 100)}%`);
+        if (bucket === 'start' && bucketFactor.start >= 1.05) tags.push(`Start-of-mo +${Math.round((bucketFactor.start - 1) * 100)}%`);
+        if (!preHol && nearHol && nearHolFactor >= 1.05) tags.push(`Near ${nearHol}`);
         days.push({
-          label: cursor.toISOString().slice(5, 10) + ' (' + dn + ')',
+          label: ds.slice(5) + ' (' + dn + ')',
           predicted: pred,
-          recommendedPrep: Math.min(80, Math.max(40, Math.ceil(pred / 5) * 5))
+          recommendedPrep: pred > 0 ? Math.max(10, Math.ceil(pred / 5) * 5) : 0,
+          note: tags.join(' • ') || 'Normal trend'
         });
       }
     }
 
-    // Next 8 weeks (4 service days per week)
+    // Next 8 weeks (4 service days/week)
     const weeks = [];
-    const weeklyBase = avgRecent * 4;
+    const weeklyBase = baseAvg * 4;
     for (let w = 1; w <= 8; w++) {
-      const proj = Math.round(weeklyBase + trendDelta * 0.25 * w);
+      const proj = Math.max(0, Math.round(weeklyBase + trendDelta * 0.2 * w));
       weeks.push({
         label: 'Week +' + w,
-        predicted: Math.max(200, proj),
-        recommendedPrep: Math.min(320, Math.max(200, Math.round(proj * 1.05)))
+        predicted: proj,
+        recommendedPrep: Math.round(proj * 1.05),
+        note: trendDelta > 1 ? 'Upward trend' : trendDelta < -1 ? 'Downward trend' : 'Steady'
       });
     }
 
-    // Next 12 months (~17 service days/mo, seasonal winter bump)
+    // Next 12 months (~17 service days/mo)
     const months = [];
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const nowM = new Date().getMonth();
     const seasonal = [1.06, 1.05, 1.02, 0.98, 0.95, 0.96, 0.97, 0.98, 1.0, 1.03, 1.07, 1.08];
     for (let m = 1; m <= 12; m++) {
       const mIdx = (nowM + m) % 12;
-      const proj = Math.round(avgRecent * 17 * seasonal[mIdx]);
-      months.push({
-        label: monthNames[mIdx],
-        predicted: proj,
-        recommendedPrep: Math.round(proj * 1.05)
-      });
+      const proj = Math.max(0, Math.round(baseAvg * 17 * seasonal[mIdx]));
+      months.push({ label: monthNames[mIdx], predicted: proj, recommendedPrep: Math.round(proj * 1.05), note: 'Seasonal index' });
     }
 
     // Next 3 years (~200 service days/year)
     const years = [];
     const baseYear = new Date().getFullYear();
     for (let y = 0; y < 3; y++) {
-      const growth = 1 + 0.03 * y;
-      const proj = Math.round(avgRecent * 200 * growth);
-      years.push({
-        label: String(baseYear + y),
-        predicted: proj,
-        recommendedPrep: Math.round(proj * 1.05)
-      });
+      const proj = Math.max(0, Math.round(baseAvg * 200 * (1 + 0.03 * y)));
+      years.push({ label: String(baseYear + y), predicted: proj, recommendedPrep: Math.round(proj * 1.05), note: 'Annual projection' });
     }
 
-    return { avgAll, avgRecent, days, weeks, months, years };
+    return {
+      avgAll,
+      avgRecent: baseAvg,
+      openCount: openHist.length,
+      dowFactor,
+      bucketFactor,
+      nearHolFactor,
+      days,
+      weeks,
+      months,
+      years
+    };
   }
 
   // --- Render Tabs ---
@@ -2459,7 +2563,7 @@
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Planned Portions</label>
-              <input name="planned" type="number" min="1" value="70" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              <input name="planned" type="number" min="0" value="35" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">People / Meals Served</label>
@@ -2469,6 +2573,7 @@
               <label class="block text-xs font-medium text-slate-700 mb-1">Weather / Event</label>
               <select name="circumstance" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
                 <option value="Normal Day">Normal Day</option>
+                <option value="Closed / Federal Holiday">Closed / Federal Holiday (0)</option>
                 <option value="Snow / Cold Snap">Snow / Cold Snap</option>
                 <option value="Heavy Rain / Storm">Heavy Rain / Storm</option>
                 <option value="Extreme Heat">Extreme Heat</option>
@@ -2490,7 +2595,15 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 class="text-base font-bold text-slate-900">Attendance Forecasting &amp; Portion Predictions</h3>
-              <p class="text-xs text-slate-500">${state.serviceHistory.length === 0 ? 'No attendance records logged yet (showing 65/day baseline until you log your first service).' : `Based on ${state.serviceHistory.length} logged service(s) &bull; Overall avg: <strong>${fc.avgAll.toFixed(1)}</strong>/day &bull; Recent avg: <strong>${fc.avgRecent.toFixed(1)}</strong>/day`}</p>
+              <p class="text-xs text-slate-500">${fc.openCount === 0 ? 'No open-day attendance records logged yet.' : `Based on ${fc.openCount} open service(s) (excluding 0/holiday closures) &bull; Overall avg: <strong>${fc.avgAll.toFixed(1)}</strong>/day &bull; Recent trend avg: <strong>${fc.avgRecent.toFixed(1)}</strong>/day`}</p>
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                ${['Mon', 'Tue', 'Wed', 'Fri'].map(d => {
+                  const pct = Math.round(((fc.dowFactor[d] || 1) - 1) * 100);
+                  return `<span class="text-[11px] px-2 py-0.5 rounded-full font-semibold ${pct >= 5 ? 'bg-red-100 text-red-800' : pct <= -5 ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-700'}">${d}: ${pct >= 0 ? '+' : ''}${pct}%</span>`;
+                }).join('')}
+                <span class="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-800">Start of Month (1–10): ${Math.round(((fc.bucketFactor.start || 1) - 1) * 100) >= 0 ? '+' : ''}${Math.round(((fc.bucketFactor.start || 1) - 1) * 100)}%</span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-purple-100 text-purple-800">Near Holiday (±3d): ${Math.round(((fc.nearHolFactor || 1) - 1) * 100) >= 0 ? '+' : ''}${Math.round(((fc.nearHolFactor || 1) - 1) * 100)}%</span>
+              </div>
             </div>
             <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
               ${[
@@ -2514,7 +2627,8 @@
                 <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
                   <th class="py-2 pr-3">Period</th>
                   <th class="py-2 pr-3">Predicted People Served</th>
-                  <th class="py-2">Recommended Batch / Prep Target</th>
+                  <th class="py-2 pr-3">Recommended Batch / Prep Target</th>
+                  <th class="py-2">Trend / Holiday Factor</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -2522,7 +2636,8 @@
                   <tr>
                     <td class="py-2 pr-3 font-medium text-slate-900">${escapeHtml(row.label)}</td>
                     <td class="py-2 pr-3 font-bold text-red-700">${row.predicted.toLocaleString()}</td>
-                    <td class="py-2 text-slate-700">${row.recommendedPrep.toLocaleString()} portions</td>
+                    <td class="py-2 pr-3 text-slate-700">${row.recommendedPrep === 0 ? 'Closed (0)' : row.recommendedPrep.toLocaleString() + ' portions'}</td>
+                    <td class="py-2 text-xs text-slate-500">${escapeHtml(row.note || '')}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -4341,7 +4456,7 @@
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">Planned</label>
-            <input name="planned" type="number" min="1" required value="${s.planned}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            <input name="planned" type="number" min="0" required value="${s.planned}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">People Served</label>
@@ -4351,7 +4466,7 @@
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Weather / Event</label>
           <select name="circumstance" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
-            ${['Normal Day', 'Snow / Cold Snap', 'Heavy Rain / Storm', 'Extreme Heat', 'Local Event / Drive', 'Holiday Week', 'Other Unusual'].map(c => `<option value="${c}" ${(s.circumstance || 'Normal Day') === c ? 'selected' : ''}>${c}</option>`).join('')}
+            ${['Normal Day', 'Closed / Federal Holiday', 'Snow / Cold Snap', 'Heavy Rain / Storm', 'Extreme Heat', 'Local Event / Drive', 'Holiday Week', 'Other Unusual'].map(c => `<option value="${c}" ${(s.circumstance || 'Normal Day') === c ? 'selected' : ''}>${c}</option>`).join('')}
           </select>
         </div>
         <div>
@@ -4418,7 +4533,13 @@
       if (['Mon', 'Tue', 'Wed', 'Fri'].includes(dn)) {
         const ds = localDateStr(cur);
         const existing = state.serviceHistory.find(s => s.date === ds);
-        dates.push({ date: ds, dayName: dn, served: existing ? existing.served : '', notes: existing ? (existing.notes || '') : '' });
+        const hol = getFederalHolidayName(ds);
+        dates.push({
+          date: ds,
+          dayName: dn,
+          served: existing ? existing.served : (hol ? 0 : ''),
+          notes: existing ? (existing.notes || '') : (hol ? hol + ' (Closed)' : '')
+        });
       }
       cur.setDate(cur.getDate() + 1);
     }
