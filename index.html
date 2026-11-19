@@ -497,30 +497,8 @@
         { id: 'tx-1', timestamp: today + ' 08:35', type: 'INCOMING', itemId: 'inv-1', itemName: 'All-Purpose Flour', grams: 22680, note: 'Vendor: Jordan Banana | Lot #JB-442', staff: 'William Clark' },
         { id: 'tx-2', timestamp: today + ' 09:10', type: 'WASTE', itemId: 'inv-10', itemName: 'Romaine Lettuce', grams: -900, note: 'Reason: Spoilage / Wilted outer leaves', staff: 'William Clark' }
       ],
-      haccpLogs: [
-        { id: 'hac-1', timestamp: today + ' 08:40', type: 'Cold Hold (≤41°F)', target: 'Walk-In Cooler', tempF: 37.5, status: 'PASS', corrective: '—', staff: 'William Clark' },
-        { id: 'hac-2', timestamp: today + ' 08:45', type: 'Cold Hold (≤41°F)', target: 'Walk-In Freezer', tempF: -2.0, status: 'PASS', corrective: '—', staff: 'William Clark' },
-        { id: 'hac-3', timestamp: today + ' 11:20', type: 'Hot Hold (≥135°F)', target: 'Steam Table Well #1 (Soup)', tempF: 148.0, status: 'PASS', corrective: '—', staff: 'William Clark' }
-      ],
-      serviceHistory: [
-        // 16 historical MTWF lunch records to power immediate Day/Week/Month/Year forecasting
-        { id: 'srv-1', date: '2026-10-12', dayName: 'Mon', meal: 'Baked Ziti', planned: 65, served: 61, notes: 'Steady turnout' },
-        { id: 'srv-2', date: '2026-10-13', dayName: 'Tue', meal: 'Roasted Chicken', planned: 65, served: 58, notes: 'Rainy morning' },
-        { id: 'srv-3', date: '2026-10-14', dayName: 'Wed', meal: 'Beef & Veg Soup', planned: 65, served: 64, notes: 'Cool weather boost' },
-        { id: 'srv-4', date: '2026-10-16', dayName: 'Fri', meal: 'Fish & Pasta', planned: 70, served: 68, notes: 'Strong Friday' },
-        { id: 'srv-5', date: '2026-10-19', dayName: 'Mon', meal: 'Chicken Pot Pie', planned: 65, served: 63, notes: '' },
-        { id: 'srv-6', date: '2026-10-20', dayName: 'Tue', meal: 'Spaghetti & Meatballs', planned: 65, served: 60, notes: '' },
-        { id: 'srv-7', date: '2026-10-21', dayName: 'Wed', meal: 'Pulled Pork', planned: 70, served: 69, notes: 'Near capacity' },
-        { id: 'srv-8', date: '2026-10-23', dayName: 'Fri', meal: 'Beef Stew', planned: 70, served: 72, notes: '2 extra walk-ins' },
-        { id: 'srv-9', date: '2026-10-26', dayName: 'Mon', meal: 'Baked Ziti', planned: 70, served: 66, notes: '' },
-        { id: 'srv-10', date: '2026-10-27', dayName: 'Tue', meal: 'Roasted Chicken', planned: 65, served: 62, notes: '' },
-        { id: 'srv-11', date: '2026-10-28', dayName: 'Wed', meal: 'Chili & Cornbread', planned: 70, served: 71, notes: '' },
-        { id: 'srv-12', date: '2026-10-30', dayName: 'Fri', meal: 'Lasagna', planned: 75, served: 74, notes: 'End of month peak' },
-        { id: 'srv-13', date: '2026-11-02', dayName: 'Mon', meal: 'Beef & Veg Soup', planned: 70, served: 67, notes: '' },
-        { id: 'srv-14', date: '2026-11-03', dayName: 'Tue', meal: 'Chicken Alfredo', planned: 70, served: 64, notes: '' },
-        { id: 'srv-15', date: '2026-11-04', dayName: 'Wed', meal: 'Meatloaf & Mash', planned: 70, served: 70, notes: '' },
-        { id: 'srv-16', date: '2026-11-06', dayName: 'Fri', meal: 'Baked Ziti', planned: 75, served: 76, notes: 'Cold front, high demand' }
-      ],
+      haccpLogs: [],
+      serviceHistory: [],
       selectedRecipeId: 'rec-1',
       recipeScalePortions: 65,
       users: [
@@ -596,6 +574,12 @@
           if (!parsed.activeUserId) parsed.activeUserId = parsed.users[0].id;
           if (!Array.isArray(parsed.auditLogs)) parsed.auditLogs = [];
           if (!parsed.blindAuditDraft) parsed.blindAuditDraft = def.blindAuditDraft;
+          if (Array.isArray(parsed.haccpLogs)) {
+            parsed.haccpLogs = parsed.haccpLogs.filter(h => !/^hac-[123]$/.test(String(h.id || '')));
+          }
+          if (Array.isArray(parsed.serviceHistory)) {
+            parsed.serviceHistory = parsed.serviceHistory.filter(s => !/^srv-\d+$/.test(String(s.id || '')));
+          }
           if (!Array.isArray(parsed.menuPlan) || parsed.menuPlan.some(m => m.id === 'mp-1' || m.id === 'mp-2')) {
             parsed.menuPlan = def.menuPlan;
           }
@@ -717,6 +701,10 @@
         if (dr.id.startsWith('rec-nov-') && !merged.some(r => r.id === dr.id)) merged.push(dr);
       });
       state.recipes = merged;
+    } else if (id === 'haccpLogs' && Array.isArray(data)) {
+      state.haccpLogs = data.filter(h => !/^hac-[123]$/.test(String(h.id || '')));
+    } else if (id === 'serviceHistory' && Array.isArray(data)) {
+      state.serviceHistory = data.filter(s => !/^srv-\d+$/.test(String(s.id || '')));
     } else if (id in state && data !== undefined) {
       state[id] = data;
     }
@@ -855,9 +843,17 @@
     return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
   }
 
+  function localDateStr(dObj) {
+    const d = dObj || new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   function nowStamp() {
     const d = new Date();
-    return d.toISOString().slice(0, 10) + ' ' + d.toTimeString().slice(0, 5);
+    return localDateStr(d) + ' ' + d.toTimeString().slice(0, 5);
   }
 
   function escapeHtml(str) {
@@ -1088,11 +1084,11 @@
       const dn = dayNames[cursor.getDay()];
       if (dn === 'Mon' || dn === 'Tue' || dn === 'Wed' || dn === 'Fri') {
         const base = avgRecent * (dowFactor[dn] || 1);
-        const pred = Math.min(80, Math.max(50, Math.round(base)));
+        const pred = Math.min(80, Math.max(40, Math.round(base)));
         days.push({
           label: cursor.toISOString().slice(5, 10) + ' (' + dn + ')',
           predicted: pred,
-          recommendedPrep: Math.min(80, Math.max(50, Math.ceil(pred / 5) * 5))
+          recommendedPrep: Math.min(80, Math.max(40, Math.ceil(pred / 5) * 5))
         });
       }
     }
@@ -1358,7 +1354,9 @@
     const criticalCount = state.inventory.filter(i => i.stockGrams < i.parGrams * 0.5).length;
     const forecasts = computeForecasts();
     const nextDayPred = forecasts.days[0];
-    const flaggedHaccp = state.haccpLogs.filter(h => h.status === 'FLAGGED').length;
+    const todayHaccpStr = localDateStr();
+    const todayHaccpLogs = state.haccpLogs.filter(h => (h.timestamp || '').startsWith(todayHaccpStr));
+    const flaggedHaccp = todayHaccpLogs.filter(h => h.status === 'FLAGGED').length;
     const allowed = getAllowedTabs(getActiveUser());
 
     const todayDate = new Date();
@@ -1495,7 +1493,7 @@
           ${kpiCard('inventory', 'Tracked Stock Items', state.inventory.length, `${orders.length} items below par (${criticalCount} critical)`)}
           ${kpiCard('prep', "Tomorrow's Prep Queue", `${state.prepQueue.length} Recipes`, `${state.prepQueue.filter(p => !p.deducted).length} pending stock deduction`)}
           ${kpiCard('forecasting', 'Next Service Forecast', `${nextDayPred ? nextDayPred.predicted : 65} Patrons`, `Rec. batch: ${nextDayPred ? nextDayPred.recommendedPrep : 70} portions (${nextDayPred ? nextDayPred.label : ''})`, 'text-red-700')}
-          ${kpiCard('haccp', 'HACCP Time &amp; Temp', flaggedHaccp ? flaggedHaccp + ' Flagged' : 'All Passing', `${state.haccpLogs.length} total compliance checks`, flaggedHaccp ? 'text-rose-700' : 'text-emerald-700')}
+          ${kpiCard('haccp', "Today's Time &amp; Temp", flaggedHaccp ? flaggedHaccp + ' Flagged Today' : `${todayHaccpLogs.length} / 4 Logged`, `${todayHaccpLogs.length === 0 ? 'Needs morning checks' : 'Today (' + todayHaccpStr + ')'}`, flaggedHaccp ? 'text-rose-700' : todayHaccpLogs.length >= 4 ? 'text-emerald-700' : 'text-amber-700')}
         </div>
 
         <!-- Upcoming Week Menu Section -->
@@ -2297,13 +2295,57 @@
     `;
   }
 
-  // 7. TIME & TEMPERATURE LOGS (HACCP)
+  // 7. TIME & TEMPERATURE LOGS (HACCP — DAILY REQUIRED CHECKS + ARCHIVE)
+  const DAILY_HACCP_SLOTS = [
+    { key: 'cooler', label: 'Walk-In Cooler (AM)', type: 'Cold Hold (≤41°F)', target: 'Walk-In Cooler', placeholder: 'e.g. 37.5' },
+    { key: 'freezer', label: 'Walk-In Freezer (AM)', type: 'Freezer (≤0°F)', target: 'Walk-In Freezer', placeholder: 'e.g. -2.0' },
+    { key: 'cook', label: 'Main Entree Cook / Reheat', type: 'Cook / Reheat (≥165°F)', target: 'Main Entree', placeholder: 'e.g. 168.0' },
+    { key: 'hothold', label: 'Steam Table Hot Hold (11:30 AM)', type: 'Hot Hold (≥135°F)', target: 'Steam Table Well #1', placeholder: 'e.g. 148.0' }
+  ];
+
   function renderHaccp(main) {
+    const todayStr = localDateStr();
+    const viewMode = state.haccpViewMode || 'today';
+    const todayLogs = state.haccpLogs.filter(l => (l.timestamp || '').startsWith(todayStr));
+    const displayedLogs = viewMode === 'today' ? todayLogs : state.haccpLogs;
+
     main.innerHTML = `
       <div class="space-y-5">
+        <!-- Today's Required Daily Temp Checks (Resets Automatically Every Day) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3 no-print">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Today's Required Temp Checks (${escapeHtml(todayStr)})</h2>
+              <p class="text-xs text-slate-500">Resets automatically every morning. Enter today's readings below or use the custom form for extra checks.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold ${todayLogs.length >= 4 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${todayLogs.length} logged today</span>
+              ${['Management', 'Staff'].includes(getActiveUser().role) && todayLogs.length > 0 ? '<button id="btn-reset-today-haccp" class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-medium">Reset Today</button>' : ''}
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${DAILY_HACCP_SLOTS.map(slot => {
+              const match = todayLogs.find(l => l.target === slot.target || l.type === slot.type);
+              return `
+                <form class="form-quick-haccp p-3 rounded-xl border ${match ? (match.status === 'PASS' ? 'bg-emerald-50/60 border-emerald-200' : 'bg-rose-50 border-rose-200') : 'bg-slate-50 border-slate-200'} flex flex-wrap items-center justify-between gap-2" data-type="${escapeHtml(slot.type)}" data-target="${escapeHtml(slot.target)}">
+                  <div>
+                    <div class="text-xs font-bold text-slate-900">${escapeHtml(slot.label)}</div>
+                    <div class="text-[11px] text-slate-500">${escapeHtml(slot.type)}</div>
+                    ${match ? `<div class="text-xs font-semibold mt-0.5 ${match.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}">Logged Today: ${match.tempF}&deg;F (${match.status}) by ${escapeHtml(match.staff)}</div>` : ''}
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <input name="tempF" type="number" step="0.1" required placeholder="${slot.placeholder}" class="w-20 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white" />
+                    <button type="submit" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">${match ? 'Update' : 'Log'}</button>
+                  </div>
+                </form>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
         <form id="form-haccp" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3 no-print">
           <div class="flex items-center justify-between">
-            <h2 class="text-base font-bold text-slate-900">Log HACCP Time &amp; Temperature Check</h2>
+            <h2 class="text-base font-bold text-slate-900">Log Custom HACCP Time &amp; Temperature Check</h2>
             <span class="text-xs text-slate-500">Auto-evaluates ServSafe thresholds</span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -2340,38 +2382,49 @@
         </form>
 
         <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-bold text-slate-900">Time &amp; Temperature Compliance Log</h3>
-            <button id="btn-print-haccp" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50 no-print">Print HACCP Log</button>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Time &amp; Temperature Compliance Log (${viewMode === 'today' ? 'Today: ' + escapeHtml(todayStr) : 'Full Archive'})</h3>
+            </div>
+            <div class="flex items-center gap-2 no-print">
+              <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                <button data-haccp-view="today" class="px-2.5 py-1 rounded text-xs font-semibold ${viewMode === 'today' ? 'bg-white text-red-700 shadow-sm' : 'text-slate-600'}">Today (${todayLogs.length})</button>
+                <button data-haccp-view="all" class="px-2.5 py-1 rounded text-xs font-semibold ${viewMode === 'all' ? 'bg-white text-red-700 shadow-sm' : 'text-slate-600'}">All History (${state.haccpLogs.length})</button>
+              </div>
+              <button id="btn-print-haccp" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">Print HACCP Log</button>
+            </div>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
-                  <th class="py-2 pr-3">Timestamp</th>
-                  <th class="py-2 pr-3">Check Type</th>
-                  <th class="py-2 pr-3">Item / Unit</th>
-                  <th class="py-2 pr-3">Temp (°F)</th>
-                  <th class="py-2 pr-3">Status</th>
-                  <th class="py-2 pr-3">Corrective Action</th>
-                  <th class="py-2">Staff</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                ${state.haccpLogs.map(log => `
-                  <tr>
-                    <td class="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(log.timestamp)}</td>
-                    <td class="py-2 pr-3 text-xs font-medium text-slate-700">${escapeHtml(log.type)}</td>
-                    <td class="py-2 pr-3 font-medium text-slate-900">${escapeHtml(log.target)}</td>
-                    <td class="py-2 pr-3 font-bold">${log.tempF}&deg;F</td>
-                    <td class="py-2 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${log.status === 'PASS' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${log.status}</span></td>
-                    <td class="py-2 pr-3 text-xs text-slate-600">${escapeHtml(log.corrective)}</td>
-                    <td class="py-2 text-xs text-slate-600">${escapeHtml(log.staff)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
+          ${displayedLogs.length === 0
+            ? `<p class="text-sm text-slate-500 py-3">No temperature checks logged yet for today (${escapeHtml(todayStr)}). Use the quick checks above to log today's readings.</p>`
+            : `<div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                      <th class="py-2 pr-3">Timestamp</th>
+                      <th class="py-2 pr-3">Check Type</th>
+                      <th class="py-2 pr-3">Item / Unit</th>
+                      <th class="py-2 pr-3">Temp (°F)</th>
+                      <th class="py-2 pr-3">Status</th>
+                      <th class="py-2 pr-3">Corrective Action</th>
+                      <th class="py-2">Staff</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${displayedLogs.map(log => `
+                      <tr>
+                        <td class="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">${escapeHtml(log.timestamp)}</td>
+                        <td class="py-2 pr-3 text-xs font-medium text-slate-700">${escapeHtml(log.type)}</td>
+                        <td class="py-2 pr-3 font-medium text-slate-900">${escapeHtml(log.target)}</td>
+                        <td class="py-2 pr-3 font-bold">${log.tempF}&deg;F</td>
+                        <td class="py-2 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${log.status === 'PASS' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${log.status}</span></td>
+                        <td class="py-2 pr-3 text-xs text-slate-600">${escapeHtml(log.corrective)}</td>
+                        <td class="py-2 text-xs text-slate-600">${escapeHtml(log.staff)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>`
+          }
         </div>
       </div>
     `;
@@ -2386,25 +2439,40 @@
     main.innerHTML = `
       <div class="space-y-5">
         <form id="form-served" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
-          <h2 class="text-base font-bold text-slate-900">Log People Served (Updates Forecasting Engine)</h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Log People / Meals Served &amp; Unusual Circumstances</h2>
+            <p class="text-xs text-slate-500">Record attendance plus weather or local events to improve next-year forecasting.</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Service Date</label>
               <input name="date" type="date" value="${today}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Meal Served</label>
-              <input name="meal" type="text" required placeholder="e.g. Baked Ziti" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Planned Portions</label>
               <input name="planned" type="number" min="1" value="70" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Actual People Served</label>
+              <label class="block text-xs font-medium text-slate-700 mb-1">People / Meals Served</label>
               <input name="served" type="number" min="0" required placeholder="e.g. 68" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
             </div>
-            <button type="submit" class="py-2 px-4 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition">Save Service Count</button>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Weather / Event</label>
+              <select name="circumstance" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                <option value="Normal Day">Normal Day</option>
+                <option value="Snow / Cold Snap">Snow / Cold Snap</option>
+                <option value="Heavy Rain / Storm">Heavy Rain / Storm</option>
+                <option value="Extreme Heat">Extreme Heat</option>
+                <option value="Local Event / Drive">Local Event / Drive</option>
+                <option value="Holiday Week">Holiday Week</option>
+                <option value="Other Unusual">Other Unusual</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Notes (For Next Year)</label>
+              <input name="notes" type="text" placeholder="e.g. Coat drive / snow" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <button type="submit" class="py-2 px-4 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition">Save Service Log</button>
           </div>
         </form>
 
@@ -2413,7 +2481,7 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 class="text-base font-bold text-slate-900">Attendance Forecasting &amp; Portion Predictions</h3>
-              <p class="text-xs text-slate-500">Historical avg: <strong>${fc.avgAll.toFixed(1)}</strong>/day &bull; Recent 4-service avg: <strong>${fc.avgRecent.toFixed(1)}</strong>/day</p>
+              <p class="text-xs text-slate-500">${state.serviceHistory.length === 0 ? 'No attendance records logged yet (showing 65/day baseline until you log your first service).' : `Based on ${state.serviceHistory.length} logged service(s) &bull; Overall avg: <strong>${fc.avgAll.toFixed(1)}</strong>/day &bull; Recent avg: <strong>${fc.avgRecent.toFixed(1)}</strong>/day`}</p>
             </div>
             <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
               ${[
@@ -2448,6 +2516,51 @@
                     <td class="py-2 text-slate-700">${row.recommendedPrep.toLocaleString()} portions</td>
                   </tr>
                 `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Historical Attendance & Unusual Circumstances Log (Year-Over-Year Reference) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Service History &amp; Unusual Circumstances (Next-Year Reference)</h3>
+            <p class="text-xs text-slate-500">Highlighted entries show weather or special events that affected turnout.</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                  <th class="py-2 pr-3">Date</th>
+                  <th class="py-2 pr-3">Day</th>
+                  <th class="py-2 pr-3">Planned</th>
+                  <th class="py-2 pr-3">Served</th>
+                  <th class="py-2 pr-3">Weather / Event</th>
+                  <th class="py-2 pr-3">Notes</th>
+                  <th class="py-2 text-right no-print">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${state.serviceHistory.length === 0
+                  ? '<tr><td colspan="7" class="py-4 text-center text-xs text-slate-500">No attendance records logged yet. Use the form above to log your first service!</td></tr>'
+                  : state.serviceHistory.slice().sort((a, b) => b.date.localeCompare(a.date)).map(s => {
+                  const circ = s.circumstance || (s.notes ? 'Noted Event / Weather' : 'Normal Day');
+                  const isUnusual = circ !== 'Normal Day';
+                  return `
+                    <tr class="${isUnusual ? 'bg-amber-50/50' : ''}">
+                      <td class="py-2 pr-3 font-mono text-xs text-slate-600">${escapeHtml(s.date)}</td>
+                      <td class="py-2 pr-3 text-xs font-semibold text-slate-700">${escapeHtml(s.dayName)}</td>
+                      <td class="py-2 pr-3 text-xs text-slate-600">${s.planned}</td>
+                      <td class="py-2 pr-3 font-bold text-slate-900">${s.served}</td>
+                      <td class="py-2 pr-3"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${isUnusual ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${escapeHtml(circ)}</span></td>
+                      <td class="py-2 pr-3 text-xs text-slate-600">${escapeHtml(s.notes || '—')}</td>
+                      <td class="py-2 text-right space-x-1 whitespace-nowrap no-print">
+                        <button data-edit-served="${s.id}" class="px-2 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Edit</button>
+                        <button data-delete-served="${s.id}" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Delete</button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           </div>
@@ -4037,6 +4150,57 @@
     `);
   }
 
+
+  function showEditServedModal(srvId) {
+    const s = state.serviceHistory.find(x => x.id === srvId);
+    if (!s) return;
+    openModal(`Edit Attendance Record — ${s.date}`, `
+      <form id="form-edit-served" class="space-y-3">
+        <input type="hidden" name="srvId" value="${escapeHtml(s.id)}" />
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Service Date</label>
+            <input name="date" type="date" required value="${escapeHtml(s.date)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Planned</label>
+            <input name="planned" type="number" min="1" required value="${s.planned}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">People Served</label>
+            <input name="served" type="number" min="0" required value="${s.served}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Weather / Event</label>
+          <select name="circumstance" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+            ${['Normal Day', 'Snow / Cold Snap', 'Heavy Rain / Storm', 'Extreme Heat', 'Local Event / Drive', 'Holiday Week', 'Other Unusual'].map(c => `<option value="${c}" ${(s.circumstance || 'Normal Day') === c ? 'selected' : ''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Notes</label>
+          <input name="notes" type="text" value="${escapeHtml(s.notes || '')}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save Attendance Record</button>
+      </form>
+    `);
+  }
+
+  function showDeleteServedModal(srvId) {
+    const s = state.serviceHistory.find(x => x.id === srvId);
+    if (!s) return;
+    openModal('Delete Attendance Record', `
+      <form id="form-delete-served" class="space-y-4">
+        <input type="hidden" name="srvId" value="${escapeHtml(s.id)}" />
+        <p class="text-sm text-slate-700">Delete the attendance record for <strong>${escapeHtml(s.date)}</strong> (${s.served} served)? Forecasts will recalculate automatically.</p>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="btn-cancel-del-served" class="px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Delete Record</button>
+        </div>
+      </form>
+    `);
+  }
+
   function showBackupModal() {
     openModal('Backup & Restore Program Data', `
       <div class="space-y-4 text-sm">
@@ -4677,6 +4841,27 @@
       return;
     }
 
+    const editSrvBtn = e.target.closest('[data-edit-served]');
+    if (editSrvBtn) {
+      showEditServedModal(editSrvBtn.dataset.editServed);
+      return;
+    }
+    const delSrvBtn = e.target.closest('[data-delete-served]');
+    if (delSrvBtn) {
+      showDeleteServedModal(delSrvBtn.dataset.deleteServed);
+      return;
+    }
+    if (e.target.id === 'btn-cancel-del-served') {
+      closeModal();
+      return;
+    }
+    const haccpViewBtn = e.target.closest('[data-haccp-view]');
+    if (haccpViewBtn) {
+      state.haccpViewMode = haccpViewBtn.dataset.haccpView;
+      render();
+      return;
+    }
+
     const horizonBtn = e.target.closest('[data-horizon]');
     if (horizonBtn) {
       state.forecastHorizon = horizonBtn.dataset.horizon;
@@ -4691,6 +4876,15 @@
       showPrintableMenuModal(range, refDate);
       return;
     }
+    if (e.target.id === 'btn-reset-today-haccp') {
+      const todayStr = localDateStr();
+      state.haccpLogs = (state.haccpLogs || []).filter(l => !(l.timestamp || '').startsWith(todayStr));
+      saveState();
+      render();
+      showToast(`Cleared today's (${todayStr}) temp checks`);
+      return;
+    }
+
     if (e.target.id === 'btn-run-carryover') {
       const count = runDailyCarryoverCheck(true);
       render();
@@ -5303,6 +5497,31 @@
       return;
     }
 
+    if (e.target.classList && e.target.classList.contains('form-quick-haccp')) {
+      const type = e.target.dataset.type;
+      const target = e.target.dataset.target;
+      const tempF = Number(fd.get('tempF'));
+      let pass = true;
+      if (type.includes('≤41°F') && tempF > 41) pass = false;
+      if (type.includes('≤0°F') && tempF > 0) pass = false;
+      if (type.includes('≥165°F') && tempF < 165) pass = false;
+      if (type.includes('≥135°F') && tempF < 135) pass = false;
+      state.haccpLogs.unshift({
+        id: uid('hac'),
+        timestamp: nowStamp(),
+        type,
+        target,
+        tempF,
+        status: pass ? 'PASS' : 'FLAGGED',
+        corrective: pass ? '—' : 'Action required',
+        staff: getActiveUser().name
+      });
+      saveState();
+      render();
+      showToast(pass ? `${target}: ${tempF}°F (PASS)` : `${target}: ${tempF}°F FLAGGED`, pass ? 'ok' : 'error');
+      return;
+    }
+
     if (e.target.id === 'form-haccp') {
       const type = fd.get('type');
       const tempF = Number(fd.get('tempF'));
@@ -5327,18 +5546,50 @@
       return;
     }
 
+    if (e.target.id === 'form-edit-served') {
+      const s = state.serviceHistory.find(x => x.id === fd.get('srvId'));
+      if (s) {
+        const dateStr = fd.get('date');
+        const dObj = new Date(dateStr + 'T12:00:00');
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        s.date = dateStr;
+        s.dayName = dayNames[dObj.getDay()];
+        s.planned = Number(fd.get('planned'));
+        s.served = Number(fd.get('served'));
+        s.circumstance = fd.get('circumstance') || 'Normal Day';
+        s.notes = (fd.get('notes') || '').trim();
+        saveState();
+        closeModal();
+        render();
+        showToast(`Updated attendance record (${s.date})`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-delete-served') {
+      const targetId = fd.get('srvId');
+      state.serviceHistory = state.serviceHistory.filter(x => x.id !== targetId);
+      saveState();
+      closeModal();
+      render();
+      showToast('Deleted attendance record — forecasts recalculated');
+      return;
+    }
+
     if (e.target.id === 'form-served') {
       const dateStr = fd.get('date');
       const dObj = new Date(dateStr + 'T12:00:00');
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const scheduled = (state.menuPlan || []).find(m => m.date === dateStr);
       state.serviceHistory.push({
         id: uid('srv'),
         date: dateStr,
         dayName: dayNames[dObj.getDay()],
-        meal: fd.get('meal'),
+        meal: scheduled ? (scheduled.customTitle || 'Community Meal') : 'Community Meal',
         planned: Number(fd.get('planned')),
         served: Number(fd.get('served')),
-        notes: ''
+        circumstance: fd.get('circumstance') || 'Normal Day',
+        notes: (fd.get('notes') || '').trim()
       });
       saveState();
       render();
