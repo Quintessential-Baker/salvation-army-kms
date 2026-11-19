@@ -82,6 +82,7 @@
         <button data-tab="checklists" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Checklists</button>
         <button data-tab="audit" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Blind Audit</button>
         <button data-tab="haccp" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Time &amp; Temp Logs</button>
+        <button data-tab="storage" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Storage &amp; Date Labels</button>
         <button data-tab="forecasting" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Served &amp; Forecasting</button>
         <button data-tab="reports" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Daily Reports</button>
         <button data-tab="users" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Users &amp; Activity</button>
@@ -282,7 +283,17 @@
         { id: 'inv-15', sku: 'PRO-402', name: 'Ground Beef (80/20)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 18144, unitLabel: 'g', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
         { id: 'inv-16', sku: 'FRZ-501', name: 'Frozen Breadsticks (144 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13000, parGrams: 13000, unitLabel: 'g', packSizeGrams: 6500, packLabel: 'case (144 ct)', lastUpdated: today },
         { id: 'inv-17', sku: 'FRZ-502', name: 'Frozen Dinner Rolls (120 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 10800, parGrams: 10800, unitLabel: 'g', packSizeGrams: 5400, packLabel: 'case (120 ct)', lastUpdated: today },
-        { id: 'inv-18', sku: 'FRZ-503', name: 'Frozen Biscuits (108 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 12000, parGrams: 6000, unitLabel: 'g', packSizeGrams: 6000, packLabel: 'case (108 ct)', lastUpdated: today }
+        { id: 'inv-18', sku: 'FRZ-503', name: 'Frozen Biscuits (108 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 12000, parGrams: 6000, unitLabel: 'g', packSizeGrams: 6000, packLabel: 'case (108 ct)', lastUpdated: today },
+        { id: 'inv-19', sku: 'PRO-403', name: 'Turkey Breast (Roast / Boneless)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 18144, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb roast', lastUpdated: today },
+        { id: 'inv-20', sku: 'PRO-205', name: 'Russet Potatoes (50 lb)', category: 'Produce', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 22680, unitLabel: 'pack', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
+        { id: 'inv-21', sku: 'DRY-108', name: 'Herb Stuffing Mix', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
+        { id: 'inv-22', sku: 'DRY-109', name: 'Green Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18000, parGrams: 18000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-23', sku: 'DRY-110', name: 'Cranberry Sauce (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9000, parGrams: 9000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-24', sku: 'FRZ-504', name: 'Pumpkin Pies (Frozen 10")', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 10800, parGrams: 10800, unitLabel: 'pack', packSizeGrams: 5400, packLabel: 'case (6 pies)', lastUpdated: today },
+        { id: 'inv-25', sku: 'DAI-304', name: 'Yogurt Cups (Individual 6 oz)', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 6120, parGrams: 8160, unitLabel: 'pack', packSizeGrams: 2040, packLabel: '12 ct case', lastUpdated: today },
+        { id: 'inv-26', sku: 'DRY-111', name: 'Pudding Cups (Individual 4 oz)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 5443, parGrams: 5443, unitLabel: 'pack', packSizeGrams: 5443, packLabel: '48 ct case', lastUpdated: today },
+        { id: 'inv-27', sku: 'PRO-206', name: 'Fresh / Chilled Fruit (Salad Bar)', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 4536, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-28', sku: 'DRY-112', name: 'Salad Dressing & Toppings', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 7570, parGrams: 7570, unitLabel: 'pack', packSizeGrams: 15140, packLabel: '4x 1 gal case', lastUpdated: today }
       ],
       recipes: [
         {
@@ -437,21 +448,25 @@
         },
         {
           id: 'rec-nov-24',
-          name: 'Thanksgiving Dinner',
+          name: 'Traditional Thanksgiving Dinner',
           category: 'Holiday Feast',
-          basePortions: 75,
+          basePortions: 50,
           prepMin: 90,
-          cookMin: 120,
+          cookMin: 150,
           isBakers: false,
-          instructions: '1. Roast protein to ≥165°F; verify internal temp in thickest part. 2. Prepare vegetables, buttered rolls, and sides. 3. Hold all hot items at ≥135°F and cold items at ≤41°F.',
+          instructions: '1. Thaw turkey breasts in Walk-In Cooler 48 hrs prior; roast to ≥165°F internal temp and slice.\n2. Boil & mash Russet potatoes with butter and warm whole milk; prepare turkey gravy (≥165°F).\n3. Bake herb stuffing with diced onion & celery to ≥165°F; heat green beans in #10 cans to ≥135°F.\n4. Bake Frozen Dinner Rolls at 375°F for 12–15 min; slice Cranberry Sauce & Pumpkin Pies (8 slices/pie).\n5. Hold all hot items at ≥135°F and pies/cranberry chilled at ≤41°F.',
           ingredients: [
-            { itemId: 'inv-14', grams: 12000 },
-            { itemId: 'inv-8', grams: 4500 },
-            { itemId: 'inv-9', grams: 2000 },
-            { itemId: 'inv-7', grams: 2000 },
-            { itemId: 'inv-12', grams: 1200 },
-            { itemId: 'inv-11', grams: 3000 },
-            { itemId: 'inv-17', grams: 3375 }
+            { itemId: 'inv-19', grams: 9072 },
+            { itemId: 'inv-20', grams: 11340 },
+            { itemId: 'inv-21', grams: 3600 },
+            { itemId: 'inv-22', grams: 9000 },
+            { itemId: 'inv-23', grams: 3000 },
+            { itemId: 'inv-17', grams: 2250 },
+            { itemId: 'inv-24', grams: 6300 },
+            { itemId: 'inv-12', grams: 1135 },
+            { itemId: 'inv-11', grams: 2440 },
+            { itemId: 'inv-9', grams: 1200 },
+            { itemId: 'inv-7', grams: 1200 }
           ]
         },
         {
@@ -500,6 +515,7 @@
         { id: 'tx-2', timestamp: today + ' 09:10', type: 'WASTE', itemId: 'inv-10', itemName: 'Romaine Lettuce', grams: -900, note: 'Reason: Spoilage / Wilted outer leaves', staff: 'William Clark' }
       ],
       haccpLogs: [],
+      storageTags: [],
       serviceHistory: [],
       selectedRecipeId: 'rec-1',
       recipeScalePortions: 65,
@@ -510,11 +526,13 @@
         { id: 'usr-4', name: 'Guest Observer', role: 'Other', title: 'Observer', initials: 'GO', pin: '9999', active: true, onboardingCompleted: false }
       ],
       trainingModules: [
-        { id: 'trn-1', role: 'ALL', title: 'Welcome, Auto-Lock & Quick Navigation', content: 'Welcome to The Salvation Army Community Meals Kitchen OS.\n\nEvery action you take is automatically stamped with your name and time. For security on shared tablets, the screen auto-locks after 5 minutes of inactivity—just enter your PIN to resume.\n\nUse the 5 top tabs (Home, Inventory & Orders, Kitchen & Menu, Safety & Tasks, Admin & Help) and open Tools ▾ in the top right for Print Page, Guided Tour, or Backup.' },
-        { id: 'trn-2', role: 'ALL', title: 'Today\'s Recipe & To-Do + Food Safety Temps', content: 'Start each morning by tapping "Today\'s Recipe & To-Do" on the Home Dashboard to see today\'s meal, scaled ingredients (40–80 portions in Cups, Gallons, #10 Cans, Packs & Pieces), cooking steps, and interactive daily checklists.\n\nNote: We use Frozen Breadsticks, Dinner Rolls, and Biscuits (bake off from frozen at 375°F) instead of scratch bread baking.\n\nAlways verify Cold Holding ≤41°F, Freezer ≤0°F, Cook/Reheat ≥165°F, and Hot Holding ≥135°F in Safety & Tasks → Time & Temp Logs.' },
-        { id: 'trn-3', role: 'Volunteer', title: 'Fast Blind Count & Prep Lists', content: 'Go to Inventory & Orders → Blind Audit: tap + / - for full cases or bags and tap 1/4, 1/2, or 3/4 for any open container, then click Submit Blind Count.\n\nCheck Kitchen & Menu → Next-Day Prep for tomorrow\'s pulls grouped by Cooler, Freezer, and Dry Storage.' },
-        { id: 'trn-4', role: 'Staff', title: 'Weekly vs. Monthly POs & Check-In Reconciliation', content: '1. Request: In Inventory & Orders → Orders & POs (or "+ Add to PO" in Living Stock), build Weekly POs for Marberger (Dairy) & Produce, and Monthly POs (3rd Friday) for Dry Goods & Frozen.\n2. Approve: Management reviews and sets exact Approved Quantities & Expected Arrival Dates.\n3. Reconcile: When the truck arrives, open Inventory & Orders → Check-In & Waste, adjust any shorted items in Expected PO Deliveries, and click Reconcile & Check In PO (always in Vendor Packs, like 1 × 50 lb bag).' },
-        { id: 'trn-5', role: 'ALL', title: 'Daily Checklists, Announcements & Guided Tour', content: 'Check off Daily, Weekly, and Monthly tasks under Safety & Tasks → Checklists.\n\nWatch the Dashboard Announcements & Reminders box for Holiday Closings (red), Reminders (amber), and Expected PO Arrivals (blue). Need a refresher? Open Tools ▾ → Guided Tour anytime.' }
+        { id: 'trn-1', role: 'ALL', title: 'Welcome, Role Boundaries, Auto-Lock & Navigation', content: 'Welcome to The Salvation Army Community Meals Kitchen OS.\n\nEvery action is stamped with your name and time. Shared tablets auto-lock after 5 minutes of inactivity—enter your PIN to resume.\n\nRole Access Summary:\n• Management / Admin: Full control — PO approvals, Par Levels, Storage Zones, Recipes, Inventory Item edits/deletes, Forecasting edits, Users, PINs & Daily Reports.\n• Staff: Daily operations — Menu scheduling/commits, Check-In & PO Receiving, Draft PO requests, Blind Audit reconciliation, People Served & Leftover logging, Checklists & Temps.\n• Volunteer: Guided floor tasks — View Recipes, Menu & Next-Day Prep, submit Blind Counts, check off Checklists, log HACCP Temps, and tag/use Leftovers (read-only on recipes & menus).\n• Other: Read-only view of Dashboard, Menu, Prep & Checklists.' },
+        { id: 'trn-2', role: 'ALL', title: 'Today\'s Recipe & To-Do + Food Safety Temps', content: 'Start each morning by tapping "Today\'s Recipe & To-Do" on the Home Dashboard to view today\'s meal, scaled ingredients (40–80 portions in Cups, Quarts, Gallons, #10 Cans, Packs & Pieces), cooking steps, and daily checklists.\n\nWe use Frozen Breadsticks, Dinner Rolls, and Biscuits (bake from frozen at 375°F) instead of scratch bread baking.\n\nAlways verify Cold Holding ≤41°F, Freezer ≤0°F, Cook/Reheat ≥165°F, and Hot Holding ≥135°F in Safety & Tasks → Time & Temp Logs.' },
+        { id: 'trn-3', role: 'ALL', title: 'Storage, Varying Shelf Lives & Daily Salad Bar', content: 'Not everything keeps for the same amount of time! Always pick the matching Food Type when dating leftovers or prepped items in Safety & Tasks → Storage & Date Labels:\n• Cooked Entrees / Meat / Pasta / Soup: 7 days max in Cooler (Prep + 6d)\n• Dairy / Yogurt / Pudding / Tuna or Potato Salad: 3–4 days (or manufacturer exp date if earlier)\n• Cut Salad Greens & Fresh Cut Fruit: 2–3 days max for safety & quality\n• Frozen Items: 90 days in Walk-In / Kitchen Freezer\n\nDaily Salad Bar: Every service day includes Tossed Salad Greens, Dressings, Yogurt Cups, Pudding Cups, and Fresh/Chilled Fruit (when available) held at ≤41°F. Active leftovers appear in Inventory → Leftovers & Prepped Food on Hand.' },
+        { id: 'trn-4', role: 'Volunteer', title: 'Volunteer Workflow: Blind Counts, Prep Pulls & Checklists', content: '1. Next-Day Prep: Check Kitchen & Menu → Next-Day Prep for tomorrow\'s pulls grouped by Cooler, Freezer, and Dry Storage.\n2. Blind Audit: Open Inventory & Orders → Blind Audit, tap + / - for full cases/bags and 1/4, 1/2, or 3/4 for open containers, then click Submit Blind Count (Staff/Management reviews before adjusting stock).\n3. Checklists & Tags: Check off assigned tasks in Safety & Tasks → Checklists and print/attach Storage & Date Labels on leftovers.' },
+        { id: 'trn-5', role: 'Staff', title: 'Staff Operations: POs, Receiving & Leftover Predictor', content: '1. Ordering: Build Weekly Draft POs for Marberger (Dairy) & Produce, and Monthly Draft POs (3rd Friday) for Jordan Banana (Dry/Frozen). Management approves quantities.\n2. Receiving: In Check-In & Waste, reconcile Expected PO Deliveries (adjust shorted packs) and click Reconcile & Check In PO.\n3. Post-Service Leftovers: In Safety & Tasks → Served & Forecasting, enter Planned vs. Actual Served. The Leftover Predictor calculates remaining portions/pans, generates the exact ServSafe Date Tag, adds it to today\'s Daily Checklist, and logs it into Leftover Inventory.' },
+        { id: 'trn-6', role: 'ALL', title: 'Daily Checklists, Priority Carryover & Midnight Temp Resets', content: 'Check off Daily, Weekly, and Monthly tasks under Safety & Tasks → Checklists. Any unfinished tasks from the previous day appear as a red PRIORITY CARRYOVER alert at the top of the Dashboard and Checklists until completed.\n\nToday\'s 4 Required Temp Checks in Time & Temp Logs reset automatically at midnight while archiving past days. Open Tools ▾ → Guided Tour anytime for a walkthrough.' },
+        { id: 'trn-7', role: 'Management', title: 'Management / Admin Control: Approvals, Forecasting & Users', content: 'Management / Admin holds exclusive control over structural data so nothing is changed accidentally:\n• Approve POs & set Approved Pack Quantities / Arrival Dates.\n• Manage Storage Zones, Par Levels, Inventory Items (Add/Edit/Discontinue/Delete), and Standardized Recipes.\n• Edit/Delete historical Attendance records and review Daily Reports.\n• Manage User accounts, Role assignments, Default PINs, Auto-Lock timer, and trigger Mandatory Re-Training.' }
       ],
       trainingLogs: [],
       activeUserId: 'usr-1',
@@ -536,7 +554,7 @@
         { id: 'mp-nov-18', date: '2026-11-18', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-18', customTitle: 'Hot Dogs (2), Baked Beans', portions: 65, status: 'PLANNED' },
         { id: 'mp-nov-20', date: '2026-11-20', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-20', customTitle: 'Leftovers or Beef Stew over noodles', portions: 65, status: 'PLANNED' },
         { id: 'mp-nov-23', date: '2026-11-23', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-23', customTitle: 'Tuna Salad Sandwich & chips, Mac Salad', portions: 65, status: 'PLANNED' },
-        { id: 'mp-nov-24', date: '2026-11-24', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-24', customTitle: 'Thanksgiving Dinner', portions: 75, status: 'PLANNED' },
+        { id: 'mp-nov-24', date: '2026-11-24', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-24', customTitle: 'Traditional Thanksgiving Dinner (Turkey, Mash, Stuffing, Green Beans, Cranberry, Rolls & Pie)', portions: 75, status: 'PLANNED' },
         { id: 'mp-nov-25', date: '2026-11-25', mealSlot: 'Lunch (11:30 AM)', recipeId: 'rec-nov-25', customTitle: 'Leftovers', portions: 60, status: 'PLANNED' },
         { id: 'mp-nov-26', date: '2026-11-26', mealSlot: 'Closed', recipeId: '', customTitle: 'Office Closed (Thanksgiving)', portions: 0, status: 'CLOSED' },
         { id: 'mp-nov-27', date: '2026-11-27', mealSlot: 'Closed', recipeId: '', customTitle: 'Office Closed', portions: 0, status: 'CLOSED' },
@@ -555,7 +573,8 @@
         { id: 'chk-9', freq: 'weekly', category: 'Food Safety', title: 'Calibrate probe thermometers (32°F ice-point test)', done: false, doneBy: '', doneAt: '' },
         { id: 'chk-10', freq: 'monthly', category: 'Ordering', title: 'Finalize & submit monthly Jordan Banana & Marberger order (3rd Friday)', done: false, doneBy: '', doneAt: '' },
         { id: 'chk-11', freq: 'monthly', category: 'Inventory Count', title: 'Perform full Blind Inventory Audit & Reconcile all storage zones', done: false, doneBy: '', doneAt: '' },
-        { id: 'chk-12', freq: 'monthly', category: 'Cleaning', title: 'Deep-clean Walk-In Freezer, dry storage dunnage racks & hood filters', done: false, doneBy: '', doneAt: '' }
+        { id: 'chk-12', freq: 'monthly', category: 'Cleaning', title: 'Deep-clean Walk-In Freezer, dry storage dunnage racks & hood filters', done: false, doneBy: '', doneAt: '' },
+        { id: 'chk-13', freq: 'daily', category: 'Prep', title: 'Set up & temp-check Daily Salad Bar (Greens ≤41°F, Yogurt, Pudding & Fruit when available; cover & date-dot at close)', done: false, doneBy: '', doneAt: '' }
       ],
       checklistCycleKeys: { daily: '', weekly: '', monthly: '' },
       checklistLogs: []
@@ -576,6 +595,7 @@
           if (!parsed.activeUserId) parsed.activeUserId = parsed.users[0].id;
           if (!Array.isArray(parsed.auditLogs)) parsed.auditLogs = [];
           if (!parsed.blindAuditDraft) parsed.blindAuditDraft = def.blindAuditDraft;
+          if (!Array.isArray(parsed.storageTags)) parsed.storageTags = [];
           if (Array.isArray(parsed.haccpLogs)) {
             parsed.haccpLogs = parsed.haccpLogs.filter(h => !/^hac-[123]$/.test(String(h.id || '')));
           }
@@ -594,6 +614,15 @@
           if (Array.isArray(parsed.recipes)) {
             const idx3 = parsed.recipes.findIndex(r => r.id === 'rec-3' && r.name.includes('Sandwich Loaf'));
             if (idx3 !== -1) parsed.recipes[idx3] = def.recipes.find(r => r.id === 'rec-3');
+            def.inventory.filter(i => ['inv-19','inv-20','inv-21','inv-22','inv-23','inv-24'].includes(i.id)).forEach(ti => {
+              if (!parsed.inventory.some(i => i.id === ti.id)) parsed.inventory.push(ti);
+            });
+            if (Array.isArray(parsed.menuPlan)) {
+              const mp24 = parsed.menuPlan.find(m => m.id === 'mp-nov-24');
+              if (mp24 && mp24.customTitle === 'Thanksgiving Dinner') {
+                mp24.customTitle = 'Traditional Thanksgiving Dinner (Turkey, Mash, Stuffing, Green Beans, Cranberry, Rolls & Pie)';
+              }
+            }
             ['rec-nov-17', 'rec-nov-24'].forEach(rid => {
               const rIdx = parsed.recipes.findIndex(r => r.id === rid);
               const dRec = def.recipes.find(r => r.id === rid);
@@ -619,11 +648,14 @@
           }
           if (!parsed.checklistFreq) parsed.checklistFreq = 'daily';
           if (!Array.isArray(parsed.checklists)) parsed.checklists = def.checklists;
+          else {
+            const def13 = def.checklists.find(c => c.id === 'chk-13');
+            if (def13 && !parsed.checklists.some(c => c.id === 'chk-13')) parsed.checklists.push(def13);
+          }
           if (!Array.isArray(parsed.checklistLogs)) parsed.checklistLogs = [];
           if (!parsed.checklistCycleKeys) parsed.checklistCycleKeys = { daily: '', weekly: '', monthly: '' };
-          if (!Array.isArray(parsed.trainingModules) || (parsed.trainingModules.some(t => t.id === 'trn-4' && t.content.includes('Guided Tour in the top header')))) {
-            parsed.trainingModules = def.trainingModules;
-          }
+          parsed.trainingModules = upgradeTrainingModulesIfNeeded(parsed.trainingModules, def.trainingModules);
+
           if (!Array.isArray(parsed.trainingLogs)) parsed.trainingLogs = [];
           if (!parsed.defaultNewUserPin) parsed.defaultNewUserPin = '0000';
           if (parsed.autoLockMinutes === undefined) parsed.autoLockMinutes = 5;
@@ -636,10 +668,19 @@
     return getDefaultState();
   }
 
+  function upgradeTrainingModulesIfNeeded(existing, defaults) {
+    if (!Array.isArray(existing) || existing.length === 0) return defaults;
+    const byId = new Map(defaults.map(m => [m.id, m]));
+    const hasV3 = existing.some(m => m.id === 'trn-7') && existing.some(m => m.id === 'trn-3' && (m.content || '').includes('Daily Salad Bar'));
+    if (hasV3) return existing;
+    const customMods = existing.filter(m => !/^trn-[1-7]$/.test(m.id));
+    return [...defaults, ...customMods];
+  }
+
   const ROLE_TABS = {
-    Management: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'forecasting', 'reports', 'users', 'help'],
-    Staff: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'forecasting', 'help'],
-    Volunteer: ['recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'help'],
+    Management: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'storage', 'forecasting', 'reports', 'users', 'help'],
+    Staff: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'storage', 'forecasting', 'help'],
+    Volunteer: ['recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'storage', 'help'],
     Other: ['dashboard', 'menu', 'prep', 'checklists', 'help']
   };
 
@@ -672,6 +713,7 @@
       prepQueue: state.prepQueue,
       transactions: state.transactions,
       haccpLogs: state.haccpLogs,
+      storageTags: state.storageTags,
       serviceHistory: state.serviceHistory,
       users: state.users,
       auditLogs: state.auditLogs,
@@ -687,22 +729,45 @@
 
   function applyCloudRow(id, data) {
     if (id === 'training' && data && Array.isArray(data.trainingModules)) {
-      state.trainingModules = data.trainingModules;
+      state.trainingModules = upgradeTrainingModulesIfNeeded(data.trainingModules, getDefaultState().trainingModules);
       state.trainingLogs = Array.isArray(data.trainingLogs) ? data.trainingLogs : [];
       if (data.defaultNewUserPin) state.defaultNewUserPin = data.defaultNewUserPin;
       if (data.autoLockMinutes !== undefined) state.autoLockMinutes = Number(data.autoLockMinutes);
     } else if (id === 'checklists' && data && Array.isArray(data.checklists)) {
+      const def13 = getDefaultState().checklists.find(c => c.id === 'chk-13');
+      if (def13 && !data.checklists.some(c => c.id === 'chk-13')) data.checklists.push(def13);
       state.checklists = data.checklists;
       state.checklistLogs = Array.isArray(data.checklistLogs) ? data.checklistLogs : [];
       if (data.checklistCycleKeys) state.checklistCycleKeys = data.checklistCycleKeys;
       if (data.lastTaskCheckDate) state.lastTaskCheckDate = data.lastTaskCheckDate;
-    } else if (id === 'menuPlan' && Array.isArray(data) && data.some(m => m.id === 'mp-1' || m.id === 'mp-2')) {
-      state.menuPlan = getDefaultState().menuPlan;
+    } else if (id === 'inventory' && Array.isArray(data)) {
+      const defInv = getDefaultState().inventory;
+      let mergedInv = data.filter(i => !(i.id === 'inv-16' && (i.name || '').includes('Yeast')));
+      defInv.filter(i => ['inv-16','inv-17','inv-18','inv-19','inv-20','inv-21','inv-22','inv-23','inv-24','inv-25','inv-26','inv-27','inv-28'].includes(i.id)).forEach(di => {
+        if (!mergedInv.some(i => i.id === di.id)) mergedInv.push(di);
+      });
+      state.inventory = mergedInv;
+    } else if (id === 'menuPlan' && Array.isArray(data)) {
+      if (data.some(m => m.id === 'mp-1' || m.id === 'mp-2')) {
+        state.menuPlan = getDefaultState().menuPlan;
+      } else {
+        state.menuPlan = data.map(m => m.id === 'mp-nov-24' && m.customTitle === 'Thanksgiving Dinner'
+          ? { ...m, customTitle: 'Traditional Thanksgiving Dinner (Turkey, Mash, Stuffing, Green Beans, Cranberry, Rolls & Pie)' }
+          : m);
+      }
     } else if (id === 'recipes' && Array.isArray(data)) {
       const defRecs = getDefaultState().recipes;
       const merged = data.slice();
       defRecs.forEach(dr => {
-        if (dr.id.startsWith('rec-nov-') && !merged.some(r => r.id === dr.id)) merged.push(dr);
+        if (!dr.id.startsWith('rec-nov-') && dr.id !== 'rec-3') return;
+        const idx = merged.findIndex(r => r.id === dr.id);
+        if (idx === -1) {
+          merged.push(dr);
+        } else if (dr.id === 'rec-nov-24' && merged[idx].name === 'Thanksgiving Dinner') {
+          merged[idx] = dr;
+        } else if (dr.id === 'rec-3' && (merged[idx].name || '').includes('Sandwich Loaf')) {
+          merged[idx] = dr;
+        }
       });
       state.recipes = merged;
     } else if (id === 'haccpLogs' && Array.isArray(data)) {
@@ -780,10 +845,12 @@
           applyCloudRow(row.id, row.data);
           lastSliceHashes[row.id] = JSON.stringify(row.data);
         });
+        const syncedPortions = syncPlannedPortionsFromForecasts();
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
         suppressCloudPush = false;
         syncStatus = 'live';
         syncErrorMsg = '';
+        if (syncedPortions > 0) pushChangedSlicesToCloud(false);
         render();
       } else {
         // First time setup: seed cloud with initial data
@@ -815,6 +882,7 @@
           suppressCloudPush = true;
           applyCloudRow(row.id, row.data);
           lastSliceHashes[row.id] = incomingJson;
+          if (row.id === 'serviceHistory') syncPlannedPortionsFromForecasts();
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
           suppressCloudPush = false;
           render();
@@ -912,7 +980,13 @@
     'inv-15': { gPerCup: 225, packUnit: '1 lb pack', gPerUnit: 454 },
     'inv-16': { gPerCup: 45, packUnit: 'breadstick', gPerUnit: 45 },
     'inv-17': { gPerCup: 45, packUnit: 'dinner roll', gPerUnit: 45 },
-    'inv-18': { gPerCup: 55, packUnit: 'biscuit', gPerUnit: 55 }
+    'inv-18': { gPerCup: 55, packUnit: 'biscuit', gPerUnit: 55 },
+    'inv-19': { gPerCup: 140, packUnit: '10 lb turkey roast', gPerUnit: 4536 },
+    'inv-20': { gPerCup: 210, packUnit: '50 lb bag', gPerUnit: 22680 },
+    'inv-21': { gPerCup: 120, packUnit: '5 lb bag', gPerUnit: 2268 },
+    'inv-22': { gPerCup: 200, packUnit: '#10 can', gPerUnit: 3000 },
+    'inv-23': { gPerCup: 250, packUnit: '#10 can', gPerUnit: 3000 },
+    'inv-24': { gPerCup: 112, packUnit: '10" pie (8 slices)', gPerUnit: 900 }
   };
 
   function toNiceFraction(val) {
@@ -1089,17 +1163,18 @@
     return '';
   }
 
-  function isPreHolidayMeal(dateStr) {
+  function getPreHolidayBoostInfo(dateStr) {
+    const mp = (state.menuPlan || []).find(m => m.date === dateStr);
+    const isFeast = !!(mp && /thanksgiving|christmas|feast|holiday/i.test(mp.customTitle || ''));
+    if (isFeast) return { mult: 1.25, isFeast: true, label: '+25% Holiday Feast (Peak Baseline)' };
     const base = new Date(dateStr + 'T12:00:00');
     for (let offset = 1; offset <= 2; offset++) {
       const probe = new Date(base);
       probe.setDate(base.getDate() + offset);
       const hol = getFederalHolidayName(localDateStr(probe));
-      if (hol) return hol;
+      if (hol) return { mult: 1.10, isFeast: false, label: '+10% Pre-' + hol };
     }
-    const mp = (state.menuPlan || []).find(m => m.date === dateStr);
-    if (mp && /thanksgiving|christmas|holiday/i.test(mp.customTitle || '')) return 'Holiday Meal';
-    return '';
+    return { mult: 1.0, isFeast: false, label: '' };
   }
 
   function isNearFederalHoliday(dateStr) {
@@ -1180,15 +1255,16 @@
         }
         const bucket = getMonthBucket(ds);
         const nearHol = isNearFederalHoliday(ds);
-        const preHol = isPreHolidayMeal(ds);
-        // Blend Day-of-Week + Time-of-Month + Near-Holiday + +10% Pre-Holiday Meal Boost
-        const combined = baseAvg * (dowFactor[dn] || 1) * ((1 + (bucketFactor[bucket] || 1)) / 2) * (nearHol ? nearHolFactor : 1) * (preHol ? 1.10 : 1);
+        const holBoost = getPreHolidayBoostInfo(ds);
+        const peakDow = Math.max(1.0, ...Object.values(dowFactor));
+        const effDow = holBoost.isFeast ? peakDow : (dowFactor[dn] || 1);
+        const combined = baseAvg * effDow * ((1 + (bucketFactor[bucket] || 1)) / 2) * (nearHol ? nearHolFactor : 1) * holBoost.mult;
         const pred = Math.max(0, Math.round(combined));
         const tags = [];
-        if (preHol) tags.push(`+10% Pre-${preHol}`);
+        if (holBoost.label) tags.push(holBoost.label);
         if ((dowFactor[dn] || 1) >= 1.06) tags.push(`${dn} +${Math.round((dowFactor[dn] - 1) * 100)}%`);
         if (bucket === 'start' && bucketFactor.start >= 1.05) tags.push(`Start-of-mo +${Math.round((bucketFactor.start - 1) * 100)}%`);
-        if (!preHol && nearHol && nearHolFactor >= 1.05) tags.push(`Near ${nearHol}`);
+        if (!holBoost.label && nearHol && nearHolFactor >= 1.05) tags.push(`Near ${nearHol}`);
         days.push({
           label: ds.slice(5) + ' (' + dn + ')',
           predicted: pred,
@@ -1244,6 +1320,58 @@
     };
   }
 
+  function forecastPortionsForDate(dateStr, fc) {
+    const hol = getFederalHolidayName(dateStr);
+    if (hol) return { predicted: 0, recommendedPrep: 0, closed: true, hol };
+    const d = new Date(dateStr + 'T12:00:00');
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dn = dayNames[d.getDay()];
+    const bucket = getMonthBucket(dateStr);
+    const nearHol = isNearFederalHoliday(dateStr);
+    const holBoost = getPreHolidayBoostInfo(dateStr);
+    const baseAvg = fc.avgRecent;
+    const peakDow = Math.max(1.0, ...Object.values(fc.dowFactor || { Mon: 1 }));
+    const effDow = holBoost.isFeast ? peakDow : (fc.dowFactor[dn] || 1);
+    const combined = baseAvg * effDow * ((1 + (fc.bucketFactor[bucket] || 1)) / 2) * (nearHol ? fc.nearHolFactor : 1) * holBoost.mult;
+    const pred = Math.max(0, Math.round(combined));
+    const rec = pred > 0 ? Math.max(10, Math.ceil(pred / 5) * 5) : 0;
+    return { predicted: pred, recommendedPrep: rec, closed: false, hol: '' };
+  }
+
+  function syncPlannedPortionsFromForecasts() {
+    const fc = computeForecasts();
+    if (!fc.openCount) return 0; // wait until at least 1 real attendance record exists
+    const todayStr = localDateStr();
+    let updated = 0;
+
+    (state.menuPlan || []).forEach(mp => {
+      if (mp.date < todayStr || mp.status === 'DEDUCTED') return;
+      const res = forecastPortionsForDate(mp.date, fc);
+      if (res.closed) {
+        if (mp.status !== 'CLOSED' || mp.portions !== 0) {
+          mp.status = 'CLOSED';
+          mp.portions = 0;
+          updated++;
+        }
+      } else if (mp.status !== 'CLOSED' && mp.portions !== res.recommendedPrep) {
+        mp.portions = res.recommendedPrep;
+        updated++;
+      }
+    });
+
+    (state.prepQueue || []).forEach(pq => {
+      if (pq.deducted) return;
+      const targetDate = pq.targetDate && /^\d{4}-\d{2}-\d{2}$/.test(pq.targetDate) ? pq.targetDate : localDateStr(new Date(Date.now() + 86400000));
+      const res = forecastPortionsForDate(targetDate, fc);
+      if (!res.closed && pq.portions !== res.recommendedPrep) {
+        pq.portions = res.recommendedPrep;
+        updated++;
+      }
+    });
+
+    return updated;
+  }
+
   // --- Render Tabs ---
   function renderNav() {
     const user = getActiveUser();
@@ -1278,6 +1406,7 @@
       checklists: 'Checklists',
       audit: 'Blind Audit',
       haccp: 'Time & Temp Logs',
+      storage: 'Storage & Date Labels',
       forecasting: 'Served & Forecasting',
       reports: 'Daily Reports',
       users: 'Users & Activity',
@@ -1288,7 +1417,7 @@
       home: ['dashboard'],
       stock: ['inventory', 'transactions', 'orders', 'audit'],
       kitchen: ['recipes', 'menu', 'prep'],
-      safety: ['checklists', 'haccp', 'forecasting'],
+      safety: ['checklists', 'haccp', 'storage', 'forecasting'],
       admin: ['reports', 'users', 'help']
     };
     const activeGroup = Object.keys(NAV_GROUPS).find(g => NAV_GROUPS[g].includes(state.activeTab)) || 'home';
@@ -1416,6 +1545,7 @@
       case 'checklists': renderChecklists(main); break;
       case 'audit': renderAudit(main); break;
       case 'haccp': renderHaccp(main); break;
+      case 'storage': renderStorageLabels(main); break;
       case 'forecasting': renderForecasting(main); break;
       case 'reports': renderReports(main); break;
       case 'users': renderUsers(main); break;
@@ -1507,6 +1637,17 @@
 
     main.innerHTML = `
       <div class="space-y-5">
+        <!-- 1-Tap Shift Quick Actions (Fool-Proof Tablet Bar) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex flex-wrap items-center justify-between gap-2 no-print">
+          <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Quick Shift Actions:</span>
+          <div class="flex flex-wrap gap-2">
+            ${allowed.includes('haccp') ? '<button data-goto="haccp" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold">Log Temp Check</button>' : ''}
+            ${allowed.includes('storage') ? '<button data-goto="storage" class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold">Tag Leftovers / Salad Bar</button>' : ''}
+            ${allowed.includes('forecasting') ? '<button data-goto="forecasting" class="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold">Log Meals Served</button>' : ''}
+            ${allowed.includes('audit') ? '<button data-goto="audit" class="px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-xs font-semibold">Blind Count</button>' : ''}
+            ${allowed.includes('checklists') ? '<button data-goto="checklists" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold">Daily Checklists</button>' : ''}
+          </div>
+        </div>
         <!-- Today's Quick Actions -->
         <div class="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 shadow-sm">
           <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">Quick Actions</div>
@@ -1521,9 +1662,21 @@
           </div>
           <div class="space-y-2">
             ${(() => {
+              const todayTagStr = localDateStr();
+              const expTags = (state.storageTags || []).filter(t => t.status === 'STORED' && t.useByDate <= todayTagStr);
+              const expBanner = expTags.length ? `
+                <div class="p-3 rounded-lg bg-rose-50 border-2 border-rose-400 text-rose-950 text-xs flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span class="font-bold uppercase text-[10px] px-1.5 py-0.5 rounded bg-rose-700 text-white mr-1.5">USE OR DISCARD TODAY</span>
+                    <strong>${expTags.length} Stored Item(s) Reached Use-By Date:</strong>
+                    <span class="ml-1">${expTags.map(t => `${escapeHtml(t.itemName)} (${escapeHtml(t.zone)}, Use-By ${escapeHtml(t.useByDate)})`).join(' • ')}</span>
+                  </div>
+                  ${allowed.includes('storage') ? '<button data-goto="storage" class="px-3 py-1 rounded-lg bg-rose-700 text-white font-semibold shrink-0">Review Tags &rarr;</button>' : ''}
+                </div>
+              ` : '';
               const carryTasks = (state.checklists || []).filter(c => c.priorityCarryover && !c.done);
-              if (!carryTasks.length) return '';
-              return `
+              if (!carryTasks.length) return expBanner;
+              return expBanner + `
                 <div class="p-3 rounded-lg bg-rose-50 border-2 border-rose-400 text-rose-950 text-xs flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <div class="flex items-center gap-1.5 flex-wrap">
@@ -1684,6 +1837,44 @@
   }
 
   // 2. LIVING STOCK
+  function renderLeftoverInventoryRows(searchVal, zoneVal, onlySaladBar) {
+    const todayStr = localDateStr();
+    const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
+    const tomorrowStr = localDateStr(tmrw);
+    const activeTags = (state.storageTags || [])
+      .filter(t => t.status === 'STORED' && (onlySaladBar ? isSaladBarTag(t) : !isSaladBarTag(t)))
+      .filter(t => {
+        const mText = !searchVal || (t.itemName || '').toLowerCase().includes(searchVal) || (t.zone || '').toLowerCase().includes(searchVal) || (t.notes || '').toLowerCase().includes(searchVal);
+        const mZone = zoneVal === 'ALL' || t.zone === zoneVal;
+        return mText && mZone;
+      })
+      .sort((a, b) => a.useByDate.localeCompare(b.useByDate));
+
+    if (!activeTags.length) {
+      return `<tr><td colspan="6" class="py-3 text-center text-xs text-slate-500">${onlySaladBar ? 'No dated Salad Bar items currently logged in storage.' : 'No meal leftovers currently in storage.'}</td></tr>`;
+    }
+
+    return activeTags.map(t => {
+      const isExpired = t.useByDate < todayStr;
+      const isDueSoon = !isExpired && t.useByDate <= tomorrowStr;
+      const badgeCls = isExpired ? 'bg-rose-700 text-white' : isDueSoon ? 'bg-amber-600 text-white' : 'bg-emerald-100 text-emerald-800';
+      const badgeTxt = isExpired ? 'EXPIRED — DISCARD' : isDueSoon ? 'USE FIRST' : 'WITHIN DATE';
+      return `
+        <tr class="${isExpired ? 'bg-rose-50/70' : isDueSoon ? 'bg-amber-50/50' : 'hover:bg-slate-50'}">
+          <td class="py-2 pr-3 font-medium text-slate-900">${escapeHtml(t.itemName)}</td>
+          <td class="py-2 pr-3 text-xs font-semibold text-slate-700">${escapeHtml(t.zone)}</td>
+          <td class="py-2 pr-3 text-xs text-slate-600">${escapeHtml(t.prepDate)} @ ${escapeHtml(t.prepTime)}</td>
+          <td class="py-2 pr-3 text-xs font-bold ${isExpired ? 'text-rose-700' : 'text-slate-900'}">${escapeHtml(t.useByDate)}</td>
+          <td class="py-2 pr-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeCls}">${badgeTxt}</span></td>
+          <td class="py-2 text-right space-x-1 whitespace-nowrap">
+            <button data-storage-action="USED" data-tag-id="${t.id}" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Served / Used</button>
+            <button data-storage-action="DISCARDED" data-tag-id="${t.id}" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Discard</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
   function renderInventory(main) {
     const searchVal = (document.getElementById('inv-search')?.value || '').toLowerCase();
     const zoneVal = document.getElementById('inv-zone')?.value || 'ALL';
@@ -1696,9 +1887,12 @@
       return matchText && matchZone;
     });
 
-    const canManage = ['Management', 'Staff'].includes(getActiveUser().role);
+    const activeLeftoverCount = getActiveLeftoversFIFO().length;
+    const activeSaladCount = getActiveSaladBarFIFO().length;
+    const canManage = getActiveUser().role === 'Management';
 
     main.innerHTML = `
+      <div class="space-y-5">
       <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -1774,6 +1968,63 @@
           </table>
         </div>
       </div>
+
+      <!-- Ready-to-Serve Meal Leftovers (Separate from Salad Bar) -->
+      <div class="bg-white rounded-xl border border-amber-200 p-4 sm:p-5 shadow-sm space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Meal Leftovers on Hand (${activeLeftoverCount})</h3>
+            <p class="text-xs text-slate-500">Cooked meal leftovers ready for Leftover Days — tracked separately from Salad Bar items and vendor stock.</p>
+          </div>
+          <button type="button" data-goto="storage" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">+ Log / Print Storage Tags</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                <th class="py-2 pr-3">Meal Leftover</th>
+                <th class="py-2 pr-3">Stored In (Zone)</th>
+                <th class="py-2 pr-3">Prepped</th>
+                <th class="py-2 pr-3">Use By</th>
+                <th class="py-2 pr-3">Status</th>
+                <th class="py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inv-leftovers-tbody" class="divide-y divide-slate-100">
+              ${renderLeftoverInventoryRows(searchVal, zoneVal, false)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Daily Salad Bar & Cold Prep Dated Items (Separate from Leftovers) -->
+      <div class="bg-white rounded-xl border border-emerald-200 p-4 sm:p-5 shadow-sm space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Daily Salad Bar &amp; Cold Prep Dated Items (${activeSaladCount})</h3>
+            <p class="text-xs text-slate-500">Greens, Yogurt, Pudding &amp; Fruit tracked separately from meal leftovers with shorter shelf-life dates.</p>
+          </div>
+          <button type="button" data-goto="storage" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">+ Tag Salad Bar Item</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                <th class="py-2 pr-3">Salad Bar / Cold Item</th>
+                <th class="py-2 pr-3">Stored In (Zone)</th>
+                <th class="py-2 pr-3">Prepped / Opened</th>
+                <th class="py-2 pr-3">Use By</th>
+                <th class="py-2 pr-3">Status</th>
+                <th class="py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inv-salad-tbody" class="divide-y divide-slate-100">
+              ${renderLeftoverInventoryRows(searchVal, zoneVal, true)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
     `;
 
     function updateInventoryRowsOnly() {
@@ -1817,6 +2068,10 @@
           </tr>
         `;
       }).join('');
+      const leftTbody = document.getElementById('inv-leftovers-tbody');
+      if (leftTbody) leftTbody.innerHTML = renderLeftoverInventoryRows(s, z, false);
+      const saladTbody = document.getElementById('inv-salad-tbody');
+      if (saladTbody) saladTbody.innerHTML = renderLeftoverInventoryRows(s, z, true);
     }
     document.getElementById('inv-search').addEventListener('input', updateInventoryRowsOnly);
     document.getElementById('inv-zone').addEventListener('change', updateInventoryRowsOnly);
@@ -2246,7 +2501,7 @@
               </div>
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">Units: <strong>Volume, Packs &amp; Cans</strong></span>
-                ${['Management', 'Staff'].includes(getActiveUser().role) ? `
+                ${getActiveUser().role === 'Management' ? `
                   <button id="btn-edit-recipe" data-edit-recipe="${selected.id}" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-800">Edit</button>
                   <button id="btn-delete-recipe" data-delete-recipe="${selected.id}" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700">Delete</button>
                 ` : ''}
@@ -2358,6 +2613,42 @@
             <p class="text-xs text-slate-500">Scheduled recipes for tomorrow's 11:30 AM service. Check off items as pulled or thawed.</p>
           </div>
           <button id="btn-print-prep" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-medium no-print">Print Prep Sheet</button>
+        </div>
+
+        <!-- Stored Leftovers (FIFO) & Daily Salad Bar Cold Pulls -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="bg-white rounded-xl border border-amber-200 p-4 shadow-sm space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-slate-900">Stored Leftovers Ready to Use (FIFO)</h3>
+              <button type="button" data-goto="storage" class="text-xs font-semibold text-amber-700 hover:underline no-print">Manage Tags &rarr;</button>
+            </div>
+            ${(() => {
+              const lefts = getActiveLeftoversFIFO();
+              if (!lefts.length) return '<p class="text-xs text-slate-500">No stored leftovers currently in coolers/freezers.</p>';
+              return `<div class="divide-y divide-slate-100 text-xs">
+                ${lefts.map(t => `
+                  <div class="py-1.5 flex items-center justify-between gap-2">
+                    <div>
+                      <span class="font-semibold text-slate-900">${escapeHtml(t.itemName)}</span>
+                      <span class="text-slate-500"> &bull; ${escapeHtml(t.zone)}</span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${t.isExpired ? 'bg-rose-700 text-white' : t.isDueSoon ? 'bg-amber-600 text-white' : 'bg-emerald-100 text-emerald-800'}">
+                      ${t.isExpired ? 'EXPIRED — DISCARD' : `Use by ${escapeHtml(t.useByDate)} (${t.daysLeft}d)`}
+                    </span>
+                  </div>
+                `).join('')}
+              </div>`;
+            })()}
+          </div>
+          <div class="bg-white rounded-xl border border-emerald-200 p-4 shadow-sm space-y-1.5">
+            <h3 class="text-sm font-bold text-slate-900">Daily Salad Bar Cold Pulls (Every Service Day)</h3>
+            <p class="text-xs text-slate-600">Pull from <strong>Walk-In Cooler / Dry Storage</strong> and hold at <strong>&le;41&deg;F</strong>:</p>
+            <ul class="text-xs text-slate-700 list-disc pl-4 space-y-0.5">
+              <li><strong>Salad Greens &amp; Dressings</strong> (date leftover cut greens for <strong>3 days</strong> max)</li>
+              <li><strong>Yogurt Cups &amp; Pudding Cups</strong> (check pkg date; opened/prepped <strong>4 days</strong> max)</li>
+              <li><strong>Fresh / Chilled Fruit</strong> when available (date cut fruit for <strong>3 days</strong> max)</li>
+            </ul>
+          </div>
         </div>
 
         <!-- Queued Recipes -->
@@ -2540,11 +2831,340 @@
     `;
   }
 
+
+  // 7b. STORAGE, LEFTOVERS & SERVSAFE DATE-MARKING (>24 HR)
+  const SHELF_LIFE_OPTIONS = [
+    { days: 7, label: 'Cooked Entree / Meat / Pasta / Soup (7 Days Max)' },
+    { days: 3, label: 'Cut Salad Greens / Fresh Fruit / Deli Salad (3 Days)' },
+    { days: 4, label: 'Dairy / Yogurt / Pudding / Egg & Tuna Salad (4 Days)' },
+    { days: 14, label: 'Unopened Commercial Yogurt / Pudding (14 Days)' },
+    { days: 90, label: 'Frozen Storage (90 Days)' }
+  ];
+
+  function inferShelfLifeDays(itemName, zone) {
+    if (/freezer/i.test(zone || '')) return 90;
+    const n = (itemName || '').toLowerCase();
+    if (/salad green|romaine|spring mix|lettuce|fresh fruit|cut fruit|melon|berries|apple|coleslaw|slaw/.test(n)) return 3;
+    if (/yogurt|pudding|milk|dairy|tuna salad|potato salad|mac salad|egg salad|chicken salad|dressing|cream/.test(n)) return 4;
+    return 7;
+  }
+
+  function computeUseByDate(prepDateStr, zone, shelfDays) {
+    const d = new Date((prepDateStr || localDateStr()) + 'T12:00:00');
+    const isFreezer = /freezer/i.test(zone || '');
+    if (isFreezer) {
+      d.setDate(d.getDate() + 90);
+    } else {
+      const days = Math.max(1, Number(shelfDays) || 7);
+      d.setDate(d.getDate() + (days - 1));
+    }
+    return localDateStr(d);
+  }
+
+  function isSaladBarTag(t) {
+    if (t && t.tagCategory === 'SALAD_BAR') return true;
+    if (t && t.tagCategory === 'LEFTOVER') return false;
+    return /salad green|romaine|spring mix|lettuce|yogurt|pudding|fresh fruit|chilled fruit|cut fruit|salad bar|dressing/i.test((t && t.itemName) || '');
+  }
+
+  function mapStorageTagFIFO(t) {
+    const todayStr = localDateStr();
+    const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
+    const tomorrowStr = localDateStr(tmrw);
+    const isExpired = t.useByDate < todayStr;
+    const isDueSoon = !isExpired && t.useByDate <= tomorrowStr;
+    const daysLeft = Math.round((new Date(t.useByDate + 'T12:00:00') - new Date(todayStr + 'T12:00:00')) / 86400000);
+    return { ...t, isExpired, isDueSoon, daysLeft };
+  }
+
+  function getActiveLeftoversFIFO() {
+    return (state.storageTags || [])
+      .filter(t => t.status === 'STORED' && !isSaladBarTag(t))
+      .map(mapStorageTagFIFO)
+      .sort((a, b) => a.useByDate.localeCompare(b.useByDate));
+  }
+
+  function getActiveSaladBarFIFO() {
+    return (state.storageTags || [])
+      .filter(t => t.status === 'STORED' && isSaladBarTag(t))
+      .map(mapStorageTagFIFO)
+      .sort((a, b) => a.useByDate.localeCompare(b.useByDate));
+  }
+
+  let lastLeftoverPreview = null;
+
+  function getMealTitleForDate(dateStr) {
+    const scheduled = (state.menuPlan || []).find(m => m.date === dateStr);
+    if (!scheduled) return 'Community Meal';
+    if (scheduled.customTitle) return scheduled.customTitle;
+    const rec = (state.recipes || []).find(r => r.id === scheduled.recipeId);
+    return rec ? rec.name : 'Community Meal';
+  }
+
+  function buildLeftoverTagInfo({ date, mealName, planned, served, zone, prepTime, shelfDays }) {
+    const dStr = date || localDateStr();
+    const pTime = prepTime || new Date().toTimeString().slice(0, 5);
+    const zName = zone || 'Walk-In Cooler';
+    const pl = Math.max(0, Number(planned || 0));
+    const sv = Math.max(0, Number(served || 0));
+    const leftoverPortions = Math.max(0, pl - sv);
+    const halfPans = Math.max(1, Math.round(leftoverPortions / 15));
+    const estGallons = Math.max(0.5, Math.round(leftoverPortions * 0.1 * 2) / 2);
+    const isFreezer = /freezer/i.test(zName);
+    const sDays = isFreezer ? 90 : (Number(shelfDays) || 7);
+    const useByDate = computeUseByDate(dStr, zName, sDays);
+    const targetTemp = isFreezer ? '≤0°F' : '≤41°F';
+    const shelfRule = isFreezer ? '90-Day Freezer' : `${sDays}-Day Cooler`;
+    const mName = (mealName || getMealTitleForDate(dStr) || 'Community Meal').trim();
+    const staffName = getActiveUser().name;
+    const itemLabel = `${mName} (~${leftoverPortions} portions / ~${halfPans} Half Pan${halfPans > 1 ? 's' : ''})`;
+    const checklistTitle = `Tag & store ~${leftoverPortions} leftover portions of ${mName} in ${zName} — Label: "${mName} | PREPPED: ${dStr} @ ${pTime} | USE BY: ${useByDate} | ${targetTemp} | BY: ${staffName}"`;
+    return {
+      date: dStr,
+      prepTime: pTime,
+      mealName: mName,
+      planned: pl,
+      served: sv,
+      leftoverPortions,
+      halfPans,
+      estGallons,
+      zone: zName,
+      useByDate,
+      isFreezer,
+      targetTemp,
+      shelfRule,
+      staffName,
+      itemLabel,
+      checklistTitle
+    };
+  }
+
+  function updateLeftoverPredictorCard() {
+    const card = document.getElementById('leftover-predictor-card');
+    if (!card) return;
+    const form = document.getElementById('form-served');
+    const zoneSel = document.getElementById('leftover-zone-select');
+    const zone = zoneSel ? zoneSel.value : 'Walk-In Cooler';
+    const shelfSel = document.getElementById('leftover-shelf-select');
+    const shelfDays = shelfSel ? Number(shelfSel.value) : inferShelfLifeDays(mealName, zone);
+    const dateVal = form ? (form.querySelector('[name="date"]')?.value || localDateStr()) : (lastLeftoverPreview?.date || localDateStr());
+    const plannedVal = form ? Number(form.querySelector('[name="planned"]')?.value || 0) : (lastLeftoverPreview?.planned || 0);
+    const servedInput = form ? form.querySelector('[name="served"]')?.value : '';
+    const hasServed = servedInput !== '' && servedInput !== null && servedInput !== undefined;
+    const servedVal = hasServed ? Number(servedInput) : (lastLeftoverPreview ? lastLeftoverPreview.served : null);
+    const mealName = getMealTitleForDate(dateVal);
+
+    const body = document.getElementById('leftover-predictor-body');
+    if (!body) return;
+
+    if (servedVal === null || isNaN(servedVal)) {
+      body.innerHTML = `<p class="text-xs text-slate-500">Enter <strong>Planned Portions</strong> and <strong>People / Meals Served</strong> above to predict leftover portions, pan volume, and the exact ServSafe date tag to write &amp; add to your Daily Checklist.</p>`;
+      return;
+    }
+
+    const info = buildLeftoverTagInfo({ date: dateVal, mealName, planned: plannedVal, served: servedVal, zone, shelfDays });
+    if (info.leftoverPortions <= 0) {
+      body.innerHTML = `
+        <div class="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+          <strong>0 Leftovers Predicted</strong> (${info.served} served out of ${info.planned} planned for ${escapeHtml(info.mealName)}). No overnight storage tag needed.
+        </div>
+      `;
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div class="space-y-2">
+          <div class="p-3 rounded-xl bg-amber-50 border border-amber-200">
+            <div class="text-[11px] font-bold uppercase text-amber-800">Predicted Leftovers</div>
+            <div class="text-2xl font-extrabold text-slate-900 mt-0.5">~${info.leftoverPortions} portions</div>
+            <div class="text-xs text-slate-700 mt-0.5">${escapeHtml(info.mealName)} &bull; ~${info.halfPans} Half Hotel Pan${info.halfPans > 1 ? 's' : ''} (~${info.estGallons} Gal)</div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Target Storage Zone</label>
+            <select id="leftover-zone-select" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+              ${(state.zones || []).filter(z => /cooler|freezer/i.test(z)).map(z => `<option value="${escapeHtml(z)}" ${z === zone ? 'selected' : ''}>${escapeHtml(z)}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Food Type / Shelf Life</label>
+            <select id="leftover-shelf-select" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+              ${SHELF_LIFE_OPTIONS.map(o => `<option value="${o.days}" ${o.days === shelfDays ? 'selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 space-y-3">
+          <div class="p-3.5 rounded-xl border-2 border-dashed border-slate-400 bg-slate-50 font-mono text-xs space-y-1">
+            <div class="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-500">What the Physical Date Tag Should Say (${escapeHtml(info.shelfRule)})</div>
+            <div><strong>ITEM:</strong> ${escapeHtml(info.itemLabel)}</div>
+            <div><strong>PREPPED / COOKED:</strong> ${escapeHtml(info.date)} @ ${escapeHtml(info.prepTime)}</div>
+            <div><strong>USE BY:</strong> <span class="text-red-700 font-bold">${escapeHtml(info.useByDate)}</span></div>
+            <div><strong>ZONE &amp; SAFE TEMP:</strong> ${escapeHtml(info.zone)} (${escapeHtml(info.targetTemp)})</div>
+            <div><strong>TAGGED BY:</strong> ${escapeHtml(info.staffName)}</div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="btn-add-leftover-chk" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Add Date-Tag Task to Daily Checklist</button>
+            <div class="flex items-center gap-1.5">
+              <input id="leftover-temp-input" type="number" step="0.1" value="${info.isFreezer ? '0.0' : '39.0'}" class="w-20 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs" title="Storage Temp (°F)" />
+              <button type="button" id="btn-create-leftover-tag" class="px-3.5 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">Create Active Storage Tag Now</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStorageLabels(main) {
+    const todayStr = localDateStr();
+    const nowTime = new Date().toTimeString().slice(0, 5);
+    const activeTags = (state.storageTags || []).filter(t => t.status === 'STORED').sort((a, b) => a.useByDate.localeCompare(b.useByDate));
+    const archivedTags = (state.storageTags || []).filter(t => t.status !== 'STORED').slice(0, 20);
+    const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = localDateStr(tomorrowDate);
+
+    main.innerHTML = `
+      <div class="space-y-5">
+        <form id="form-add-storage-tag" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3 no-print">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Tag &amp; Log Stored Leftovers / Prepped Food (&gt;24 Hours)</h2>
+              <p class="text-xs text-slate-500">Not everything keeps for 7 days! Select the food type (Cooked Entrees = 7d, Cut Salad Greens/Fruit = 3d, Dairy/Yogurt/Pudding = 4d, Freezer = 90d) or enter a manufacturer Use-By date.</p>
+            </div>
+            <button type="button" id="btn-print-storage" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Print Storage Tags</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5 text-xs">
+            <span class="font-semibold text-slate-500 mr-1">1-Tap Preset:</span>
+            <button type="button" data-st-preset="Salad Greens|SALAD_BAR|3|Walk-In Cooler" class="px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-medium">Salad Greens (3d)</button>
+            <button type="button" data-st-preset="Fresh Cut Fruit|SALAD_BAR|3|Walk-In Cooler" class="px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-medium">Cut Fruit (3d)</button>
+            <button type="button" data-st-preset="Yogurt / Pudding Cups|SALAD_BAR|4|Walk-In Cooler" class="px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-medium">Yogurt / Pudding (4d)</button>
+            <button type="button" data-st-preset="Cold Deli Salad (Tuna / Potato / Mac)|LEFTOVER|4|Walk-In Cooler" class="px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-medium">Deli Salad (4d)</button>
+            <button type="button" data-st-preset="Cooked Meal Leftover|LEFTOVER|7|Walk-In Cooler" class="px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-medium">Cooked Meal (7d)</button>
+            <button type="button" data-st-preset="Frozen Backup Pan|LEFTOVER|90|Walk-In Freezer" class="px-2.5 py-1 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-medium">Freezer (90d)</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+            <div class="lg:col-span-2">
+              <label class="block text-xs font-medium text-slate-700 mb-1">Food / Leftover Item &amp; Container</label>
+              <input name="itemName" type="text" required placeholder="e.g. Goulash (2 Half Hotel Pans)" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Storage Zone</label>
+              <select name="zone" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+                ${(state.zones || []).map(z => `<option value="${escapeHtml(z)}" ${z.includes('Cooler') ? 'selected' : ''}>${escapeHtml(z)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Prep / Cook Date</label>
+              <input name="prepDate" type="date" value="${todayStr}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Time Stored</label>
+              <input name="prepTime" type="time" value="${nowTime}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Temp at Storage (°F)</label>
+              <input name="tempF" type="number" step="0.1" required placeholder="e.g. 39.0" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end pt-1">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Category</label>
+              <select name="tagCategory" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+                <option value="LEFTOVER">Meal Leftover / Cooked Food</option>
+                <option value="SALAD_BAR">Daily Salad Bar / Cold Prep</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Shelf-Life Rule</label>
+              <select name="shelfDays" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white">
+                ${SHELF_LIFE_OPTIONS.map(o => `<option value="${o.days}">${escapeHtml(o.label)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Custom / Pkg Use-By (Optional)</label>
+              <input name="customUseBy" type="date" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs" />
+            </div>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Create Tag &amp; Log Storage</button>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <input name="notes" type="text" placeholder="Reheating / Thaw / Portion notes (optional)" class="flex-1 min-w-[200px] px-3 py-2 rounded-lg border border-slate-300 text-xs" />
+            <span id="storage-useby-preview" class="text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg">Suggested Use-By: ${computeUseByDate(todayStr, 'Walk-In Cooler', 7)} (7-Day Rule)</span>
+          </div>
+        </form>
+
+        <!-- Active Tagged Containers in Walk-Ins & Kitchen Spaces -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900">Active Tagged Items in Storage (${activeTags.length})</h3>
+            <span class="text-xs text-slate-500">Sorted by earliest Use-By Date (FIFO)</span>
+          </div>
+          ${activeTags.length === 0
+            ? '<p class="text-sm text-slate-500">No leftovers or prepped containers currently tagged in storage.</p>'
+            : `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                ${activeTags.map(t => {
+                  const isExpired = t.useByDate < todayStr;
+                  const isDueSoon = !isExpired && t.useByDate <= tomorrowStr;
+                  const tempOk = /freezer/i.test(t.zone) ? t.tempF <= 0 : t.tempF <= 41;
+                  const cardCls = isExpired
+                    ? 'border-rose-400 bg-rose-50'
+                    : isDueSoon
+                      ? 'border-amber-300 bg-amber-50/70'
+                      : 'border-slate-200 bg-slate-50';
+                  return `
+                    <div class="p-3.5 rounded-xl border ${cardCls} space-y-2">
+                      <div class="flex items-start justify-between gap-2">
+                        <div>
+                          <div class="font-bold text-sm text-slate-900">${escapeHtml(t.itemName)}</div>
+                          <div class="text-xs text-slate-600">${escapeHtml(t.zone)}</div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isExpired ? 'bg-rose-700 text-white' : isDueSoon ? 'bg-amber-600 text-white' : 'bg-emerald-100 text-emerald-800'}">
+                          ${isExpired ? 'EXPIRED — DISCARD' : isDueSoon ? 'USE FIRST' : 'WITHIN DATE'}
+                        </span>
+                      </div>
+                      <div class="text-xs space-y-0.5 bg-white/80 rounded-lg p-2 border border-slate-200/80">
+                        <div><strong>Prepped:</strong> ${escapeHtml(t.prepDate)} @ ${escapeHtml(t.prepTime)}</div>
+                        <div><strong>Use By:</strong> <span class="font-bold ${isExpired ? 'text-rose-700' : 'text-slate-900'}">${escapeHtml(t.useByDate)}</span></div>
+                        <div><strong>Stored Temp:</strong> <span class="font-semibold ${tempOk ? 'text-emerald-700' : 'text-rose-700'}">${t.tempF}&deg;F (${tempOk ? 'Safe ≤41°F' : 'Check Cooling!'})</span></div>
+                        <div><strong>Tagged By:</strong> ${escapeHtml(t.taggedBy)}</div>
+                        ${t.notes ? `<div class="text-slate-500 italic">${escapeHtml(t.notes)}</div>` : ''}
+                      </div>
+                      <div class="flex gap-2 pt-1 no-print">
+                        <button data-storage-action="USED" data-tag-id="${t.id}" class="flex-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Served / Used</button>
+                        <button data-storage-action="DISCARDED" data-tag-id="${t.id}" class="flex-1 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-semibold">Discard</button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>`
+          }
+        </div>
+
+        ${archivedTags.length ? `
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
+          <h3 class="text-xs font-bold uppercase text-slate-500">Recent Used / Discarded Storage History</h3>
+          <div class="divide-y divide-slate-100 text-xs">
+            ${archivedTags.map(t => `
+              <div class="py-1.5 flex items-center justify-between gap-2">
+                <span><strong>${escapeHtml(t.itemName)}</strong> (${escapeHtml(t.zone)}) — Prepped ${escapeHtml(t.prepDate)}, Use-By ${escapeHtml(t.useByDate)}</span>
+                <span class="px-2 py-0.5 rounded font-semibold ${t.status === 'USED' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${escapeHtml(t.status)} by ${escapeHtml(t.closedBy || '')}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
   // 8. PATRONS SERVED & FORECASTING
   function renderForecasting(main) {
     const fc = computeForecasts();
     const activeSeries = fc[state.forecastHorizon] || fc.days;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateStr();
+    const todayMenu = (state.menuPlan || []).find(m => m.date === today);
+    const defaultPlanned = lastLeftoverPreview ? lastLeftoverPreview.planned : (todayMenu ? todayMenu.portions : 60);
+    const defaultDate = lastLeftoverPreview ? lastLeftoverPreview.date : today;
+    const defaultServedAttr = lastLeftoverPreview && lastLeftoverPreview.served !== '' ? `value="${lastLeftoverPreview.served}"` : '';
 
     main.innerHTML = `
       <div class="space-y-5">
@@ -2552,22 +3172,22 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 class="text-base font-bold text-slate-900">Log People / Meals Served &amp; Unusual Circumstances</h2>
-              <p class="text-xs text-slate-500">Record attendance plus weather or local events to improve next-year forecasting.</p>
+              <p class="text-xs text-slate-500">Record attendance plus weather or local events to improve next-year forecasting and predict leftovers.</p>
             </div>
             <button type="button" id="btn-bulk-served" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold">+ Bulk Enter Past Months (Aug–Sep)</button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Service Date</label>
-              <input name="date" type="date" value="${today}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              <input name="date" type="date" value="${defaultDate}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Planned Portions</label>
-              <input name="planned" type="number" min="0" value="35" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              <input name="planned" type="number" min="0" value="${defaultPlanned}" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">People / Meals Served</label>
-              <input name="served" type="number" min="0" required placeholder="e.g. 68" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+              <input name="served" type="number" min="0" ${defaultServedAttr} required placeholder="e.g. 52" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Weather / Event</label>
@@ -2588,7 +3208,28 @@
             </div>
             <button type="submit" class="py-2 px-4 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition">Save Service Log</button>
           </div>
+          <div class="flex flex-wrap gap-4 pt-1">
+            <label class="inline-flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" name="autoLeftoverChecklist" checked class="w-4 h-4 accent-red-700 rounded" />
+              <span>If leftovers &gt; 0, add exact Date Tag task to Daily Checklist</span>
+            </label>
+            <label class="inline-flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" name="autoLeftoverInventory" checked class="w-4 h-4 accent-red-700 rounded" />
+              <span>Also log predicted leftovers into Leftover Inventory &amp; Storage</span>
+            </label>
+          </div>
         </form>
+
+        <!-- Leftover Predictor & Date-Tag Generator -->
+        <div id="leftover-predictor-card" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Leftover Predictor &amp; ServSafe Date-Tag Generator</h3>
+              <p class="text-xs text-slate-500">Automatically predicts leftover portions from Planned vs. Actual Served and generates the exact label &amp; Daily Checklist task.</p>
+            </div>
+          </div>
+          <div id="leftover-predictor-body"></div>
+        </div>
 
         <!-- Multi-Horizon Forecast Chart -->
         <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
@@ -2679,8 +3320,10 @@
                       <td class="py-2 pr-3"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${isUnusual ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${escapeHtml(circ)}</span></td>
                       <td class="py-2 pr-3 text-xs text-slate-600">${escapeHtml(s.notes || '—')}</td>
                       <td class="py-2 text-right space-x-1 whitespace-nowrap no-print">
-                        <button data-edit-served="${s.id}" class="px-2 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Edit</button>
-                        <button data-delete-served="${s.id}" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Delete</button>
+                        ${getActiveUser().role === 'Management' ? `
+                          <button data-edit-served="${s.id}" class="px-2 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Edit</button>
+                          <button data-delete-served="${s.id}" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Delete</button>
+                        ` : '<span class="text-[11px] text-slate-400">Admin only</span>'}
                       </td>
                     </tr>
                   `;
@@ -2721,6 +3364,7 @@
         }
       });
     }
+    updateLeftoverPredictorCard();
   }
 
 
@@ -2765,7 +3409,7 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 class="text-base font-bold text-slate-900">Scheduled Menu &amp; Inventory Impact</h3>
-              <p class="text-xs text-slate-500">Click <strong>Commit &amp; Deduct Stock</strong> when ready to pull ingredients from Living Stock and queue Next-Day Prep.</p>
+              <p class="text-xs text-slate-500">Click <strong>Commit &amp; Deduct Stock</strong> when ready to pull ingredients from Living Stock and queue Next-Day Prep. <strong>Daily Salad Bar</strong> (Greens, Yogurt, Pudding &amp; Fruit when available) is served alongside every lunch.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 no-print">
               <select id="menu-print-range" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
@@ -2804,6 +3448,18 @@
                           ${canEdit ? `<button data-remove-menu="${mp.id}" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Remove</button>` : ''}
                         </div>
                       </div>
+                      ${/leftover/i.test(mp.customTitle || '') ? (() => {
+                        const lefts = getActiveLeftoversFIFO();
+                        return `
+                          <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs space-y-1">
+                            <div class="font-bold text-amber-900">Available Leftovers in Storage for This Service (${lefts.length}):</div>
+                            ${lefts.length === 0
+                              ? '<div class="text-amber-800">No stored leftovers logged yet — check Storage &amp; Date Labels or prepare backup recipe.</div>'
+                              : lefts.map(t => `<div class="flex flex-wrap items-center justify-between gap-2"><span><strong>${escapeHtml(t.itemName)}</strong> (${escapeHtml(t.zone)})</span><span class="font-bold ${t.isExpired ? 'text-rose-700' : 'text-amber-900'}">${t.isExpired ? 'EXPIRED — DISCARD' : `Use by ${escapeHtml(t.useByDate)}`}</span></div>`).join('')
+                            }
+                          </div>
+                        `;
+                      })() : ''}
                       ${rec ? `
                         <div class="flex flex-wrap gap-2 pt-1">
                           ${rec.ingredients.map(ing => {
@@ -2885,7 +3541,7 @@
                   <button data-chk-freq="${k}" class="px-3 py-1 rounded-md text-xs font-semibold transition ${freq === k ? 'bg-white text-red-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}">${lbl}</button>
                 `).join('')}
               </div>
-              ${canManage ? `<button id="btn-reset-chk-cycle" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">Reset ${freq.charAt(0).toUpperCase() + freq.slice(1)} Cycle</button>` : ''}
+              ${getActiveUser().role === 'Management' ? `<button id="btn-reset-chk-cycle" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium hover:bg-slate-50">Reset ${freq.charAt(0).toUpperCase() + freq.slice(1)} Cycle</button>` : ''}
               ${canManage ? '<button id="btn-run-carryover" class="px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-semibold no-print">Flag Unfinished as Priority</button>' : ''}
               <button id="btn-print-checklists" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium no-print">Print Checklist</button>
             </div>
@@ -2942,7 +3598,7 @@
                       ${c.done ? `<div class="text-xs text-emerald-700 mt-0.5">Completed by <strong>${escapeHtml(c.doneBy)}</strong> at ${escapeHtml(c.doneAt)}</div>` : ''}
                     </div>
                   </label>
-                  ${canManage ? `<button data-chk-delete="${c.id}" class="text-xs text-rose-600 hover:underline no-print">Remove</button>` : ''}
+                  ${getActiveUser().role === 'Management' ? `<button data-chk-delete="${c.id}" class="text-xs text-rose-600 hover:underline no-print">Remove</button>` : ''}
                 </div>
               `).join('')
             }
@@ -3520,6 +4176,28 @@
           </form>
 
           <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div class="text-xs font-bold uppercase text-slate-700">Role Definitions &amp; Access Boundaries</div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div class="p-2.5 rounded-lg bg-white border border-slate-200">
+                  <div class="font-bold text-red-700">Management / Admin</div>
+                  <div class="text-slate-600 mt-0.5">Full access: Approve POs, Manage Zones &amp; Par Levels, Edit/Delete Items, Recipes &amp; Attendance, Daily Reports, Users, PINs &amp; Training.</div>
+                </div>
+                <div class="p-2.5 rounded-lg bg-white border border-slate-200">
+                  <div class="font-bold text-sky-700">Staff</div>
+                  <div class="text-slate-600 mt-0.5">Daily ops: Draft POs, Reconcile Deliveries, Menu Commits, Blind Audit Reconciliation, Log Served &amp; Leftovers, Temps &amp; Checklists.</div>
+                </div>
+                <div class="p-2.5 rounded-lg bg-white border border-slate-200">
+                  <div class="font-bold text-emerald-700">Volunteer</div>
+                  <div class="text-slate-600 mt-0.5">Floor execution: Read-only Recipes/Menu/Prep, Submit Blind Counts, Checklists, HACCP Temps &amp; Storage/Leftover Tags.</div>
+                </div>
+                <div class="p-2.5 rounded-lg bg-white border border-slate-200">
+                  <div class="font-bold text-slate-700">Other</div>
+                  <div class="text-slate-600 mt-0.5">Read-only view of Dashboard, Menu, Next-Day Prep, Checklists &amp; Help.</div>
+                </div>
+              </div>
+            </div>
+
             <div class="flex flex-wrap items-center justify-between gap-2">
               <h3 class="text-sm font-bold text-slate-900">Active Mandatory Training Modules (${(state.trainingModules || []).length})</h3>
               <button id="btn-require-all-retrain" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">Require All Users to Re-Train on Next Login</button>
@@ -4417,6 +5095,30 @@
           </div>
         ` : ''}
 
+        ${(() => {
+          const lefts = getActiveLeftoversFIFO();
+          if (!lefts.length && !/leftover/i.test(mp.customTitle || '')) return '';
+          return `
+            <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs space-y-1.5">
+              <div class="font-bold uppercase text-[11px] text-amber-900">Stored Leftovers Available to Serve (FIFO — ${lefts.length})</div>
+              ${lefts.length === 0
+                ? '<div class="text-amber-800">No stored leftovers currently tagged in coolers/freezers.</div>'
+                : lefts.map(t => `
+                  <div class="flex flex-wrap items-center justify-between gap-2 bg-white/80 rounded p-1.5 border border-amber-200/70">
+                    <span><strong>${escapeHtml(t.itemName)}</strong> &bull; ${escapeHtml(t.zone)} &bull; <span class="font-bold ${t.isExpired ? 'text-rose-700' : 'text-slate-900'}">${t.isExpired ? 'EXPIRED — DISCARD' : 'Use by ' + escapeHtml(t.useByDate)}</span></span>
+                    <button type="button" data-storage-action="${t.isExpired ? 'DISCARDED' : 'USED'}" data-tag-id="${t.id}" class="px-2 py-0.5 rounded ${t.isExpired ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'} text-[11px] font-semibold">${t.isExpired ? 'Discard' : 'Served / Used'}</button>
+                  </div>
+                `).join('')
+              }
+            </div>
+          `;
+        })()}
+
+        <div class="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
+          <div class="font-bold uppercase text-[11px] text-emerald-800">Daily Salad Bar (Every Service Day)</div>
+          <div>Set out <strong>Salad Greens &amp; Dressings</strong>, <strong>Yogurt Cups</strong>, <strong>Pudding Cups</strong>, and <strong>Fresh / Chilled Fruit</strong> (when available) at <strong>&le;41&deg;F</strong>. Date leftover cut greens/fruit for <strong>2–3 days</strong> max and dairy/pudding for <strong>3–4 days</strong> (or pkg date).</div>
+        </div>
+
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <h4 class="text-xs font-bold uppercase text-slate-500">3. Today's Daily Checklist (${dailyTasks.filter(t => !t.done).length} remaining)</h4>
@@ -4642,7 +5344,7 @@
         home: ['dashboard'],
         stock: ['inventory', 'transactions', 'orders', 'audit'],
         kitchen: ['recipes', 'menu', 'prep'],
-        safety: ['checklists', 'haccp', 'forecasting'],
+        safety: ['checklists', 'haccp', 'storage', 'forecasting'],
         admin: ['reports', 'users', 'help']
       };
       const allowed = getAllowedTabs(getActiveUser());
@@ -5095,6 +5797,12 @@
 
     const removeMenuBtn = e.target.closest('[data-remove-menu]');
     if (removeMenuBtn) {
+      if (removeMenuBtn.dataset.confirmed !== '1') {
+        removeMenuBtn.dataset.confirmed = '1';
+        removeMenuBtn.textContent = 'Confirm?';
+        setTimeout(() => { if (removeMenuBtn.isConnected) { removeMenuBtn.dataset.confirmed = '0'; removeMenuBtn.textContent = 'Remove'; } }, 3000);
+        return;
+      }
       state.menuPlan = (state.menuPlan || []).filter(m => m.id !== removeMenuBtn.dataset.removeMenu);
       saveState();
       render();
@@ -5220,6 +5928,12 @@
     }
     const chkDelBtn = e.target.closest('[data-chk-delete]');
     if (chkDelBtn) {
+      if (chkDelBtn.dataset.confirmed !== '1') {
+        chkDelBtn.dataset.confirmed = '1';
+        chkDelBtn.textContent = 'Confirm?';
+        setTimeout(() => { if (chkDelBtn.isConnected) { chkDelBtn.dataset.confirmed = '0'; chkDelBtn.textContent = 'Remove'; } }, 3000);
+        return;
+      }
       state.checklists = (state.checklists || []).filter(c => c.id !== chkDelBtn.dataset.chkDelete);
       saveState();
       render();
@@ -5260,6 +5974,115 @@
     if (repModeBtn) {
       state.reportRangeMode = repModeBtn.dataset.reportMode;
       render();
+      return;
+    }
+    if (e.target.id === 'btn-add-leftover-chk') {
+      const form = document.getElementById('form-served');
+      const zoneSel = document.getElementById('leftover-zone-select');
+      const dateStr = form ? (form.querySelector('[name="date"]')?.value || localDateStr()) : (lastLeftoverPreview?.date || localDateStr());
+      const plannedNum = form ? Number(form.querySelector('[name="planned"]')?.value || 0) : (lastLeftoverPreview?.planned || 0);
+      const servedNum = form ? Number(form.querySelector('[name="served"]')?.value || 0) : (lastLeftoverPreview?.served || 0);
+      const shelfSel = document.getElementById('leftover-shelf-select');
+      const info = buildLeftoverTagInfo({ date: dateStr, planned: plannedNum, served: servedNum, zone: zoneSel ? zoneSel.value : 'Walk-In Cooler', shelfDays: shelfSel ? Number(shelfSel.value) : 7 });
+      if (info.leftoverPortions > 0) {
+        if (!Array.isArray(state.checklists)) state.checklists = [];
+        if (!state.checklists.some(c => c.freq === 'daily' && c.title === info.checklistTitle)) {
+          state.checklists.push({
+            id: uid('chk'),
+            freq: 'daily',
+            category: 'Storage & Labeling',
+            title: info.checklistTitle,
+            done: false,
+            doneBy: '',
+            doneAt: ''
+          });
+          saveState();
+          showToast('Added exact Date Tag instructions to Daily Checklist!');
+        } else {
+          showToast('That Date Tag task is already on today\'s Daily Checklist.');
+        }
+      }
+      return;
+    }
+
+    if (e.target.id === 'btn-create-leftover-tag') {
+      const form = document.getElementById('form-served');
+      const zoneSel = document.getElementById('leftover-zone-select');
+      const tempInput = document.getElementById('leftover-temp-input');
+      const dateStr = form ? (form.querySelector('[name="date"]')?.value || localDateStr()) : (lastLeftoverPreview?.date || localDateStr());
+      const plannedNum = form ? Number(form.querySelector('[name="planned"]')?.value || 0) : (lastLeftoverPreview?.planned || 0);
+      const servedNum = form ? Number(form.querySelector('[name="served"]')?.value || 0) : (lastLeftoverPreview?.served || 0);
+      const shelfSel = document.getElementById('leftover-shelf-select');
+      const info = buildLeftoverTagInfo({ date: dateStr, planned: plannedNum, served: servedNum, zone: zoneSel ? zoneSel.value : 'Walk-In Cooler', shelfDays: shelfSel ? Number(shelfSel.value) : 7 });
+      if (info.leftoverPortions > 0) {
+        if (!Array.isArray(state.storageTags)) state.storageTags = [];
+        state.storageTags.unshift({
+          id: uid('tag'),
+          itemName: info.itemLabel,
+          zone: info.zone,
+          prepDate: info.date,
+          prepTime: info.prepTime,
+          useByDate: info.useByDate,
+          tempF: tempInput ? Number(tempInput.value) : (info.isFreezer ? 0 : 39),
+          notes: `Auto-generated from ${info.served}/${info.planned} served`,
+          taggedBy: info.staffName,
+          status: 'STORED'
+        });
+        saveState();
+        showToast(`Created Storage Tag for ${info.mealName} (Use By ${info.useByDate})`);
+      }
+      return;
+    }
+
+    const stPresetBtn = e.target.closest('[data-st-preset]');
+    if (stPresetBtn) {
+      const [pName, pCat, pDays, pZone] = stPresetBtn.dataset.stPreset.split('|');
+      const form = document.getElementById('form-add-storage-tag');
+      if (form) {
+        if (form.querySelector('[name="itemName"]') && !form.querySelector('[name="itemName"]').value.trim()) {
+          form.querySelector('[name="itemName"]').value = pName;
+        }
+        if (form.querySelector('[name="tagCategory"]')) form.querySelector('[name="tagCategory"]').value = pCat;
+        if (form.querySelector('[name="shelfDays"]')) form.querySelector('[name="shelfDays"]').value = pDays;
+        if (form.querySelector('[name="zone"]')) form.querySelector('[name="zone"]').value = pZone;
+        if (form.querySelector('[name="tempF"]') && !form.querySelector('[name="tempF"]').value) {
+          form.querySelector('[name="tempF"]').value = /freezer/i.test(pZone) ? '0.0' : '39.0';
+        }
+        refreshStorageFormPreview(false);
+      }
+      return;
+    }
+
+    const stActionBtn = e.target.closest('[data-storage-action]');
+    if (stActionBtn) {
+      const action = stActionBtn.dataset.storageAction;
+      if (action === 'DISCARDED' && stActionBtn.dataset.confirmed !== '1') {
+        stActionBtn.dataset.confirmed = '1';
+        const origText = stActionBtn.textContent;
+        stActionBtn.textContent = 'Tap again to Discard';
+        stActionBtn.classList.add('ring-2', 'ring-rose-500');
+        setTimeout(() => {
+          if (stActionBtn.isConnected) {
+            stActionBtn.dataset.confirmed = '0';
+            stActionBtn.textContent = origText;
+            stActionBtn.classList.remove('ring-2', 'ring-rose-500');
+          }
+        }, 3000);
+        return;
+      }
+      const tag = (state.storageTags || []).find(t => t.id === stActionBtn.dataset.tagId);
+      if (tag) {
+        tag.status = action;
+        tag.closedBy = getActiveUser().name;
+        tag.closedAt = nowStamp();
+        saveState();
+        render();
+        showToast(`${tag.itemName} marked as ${tag.status}`);
+      }
+      return;
+    }
+    if (e.target.id === 'btn-print-storage') {
+      window.print();
       return;
     }
     if (e.target.id === 'btn-print-report') {
@@ -5571,7 +6394,62 @@
     }
   });
 
+  function refreshStorageFormPreview(autoPickShelf) {
+    const form = document.getElementById('form-add-storage-tag');
+    const prev = document.getElementById('storage-useby-preview');
+    if (!form || !prev) return;
+    const itemName = form.querySelector('[name="itemName"]')?.value || '';
+    const zone = form.querySelector('[name="zone"]')?.value || 'Walk-In Cooler';
+    const prepDate = form.querySelector('[name="prepDate"]')?.value || localDateStr();
+    const shelfSel = form.querySelector('[name="shelfDays"]');
+    const catSel = form.querySelector('[name="tagCategory"]');
+    if (autoPickShelf && shelfSel) {
+      shelfSel.value = String(inferShelfLifeDays(itemName, zone));
+    }
+    if (autoPickShelf && catSel) {
+      catSel.value = /salad|greens|romaine|yogurt|pudding|fruit|dressing/i.test(itemName) ? 'SALAD_BAR' : 'LEFTOVER';
+    }
+    const shelfDays = shelfSel ? Number(shelfSel.value) : 7;
+    const customUseBy = form.querySelector('[name="customUseBy"]')?.value || '';
+    const useBy = customUseBy || computeUseByDate(prepDate, zone, shelfDays);
+    const tempVal = form.querySelector('[name="tempF"]')?.value;
+    const isFrz = /freezer/i.test(zone);
+    const tempWarn = tempVal !== '' && tempVal !== undefined && ((isFrz && Number(tempVal) > 0) || (!isFrz && Number(tempVal) > 41));
+    prev.className = tempWarn
+      ? 'text-xs font-bold text-rose-800 bg-rose-100 border border-rose-300 px-3 py-1.5 rounded-lg'
+      : 'text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg';
+    prev.textContent = (customUseBy
+      ? `Custom Use-By: ${useBy}`
+      : `Suggested Use-By: ${useBy} (${isFrz ? '90-Day Freezer' : shelfDays + '-Day Cooler'})`) + (tempWarn ? ` — Cool to ${isFrz ? '≤0°F' : '≤41°F'}!` : '');
+  }
+
+  document.addEventListener('input', (e) => {
+    if (e.target.closest('#form-served') && ['planned', 'served'].includes(e.target.name)) {
+      updateLeftoverPredictorCard();
+    }
+    if (e.target.closest('#form-add-storage-tag')) {
+      refreshStorageFormPreview(e.target.name === 'itemName');
+    }
+  });
+
   document.addEventListener('change', (e) => {
+    if (e.target.closest('#form-add-storage-tag')) {
+      refreshStorageFormPreview(e.target.name === 'zone');
+      return;
+    }
+    if (e.target.id === 'leftover-zone-select' || e.target.id === 'leftover-shelf-select') {
+      updateLeftoverPredictorCard();
+      return;
+    }
+    if (e.target.closest('#form-served') && e.target.name === 'date') {
+      const form = document.getElementById('form-served');
+      const mp = (state.menuPlan || []).find(m => m.date === e.target.value);
+      if (form && mp && form.querySelector('[name="planned"]')) {
+        form.querySelector('[name="planned"]').value = mp.portions;
+      }
+      updateLeftoverPredictorCard();
+      return;
+    }
     if (e.target.id === 'active-user-select') {
       state.activeUserId = e.target.value;
       saveState();
@@ -5972,6 +6850,33 @@
       return;
     }
 
+    if (e.target.id === 'form-add-storage-tag') {
+      const prepDate = fd.get('prepDate') || localDateStr();
+      const zone = fd.get('zone') || 'Walk-In Cooler';
+      const shelfDays = Number(fd.get('shelfDays')) || 7;
+      const customUseBy = (fd.get('customUseBy') || '').trim();
+      const useByDate = customUseBy || computeUseByDate(prepDate, zone, shelfDays);
+      const tag = {
+        id: uid('tag'),
+        tagCategory: fd.get('tagCategory') || 'LEFTOVER',
+        itemName: (fd.get('itemName') || '').trim(),
+        zone,
+        prepDate,
+        prepTime: fd.get('prepTime') || '12:00',
+        useByDate,
+        tempF: Number(fd.get('tempF')),
+        notes: (fd.get('notes') || '').trim(),
+        taggedBy: getActiveUser().name,
+        status: 'STORED'
+      };
+      if (!Array.isArray(state.storageTags)) state.storageTags = [];
+      state.storageTags.unshift(tag);
+      saveState();
+      render();
+      showToast(`Tagged ${tag.itemName} — Use By ${useByDate}`);
+      return;
+    }
+
     if (e.target.id === 'form-haccp') {
       const type = fd.get('type');
       const tempF = Number(fd.get('tempF'));
@@ -6024,6 +6929,7 @@
         }
         saved++;
       }
+      syncPlannedPortionsFromForecasts();
       saveState();
       closeModal();
       render();
@@ -6043,7 +6949,8 @@
         s.served = Number(fd.get('served'));
         s.circumstance = fd.get('circumstance') || 'Normal Day';
         s.notes = (fd.get('notes') || '').trim();
-        saveState();
+        syncPlannedPortionsFromForecasts();
+      saveState();
         closeModal();
         render();
         showToast(`Updated attendance record (${s.date})`);
@@ -6054,6 +6961,7 @@
     if (e.target.id === 'form-delete-served') {
       const targetId = fd.get('srvId');
       state.serviceHistory = state.serviceHistory.filter(x => x.id !== targetId);
+      syncPlannedPortionsFromForecasts();
       saveState();
       closeModal();
       render();
@@ -6065,20 +6973,67 @@
       const dateStr = fd.get('date');
       const dObj = new Date(dateStr + 'T12:00:00');
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const scheduled = (state.menuPlan || []).find(m => m.date === dateStr);
+      const mealName = getMealTitleForDate(dateStr);
+      const plannedNum = Number(fd.get('planned'));
+      const servedNum = Number(fd.get('served'));
       state.serviceHistory.push({
         id: uid('srv'),
         date: dateStr,
         dayName: dayNames[dObj.getDay()],
-        meal: scheduled ? (scheduled.customTitle || 'Community Meal') : 'Community Meal',
-        planned: Number(fd.get('planned')),
-        served: Number(fd.get('served')),
+        meal: mealName,
+        planned: plannedNum,
+        served: servedNum,
         circumstance: fd.get('circumstance') || 'Normal Day',
         notes: (fd.get('notes') || '').trim()
       });
+      lastLeftoverPreview = { date: dateStr, mealName, planned: plannedNum, served: servedNum };
+      const leftovers = Math.max(0, plannedNum - servedNum);
+      let chkAdded = false;
+      let invAdded = false;
+      if (leftovers > 0) {
+        const zoneSel = document.getElementById('leftover-zone-select');
+        const zone = zoneSel ? zoneSel.value : 'Walk-In Cooler';
+        const shelfSel = document.getElementById('leftover-shelf-select');
+        const info = buildLeftoverTagInfo({ date: dateStr, mealName, planned: plannedNum, served: servedNum, zone, shelfDays: shelfSel ? Number(shelfSel.value) : 7 });
+        if (fd.get('autoLeftoverChecklist')) {
+          if (!Array.isArray(state.checklists)) state.checklists = [];
+          if (!state.checklists.some(c => c.freq === 'daily' && c.title === info.checklistTitle)) {
+            state.checklists.push({
+              id: uid('chk'),
+              freq: 'daily',
+              category: 'Storage & Labeling',
+              title: info.checklistTitle,
+              done: false,
+              doneBy: '',
+              doneAt: ''
+            });
+            chkAdded = true;
+          }
+        }
+        if (fd.get('autoLeftoverInventory')) {
+          if (!Array.isArray(state.storageTags)) state.storageTags = [];
+          const tempInput = document.getElementById('leftover-temp-input');
+          state.storageTags.unshift({
+            id: uid('tag'),
+            itemName: info.itemLabel,
+            zone: info.zone,
+            prepDate: info.date,
+            prepTime: info.prepTime,
+            useByDate: info.useByDate,
+            tempF: tempInput ? Number(tempInput.value) : (info.isFreezer ? 0 : 39),
+            notes: `Predicted from ${info.served}/${info.planned} served`,
+            taggedBy: info.staffName,
+            status: 'STORED'
+          });
+          invAdded = true;
+        }
+      }
+      syncPlannedPortionsFromForecasts();
       saveState();
       render();
-      showToast(`Logged ${fd.get('served')} people served — forecasts updated!`);
+      showToast(chkAdded || invAdded
+        ? `Logged ${servedNum} served (~${leftovers} leftovers) — updated ${[invAdded ? 'Leftover Inventory' : '', chkAdded ? 'Daily Checklist' : ''].filter(Boolean).join(' & ')}!`
+        : `Logged ${servedNum} people served — forecasts updated!`);
       return;
     }
 
@@ -6511,6 +7466,7 @@
 
   function bootApp() {
     runDailyCarryoverCheck(false);
+    if (syncPlannedPortionsFromForecasts() > 0) saveState();
     resetInactivityTimer();
     autoResetChecklistsIfNeeded(false);
     render();
