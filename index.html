@@ -20,9 +20,15 @@
       .no-print { display: none !important; }
       body { background: #fff !important; }
       .print-only { display: block !important; }
-      body.printing-modal #app-main { display: none !important; }
-      body.printing-modal #modal-backdrop { position: static !important; background: #fff !important; padding: 0 !important; display: block !important; }
-      body.printing-modal #modal-box { box-shadow: none !important; max-width: 100% !important; max-height: none !important; overflow: visible !important; padding: 0 !important; }
+      .overflow-x-auto, .overflow-y-auto, [class*="max-h-"] { overflow: visible !important; max-height: none !important; }
+      body:not(.printing-modal) #modal-backdrop { display: none !important; }
+      body.printing-modal #app-main,
+      body.printing-modal header,
+      body.printing-modal #mobile-quick-dock,
+      body.printing-modal #toast-container,
+      body.printing-modal #undo-bar { display: none !important; }
+      body.printing-modal #modal-backdrop { position: static !important; inset: auto !important; background: #fff !important; padding: 0 !important; display: block !important; }
+      body.printing-modal #modal-box { box-shadow: none !important; border: none !important; max-width: 100% !important; width: 100% !important; max-height: none !important; overflow: visible !important; padding: 0 !important; }
       body.printing-modal #modal-box > div:first-child { display: none !important; }
     }
     /* ===== Accessibility & tablet comfort ===== */
@@ -123,7 +129,7 @@
   <div id="toast-container" role="status" aria-live="polite" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm no-print"></div>
 
   <!-- Modal Container -->
-  <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden items-center justify-center p-4 no-print">
+  <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/50 z-40 hidden items-center justify-center p-4">
     <div id="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1" class="bg-white rounded-xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-5">
       <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
         <h3 id="modal-title" class="text-base font-bold text-slate-900">Modal</h3>
@@ -826,7 +832,7 @@
       manualPoRequests: {},
       lastTaskCheckDate: new Date().toISOString().slice(0, 10),
       announcements: [
-        { id: 'ann-1', priority: 'urgent', title: 'Thanksgiving Holiday Closing (Nov 26–27)', body: 'Kitchen & office closed Thu Nov 26 & Fri Nov 27. Thanksgiving Dinner is Tue Nov 24 (75 portions).', author: 'William Clark', createdAt: '2026-11-16' },
+        { id: 'ann-1', priority: 'urgent', title: 'Thanksgiving Holiday Closing (Nov 26–27)', body: 'Kitchen & office closed Thu Nov 26 & Fri Nov 27. Thanksgiving Dinner is Tue Nov 24 (75 portions).', author: 'William Clark', createdAt: '2026-11-16', expiresAt: '2026-11-27' },
         { id: 'ann-2', priority: 'reminder', title: 'Weekly & Monthly Order Schedule', body: 'Marberger (dairy) and Produce can be ordered weekly. Dry Goods & Frozen items (Jordan Banana) are ordered monthly on the 3rd Friday.', author: 'William Clark', createdAt: '2026-11-16' }
       ],
       menuPlan: [
@@ -1093,8 +1099,7 @@
     { cls: 'form-reconcile-po', undo: 'Delivery checked in', msg: () => 'Check this delivery in? Stock will go up by the amounts you entered as received.' },
     { sel: '#btn-audit-reconcile-all', undo: 'Stock counts applied', danger: true, msg: () => 'Apply ALL counted amounts to Living Stock? This overwrites the current stock number for every counted item.' },
     { sel: '[data-reconcile-item]', undo: 'Stock count applied', msg: () => 'Apply this counted amount to Living Stock? It overwrites the current stock number for this item.' },
-    { sel: '[data-commit-menu]', undo: 'Meal committed', msg: () => 'Commit this meal? The ingredients will be subtracted from stock.' },
-    { sel: '#btn-commit-all-menu', undo: 'Meals committed', danger: true, msg: () => 'Commit ALL scheduled meals? Their ingredients will all be subtracted from stock.' },
+    { sel: '[data-deduct-menu]', undo: 'Menu stock deducted', msg: () => 'Deduct ingredients for this meal from Living Stock?' },
     { form: 'form-edit-inv', undo: 'Item edited', msg: fd => { const it = state.inventory.find(i => i.id === fd.get('itemId')); if (!it) return null; const g = Math.max(1, Math.round((Number(fd.get('packWeightLb')) || 1) * 453.592)); return Math.abs(Math.round(Number(fd.get('stockPacks') || 0) * g) - it.stockGrams) > 2 ? `You changed the stock count for ${it.name}. Save the new count over the old one?` : null; } },
     { form: 'form-init-inventory', undo: 'Inventory init', danger: true, msg: () => 'Official Inventory Init resets ALL stock to the counts you entered and sets new par levels. Continue?' },
     { form: 'form-delete-inv', undo: 'Item deleted' },
@@ -2410,7 +2415,7 @@
         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2.5">
           <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-bold text-slate-900">Announcements &amp; Reminders</h2>
-            ${['Management', 'Staff'].includes(getActiveUser().role) ? '<button id="btn-new-announcement" class="px-2.5 py-1 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">+ Post Announcement</button>' : ''}
+            <span class="text-[11px] text-slate-500">Dismiss clears for your account only</span>
           </div>
           <div class="space-y-2">
             ${(() => {
@@ -2468,11 +2473,12 @@
             `).join('')}
             ${(() => {
               const nowMs = Date.now();
-              const canEditAnn = ['Management', 'Staff'].includes(getActiveUser().role);
+              const curUid = getActiveUser().id;
               const allAnns = (state.announcements || []).filter(a => {
+                if (a.dismissedBy && a.dismissedBy[curUid]) return false;
                 if (!a.alertAt) return true;
                 const goLiveMs = new Date(a.alertAt).getTime();
-                return isNaN(goLiveMs) || goLiveMs <= nowMs || canEditAnn;
+                return isNaN(goLiveMs) || goLiveMs <= nowMs;
               });
               if (!allAnns.length) return '<p class="text-xs text-slate-500">No announcements posted.</p>';
               return allAnns.map(a => {
@@ -2502,12 +2508,7 @@
                       <p class="mt-1 leading-relaxed">${escapeHtml(a.body)}</p>
                       <div class="text-[11px] opacity-75 mt-1">Posted by ${escapeHtml(a.author)} &bull; ${escapeHtml(a.createdAt)}</div>
                     </div>
-                    ${canEditAnn ? `
-                      <div class="flex items-center gap-2 shrink-0">
-                        <button data-edit-announcement="${a.id}" class="text-xs font-semibold underline hover:opacity-80">Edit</button>
-                        <button data-del-announcement="${a.id}" class="text-xs font-bold text-rose-700 hover:underline">Delete</button>
-                      </div>
-                    ` : ''}
+                    <button type="button" data-dismiss-ann="${a.id}" class="px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white border border-slate-300 text-xs font-semibold text-slate-700 shrink-0">Dismiss</button>
                   </div>
                 `;
               }).join('');
@@ -4237,23 +4238,47 @@
 
 
 
-  // 8b. MENU PLANNER (LINKED TO RECIPE BANK & INVENTORY)
+  // 8b. MENU PLANNER (SEPARATED SCHEDULE + MEAL & RECIPE SHOWCASE)
   function renderMenuPlanner(main) {
     const canEdit = ['Management', 'Staff'].includes(getActiveUser().role);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateStr();
     const recOpts = state.recipes.map(r => `<option value="${r.id}">${escapeHtml(r.name)} (${escapeHtml(r.category)})</option>`).join('');
     const sortedPlan = (state.menuPlan || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    // Pick selected meal (default to today or next upcoming meal)
+    const defaultMp = sortedPlan.find(m => m.date >= today && m.status !== 'CLOSED') || sortedPlan[0] || null;
+    const selectedMp = sortedPlan.find(m => m.id === state._selectedMenuId) || defaultMp;
+    const selRec = selectedMp && selectedMp.recipeId ? state.recipes.find(r => r.id === selectedMp.recipeId) : null;
+    const selFactor = (selRec && selectedMp) ? (selectedMp.portions / selRec.basePortions) : 1;
 
     main.innerHTML = `
-      <div class="space-y-5">
-        ${canEdit ? `
-        <form id="form-add-menu-item" class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 class="text-base font-bold text-slate-900">Schedule Meal from Standardized Recipe Bank</h2>
-              <p class="text-xs text-slate-500">Pick a date and recipe (40–80 portions). Planned meals reserve stock for Order Suggestions; committing deducts Living Stock &amp; sends to Prep.</p>
-            </div>
-            <button type="button" data-goto="recipes" class="text-xs font-semibold text-red-700 hover:underline">+ Add New Recipe to Bank &rarr;</button>
+      <div class="space-y-4">
+        <!-- Compact Top Bar -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Menu Planner &amp; Meal Showcase</h2>
+            <p class="text-xs text-slate-500">Tap any day on the left to view its scaled recipe, ingredients, and prep steps on the right.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 no-print">
+            ${canEdit ? `<button id="btn-toggle-add-menu" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">${state._showAddMenuForm ? 'Hide Schedule Form' : '+ Schedule Meal / Leftovers'}</button>` : ''}
+            ${canEdit ? '<button id="btn-bulk-schedule-menu" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Bulk Schedule (Week / Month)</button>' : ''}
+            ${canEdit ? '<button id="btn-auto-holiday-menus" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">Auto-Schedule Holiday Feasts</button>' : ''}
+            <select id="menu-print-range" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
+              <option value="daily">Daily Menu</option>
+              <option value="weekly" selected>Weekly Menu</option>
+              <option value="monthly">Monthly Menu</option>
+            </select>
+            <input id="menu-print-date" type="date" value="${today}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white" />
+            <button id="btn-print-menu-range" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Print Menu</button>
+          </div>
+        </div>
+
+        ${canEdit && state._showAddMenuForm ? `
+        <form id="form-add-menu-item" class="bg-white rounded-xl border border-red-200 p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900">Schedule a Meal or Leftovers Day</h3>
+            <button type="button" data-goto="recipes" class="text-xs font-semibold text-red-700 hover:underline">+ Browse 210 Recipes &rarr;</button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
             <div>
@@ -4273,91 +4298,152 @@
               <select name="recipeId" id="mp-recipe-select" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">${recOpts}</select>
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Portions (40–80)</label>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Portions</label>
               <input name="portions" type="number" min="25" max="200" value="65" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
             </div>
-            <button type="submit" class="py-2 px-4 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition">Add to Menu Plan</button>
+            <button type="submit" class="py-2 px-4 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold transition">Add to Menu</button>
           </div>
         </form>
         ` : ''}
 
-        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 class="text-base font-bold text-slate-900">Scheduled Menu &amp; Inventory Impact</h3>
-              <p class="text-xs text-slate-500">Click <strong>Commit &amp; Deduct Stock</strong> when ready to pull ingredients from Living Stock and queue Next-Day Prep. <strong>Daily Salad Bar</strong> (Greens, Yogurt, Pudding &amp; Fruit when available) is served alongside every lunch.</p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2 no-print">
-              <select id="menu-print-range" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
-                <option value="daily">Daily Menu</option>
-                <option value="weekly" selected>Weekly Menu</option>
-                <option value="monthly">Monthly Menu</option>
-              </select>
-              <input id="menu-print-date" type="date" value="${today}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white" />
-              <button id="btn-print-menu-range" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Print Menu</button>
-              ${canEdit ? '<button id="btn-auto-holiday-menus" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">Auto-Schedule Pre-Holiday Feasts</button>' : ''}
-              ${canEdit && sortedPlan.some(m => m.status !== 'DEDUCTED')
-                ? `<button id="btn-commit-all-menu" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Commit All Planned &amp; Deduct Stock</button>`
-                : ''}
-            </div>
+        <!-- Clean 2-Column Split: Compact Menu Calendar (Left) + Meal & Recipe Showcase (Right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <!-- Left: Compact Schedule List -->
+          <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm space-y-2">
+            <div class="text-xs font-bold uppercase text-slate-500 px-1 pb-1">Scheduled Service Days (${sortedPlan.length})</div>
+            ${sortedPlan.length === 0
+              ? '<p class="text-sm text-slate-500 p-3">No meals scheduled yet. Click "+ Schedule Meal / Leftovers" above.</p>'
+              : `<div class="space-y-1.5 max-h-[640px] overflow-y-auto pr-1">
+                  ${sortedPlan.map(mp => {
+                    const rec = mp.recipeId ? state.recipes.find(r => r.id === mp.recipeId) : null;
+                    const d = new Date(mp.date + 'T12:00:00');
+                    const isSelected = selectedMp && selectedMp.id === mp.id;
+                    const isClosed = mp.status === 'CLOSED';
+                    const isDeducted = mp.status === 'DEDUCTED';
+                    const isConfirmed = mp.status === 'CONFIRMED';
+                    const badgeCls = isClosed ? 'bg-slate-200 text-slate-700' : isDeducted ? 'bg-emerald-100 text-emerald-800' : isConfirmed ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800';
+                    const badgeTxt = isClosed ? 'Closed' : isDeducted ? 'Stock Deducted' : isConfirmed ? 'Confirmed' : 'Planned';
+                    return `
+                      <button type="button" data-select-menu="${mp.id}" class="w-full text-left p-3 rounded-xl border transition ${isSelected ? 'border-red-600 bg-red-50/70 ring-1 ring-red-200' : isClosed ? 'border-slate-200 bg-slate-100/70 opacity-75' : 'border-slate-200 bg-white hover:bg-slate-50'}">
+                        <div class="flex items-center justify-between gap-2 text-xs">
+                          <span class="font-mono font-bold ${isSelected ? 'text-red-700' : 'text-slate-600'}">${dayNames[d.getDay()]} &bull; ${escapeHtml(mp.date)}</span>
+                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeCls}">${badgeTxt}</span>
+                        </div>
+                        <div class="font-bold text-sm text-slate-900 mt-1">${escapeHtml(mp.customTitle || (rec ? rec.name : 'Scheduled Meal'))}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">${isClosed ? 'No Meal Service' : `${mp.portions} portions`}</div>
+                      </button>
+                    `;
+                  }).join('')}
+                </div>`
+            }
           </div>
 
-          ${sortedPlan.length === 0
-            ? '<p class="text-sm text-slate-500">No meals scheduled yet. Select a recipe above to start planning.</p>'
-            : `<div class="space-y-3">
-                ${sortedPlan.map(mp => {
-                  const rec = state.recipes.find(r => r.id === mp.recipeId);
-                  const factor = rec ? mp.portions / rec.basePortions : 1;
-                  const isDeducted = mp.status === 'DEDUCTED';
-                  const isClosed = mp.status === 'CLOSED';
-                  return `
-                    <div class="border border-slate-200 rounded-xl p-4 ${isClosed ? 'bg-slate-100/80' : 'bg-slate-50/70'} space-y-2">
-                      <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <span class="text-xs font-mono font-semibold text-slate-500">${escapeHtml(mp.date)} &bull; ${escapeHtml(mp.mealSlot)}</span>
-                          <h4 class="text-sm sm:text-base font-bold text-slate-900">${escapeHtml(mp.customTitle || (rec ? rec.name : 'Removed Recipe'))} ${!isClosed ? `<span class="text-red-700">(${mp.portions} portions)</span>` : ''}</h4>
-                          
-                        </div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${isClosed ? 'bg-slate-200 text-slate-700' : isDeducted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                            ${isClosed ? 'Office Closed' : isDeducted ? 'Deducted from Stock' : 'Planned (Reserved for Orders)'}
-                          </span>
-                          ${canEdit && !isDeducted && !isClosed ? `<button data-commit-menu="${mp.id}" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Commit &amp; Deduct Stock</button>` : ''}
-                          ${canEdit ? `<button data-remove-menu="${mp.id}" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Remove</button>` : ''}
-                        </div>
-                      </div>
-                      ${/leftover/i.test(mp.customTitle || '') ? (() => {
-                        const lefts = getActiveLeftoversFIFO();
-                        return `
-                          <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs space-y-1">
-                            <div class="font-bold text-amber-900">Available Leftovers in Storage for This Service (${lefts.length}):</div>
-                            ${lefts.length === 0
-                              ? '<div class="text-amber-800">No stored leftovers logged yet — check Storage &amp; Date Labels or prepare backup recipe.</div>'
-                              : lefts.map(t => `<div class="flex flex-wrap items-center justify-between gap-2"><span><strong>${escapeHtml(t.itemName)}</strong> (${escapeHtml(t.zone)})</span><span class="font-bold ${t.isExpired ? 'text-rose-700' : 'text-amber-900'}">${t.isExpired ? 'EXPIRED — DISCARD' : `Use by ${escapeHtml(t.useByDate)}`}</span></div>`).join('')
-                            }
-                          </div>
-                        `;
-                      })() : ''}
-                      ${rec ? `
-                        <div class="flex flex-wrap gap-2 pt-1">
-                          ${rec.ingredients.map(ing => {
-                            const inv = state.inventory.find(i => i.id === ing.itemId);
-                            const reqG = ing.grams * factor;
-                            const ok = inv ? inv.stockGrams >= reqG : false;
-                            return `<span class="text-xs px-2 py-1 rounded bg-white border ${ok ? 'border-slate-200 text-slate-700' : 'border-rose-300 text-rose-700 font-semibold'}">${inv ? escapeHtml(inv.name) : 'Item'}: ${formatShortMass(reqG)}</span>`;
-                          }).join('')}
-                        </div>
-                      ` : ''}
+          <!-- Right: Dedicated Meal & Recipe Showcase -->
+          <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+            ${!selectedMp ? '<p class="text-sm text-slate-500">Select a service day on the left to view the meal details and recipe.</p>' : (() => {
+              const isClosed = selectedMp.status === 'CLOSED';
+              const isDeducted = selectedMp.status === 'DEDUCTED';
+              const isConfirmed = selectedMp.status === 'CONFIRMED';
+              const d = new Date(selectedMp.date + 'T12:00:00');
+              return `
+                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-3">
+                  <div>
+                    <div class="text-xs font-mono font-bold text-red-700">${dayNames[d.getDay()]} &bull; ${escapeHtml(selectedMp.date)} &bull; ${escapeHtml(selectedMp.mealSlot)}</div>
+                    <h3 class="text-lg font-bold text-slate-900 mt-0.5">${escapeHtml(selectedMp.customTitle || (selRec ? selRec.name : 'Scheduled Meal'))}</h3>
+                    <div class="text-xs text-slate-600 mt-0.5">
+                      ${isClosed ? 'Office Closed — No Service' : `Target Yield: <strong>${selectedMp.portions} portions</strong>${selRec ? ` &bull; Prep: ${selRec.prepMin}m &bull; Cook: ${selRec.cookMin}m &bull; Total: ${selRec.prepMin + selRec.cookMin}m` : ''}`}
                     </div>
-                  `;
-                }).join('')}
-              </div>`
-          }
+                  </div>
+                  <div class="flex flex-wrap gap-2 no-print">
+                    ${!isClosed ? '<button type="button" id="btn-print-meal-showcase" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Print Meal Sheet</button>' : ''}
+                    ${canEdit ? `<button data-remove-menu="${selectedMp.id}" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Remove</button>` : ''}
+                  </div>
+                </div>
+
+                ${isClosed ? '<div class="p-4 rounded-xl bg-slate-100 text-sm text-slate-700">No ingredients, prep, or cooking required on closed dates.</div>' : `
+                  ${/leftover/i.test(selectedMp.customTitle || '') ? (() => {
+                    const lefts = getActiveLeftoversFIFO();
+                    return `
+                      <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs space-y-1.5">
+                        <div class="font-bold uppercase text-amber-900">Available Meal Leftovers in Storage (FIFO — ${lefts.length})</div>
+                        ${lefts.length === 0
+                          ? '<div class="text-amber-800">No stored meal leftovers logged yet — use the backup recipe below if needed.</div>'
+                          : lefts.map(t => `<div class="flex items-center justify-between gap-2 bg-white/80 rounded p-1.5 border border-amber-200/70"><span><strong>${escapeHtml(t.itemName)}</strong> (${escapeHtml(t.zone)})</span><span class="font-bold ${t.isExpired ? 'text-rose-700' : 'text-amber-900'}">${t.isExpired ? 'EXPIRED — DISCARD' : 'Use by ' + escapeHtml(t.useByDate)}</span></div>`).join('')
+                        }
+                      </div>
+                    `;
+                  })() : ''}
+
+                  ${selRec ? `
+                    <div>
+                      <h4 class="text-xs font-bold uppercase text-slate-500 mb-2">Ingredients Needed (${selectedMp.portions} Portions)</h4>
+                      <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                          <thead class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase">
+                            <tr>
+                              <th class="py-2 px-3">Ingredient</th>
+                              <th class="py-2 px-3">Zone</th>
+                              <th class="py-2 px-3">Amount Needed</th>
+                              <th class="py-2 px-3">Stock Check</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-slate-100">
+                            ${selRec.ingredients.map(ing => {
+                              const inv = state.inventory.find(i => i.id === ing.itemId);
+                              const reqG = ing.grams * selFactor;
+                              const ok = inv ? inv.stockGrams >= reqG : false;
+                              return `
+                                <tr>
+                                  <td class="py-2 px-3 font-medium text-slate-900">${inv ? escapeHtml(inv.name) : 'Item'}</td>
+                                  <td class="py-2 px-3 text-xs text-slate-500">${inv ? escapeHtml(inv.zone) : '—'}</td>
+                                  <td class="py-2 px-3 font-bold text-slate-900">${formatKitchenVolume(inv, reqG)}</td>
+                                  <td class="py-2 px-3 text-xs font-semibold ${ok ? 'text-emerald-700' : 'text-rose-700'}">${inv ? (ok ? 'OK' : 'Short') : '—'}</td>
+                                </tr>
+                              `;
+                            }).join('')}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                      <h4 class="text-xs font-bold uppercase text-slate-500">Cooking &amp; Food Safety Instructions</h4>
+                      <p class="text-xs sm:text-sm text-slate-800 whitespace-pre-line leading-relaxed">${escapeHtml(selRec.instructions)}</p>
+                    </div>
+                  ` : ''}
+
+                  <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+                    <strong>Daily Salad Bar:</strong> Serve with Salad Greens, Dressings, Yogurt Cups, Pudding Cups &amp; Fruit (when available) held at &le;41&deg;F.
+                  </div>
+
+                  ${canEdit ? `
+                    <form id="form-swap-menu-day" class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs no-print">
+                      <input type="hidden" name="sourceId" value="${escapeHtml(selectedMp.id)}" />
+                      <span class="font-semibold text-slate-700">Switch / Swap This Meal With Another Day:</span>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <select name="targetId" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs">
+                          ${sortedPlan.filter(m => m.id !== selectedMp.id).map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.date)} — ${escapeHtml((m.customTitle || 'Meal').slice(0, 32))}</option>`).join('')}
+                        </select>
+                        <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-semibold">Swap Days</button>
+                      </div>
+                    </form>
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 no-print">
+                      <div class="text-xs text-slate-500">Step 1 confirms the meal for Prep. Step 2 deducts Living Stock when cooked.</div>
+                      <div class="flex flex-wrap gap-2">
+                        ${!isConfirmed && !isDeducted ? `<button type="button" data-confirm-menu="${selectedMp.id}" class="px-3.5 py-2 rounded-lg bg-sky-700 hover:bg-sky-800 text-white text-xs font-semibold">1. Confirm Meal &amp; Queue Prep</button>` : ''}
+                        ${!isDeducted && selRec ? `<button type="button" data-deduct-menu="${selectedMp.id}" class="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">2. Deduct Stock Now</button>` : ''}
+                        ${isDeducted ? '<span class="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold">Stock Deducted ✓</span>' : ''}
+                      </div>
+                    </div>
+                  ` : ''}
+                `}
+              `;
+            })()}
+          </div>
         </div>
       </div>
     `;
   }
-
 
   // 8c. DAILY, WEEKLY & MONTHLY CHECKLISTS (WITH AUTO-RESET ON NEW CYCLE)
   function getCurrentCycleKeys() {
@@ -5100,6 +5186,43 @@
           </div>
         </div>
 
+        <!-- Announcements & Alerts Manager (Management Only) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Announcements, Reminders &amp; Alerts Manager</h3>
+              <p class="text-xs text-slate-500">Create, schedule, edit, or globally delete announcements. Dismissing on the Home page only hides an alert for that user's account.</p>
+            </div>
+            <button id="btn-new-announcement" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">+ Post / Schedule Announcement</button>
+          </div>
+          ${(state.announcements || []).length === 0
+            ? '<p class="text-xs text-slate-500">No announcements configured.</p>'
+            : `<div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                ${(state.announcements || []).map(a => {
+                  const disCount = a.dismissedBy ? Object.keys(a.dismissedBy).length : 0;
+                  return `
+                    <div class="p-3 flex flex-wrap items-start justify-between gap-2 text-xs bg-white">
+                      <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="px-2 py-0.5 rounded font-bold uppercase text-[10px] ${a.priority === 'urgent' ? 'bg-rose-100 text-rose-800' : a.priority === 'reminder' ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'}">${escapeHtml(a.priority || 'info')}</span>
+                          <strong class="text-sm text-slate-900">${escapeHtml(a.title)}</strong>
+                          ${a.alertAt ? `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">Go-Live: ${escapeHtml(a.alertAt.replace('T', ' '))}</span>` : ''}
+                          ${a.expiresAt ? `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">Expires: ${escapeHtml(a.expiresAt)}</span>` : ''}
+                        </div>
+                        <p class="text-slate-600 mt-1">${escapeHtml(a.body)}</p>
+                        <div class="text-[11px] text-slate-400 mt-0.5">By ${escapeHtml(a.author)} &bull; Dismissed by ${disCount} account(s)</div>
+                      </div>
+                      <div class="flex items-center gap-2 shrink-0">
+                        <button data-edit-announcement="${a.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 font-semibold text-slate-700">Edit</button>
+                        <button data-del-announcement="${a.id}" class="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold">Delete Globally</button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>`
+          }
+        </div>
+
         <!-- Real-Time Accountability Feed -->
         <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -5429,6 +5552,54 @@
     `);
   }
 
+  function showUserHandoutModal({ user, tempPin, isNew }) {
+    const role = normalizeRole(user.role);
+    const roleDesc = role === 'Management'
+      ? 'Full access: Approve POs, Manage Zones & Par Levels, Official Inventory Init, Edit/Delete Items & Recipes, Daily Reports, Users & Training.'
+      : role === 'Staff'
+        ? 'Daily kitchen operations: Check-In & Waste, Draft POs, Menu Schedule/Confirm/Deduct, Blind Audit Reconciliation, Served & Leftovers, Temps & Checklists.'
+        : role === 'Volunteer'
+          ? 'Guided shift tasks: View Recipes & Menu, Next-Day Prep pulls, Blind Counts, Checklists, HACCP Temps & Storage/Leftover Tags.'
+          : 'Read-only view of Dashboard, Menu, Next-Day Prep & Checklists.';
+    const appUrl = (window.location && window.location.protocol.startsWith('http')) ? window.location.href.split('#')[0] : 'Your Kitchen OS Web Link';
+
+    document.body.classList.add('printing-modal');
+    openModal(`${isNew ? 'New Account Created' : 'Account Updated'} — Printable Info Sheet`, `
+      <div class="space-y-4 text-sm">
+        <div class="p-4 rounded-xl border-2 border-slate-300 bg-white space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+            <div>
+              <div class="text-xs font-bold uppercase text-red-700">The Salvation Army Community Meals</div>
+              <div class="text-base font-bold text-slate-900">Kitchen OS — Login &amp; Access Info</div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800">${escapeHtml(role)}</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+              <div class="text-slate-500">Profile Name</div>
+              <div class="font-bold text-slate-900 text-sm">${escapeHtml(user.name)} (${escapeHtml(user.initials)})</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+              <div class="text-slate-500">${tempPin ? 'Temporary PIN (One-Time)' : 'PIN Status'}</div>
+              <div class="font-mono font-bold text-red-700 text-sm">${tempPin ? escapeHtml(tempPin) : 'Keep existing personal PIN'}</div>
+            </div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
+            <div><strong>Kitchen OS Link:</strong> <span class="font-mono break-all text-slate-700">${escapeHtml(appUrl)}</span></div>
+            <div><strong>Your Role Access:</strong> ${escapeHtml(roleDesc)}</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-950">
+            <strong>First Login Steps:</strong> Select <strong>${escapeHtml(user.name)}</strong>, enter your ${tempPin ? 'temporary PIN above' : 'PIN'}, ${user.mustChangePin ? 'choose your own personal PIN (6+ characters), ' : ''}and complete the quick role training walkthrough.
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 no-print">
+          <button type="button" onclick="document.getElementById('modal-close').click()" class="px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">Close</button>
+          <button type="button" id="btn-print-modal" class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">Print Info Sheet</button>
+        </div>
+      </div>
+    `);
+  }
+
   function showEditPinModal(userId) {
     const u = state.users.find(x => x.id === userId);
     if (!u) return;
@@ -5549,6 +5720,101 @@
     `);
   }
 
+
+  function showBulkScheduleMenuModal(mode, refDateStr) {
+    const mMode = mode || 'week';
+    const refStr = refDateStr || localDateStr();
+    const ref = new Date(refStr + 'T12:00:00');
+    const dates = [];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const fc = computeForecasts();
+
+    let start = new Date(ref);
+    let end = new Date(ref);
+    if (mMode === 'week') {
+      const dayNum = (ref.getDay() + 6) % 7;
+      start.setDate(ref.getDate() - dayNum);
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
+    } else {
+      start = new Date(ref.getFullYear(), ref.getMonth(), 1, 12);
+      end = new Date(ref.getFullYear(), ref.getMonth() + 1, 0, 12);
+    }
+
+    const cur = new Date(start);
+    while (cur <= end) {
+      const dn = dayNames[cur.getDay()];
+      if (['Mon', 'Tue', 'Wed', 'Fri'].includes(dn)) {
+        const ds = localDateStr(cur);
+        const existing = (state.menuPlan || []).find(m => m.date === ds);
+        const hol = getFederalHolidayName(ds);
+        const fcRes = fc.openCount ? forecastPortionsForDate(ds, fc) : { recommendedPrep: 65, closed: !!hol };
+        dates.push({
+          date: ds,
+          dayName: dn,
+          hol,
+          existing,
+          portions: existing ? existing.portions : (hol ? 0 : (fcRes.recommendedPrep || 65))
+        });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    const recOpts = state.recipes.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+    openModal(`Bulk Schedule Menu — ${mMode === 'week' ? 'By Week' : 'Whole Month'}`, `
+      <div class="space-y-3 text-xs">
+        <div class="flex flex-wrap items-end gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+          <div>
+            <label class="block font-medium text-slate-600 mb-1">Range</label>
+            <select id="bulk-menu-mode" class="px-2.5 py-1.5 rounded border border-slate-300 bg-white">
+              <option value="week" ${mMode === 'week' ? 'selected' : ''}>This Week (MTWF)</option>
+              <option value="month" ${mMode === 'month' ? 'selected' : ''}>Whole Month (MTWF)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-medium text-slate-600 mb-1">Reference Date</label>
+            <input id="bulk-menu-refdate" type="date" value="${escapeHtml(refStr)}" class="px-2.5 py-1.5 rounded border border-slate-300 bg-white" />
+          </div>
+          <button type="button" id="btn-reload-bulk-menu" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white font-semibold">Load Days</button>
+        </div>
+
+        <form id="form-bulk-schedule-menu" class="space-y-3">
+          <div class="divide-y divide-slate-100 border border-slate-200 rounded-lg max-h-[50vh] overflow-y-auto">
+            ${dates.map(d => {
+              const curType = d.existing ? (d.existing.status === 'CLOSED' ? 'CLOSED' : (d.existing.menuType || (d.existing.recipeId ? 'RECIPE' : 'LEFTOVERS'))) : (d.hol ? 'CLOSED' : 'SKIP');
+              const curRecId = d.existing ? d.existing.recipeId : '';
+              return `
+                <div class="p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                  <div class="sm:col-span-3">
+                    <div class="font-mono font-bold text-slate-800">${escapeHtml(d.date)} (${d.dayName})</div>
+                    ${d.hol ? `<div class="text-[10px] text-rose-700 font-semibold">${escapeHtml(d.hol)}</div>` : ''}
+                  </div>
+                  <div class="sm:col-span-3">
+                    <select name="btype_${d.date}" class="w-full px-2 py-1.5 rounded border border-slate-300 bg-white">
+                      <option value="SKIP" ${curType === 'SKIP' ? 'selected' : ''}>— Keep / Skip —</option>
+                      <option value="RECIPE" ${curType === 'RECIPE' ? 'selected' : ''}>Standard Recipe</option>
+                      <option value="LEFTOVERS" ${curType === 'LEFTOVERS' ? 'selected' : ''}>Leftovers Service</option>
+                      <option value="COMBO" ${curType === 'COMBO' ? 'selected' : ''}>Leftovers or Recipe</option>
+                      <option value="CLOSED" ${curType === 'CLOSED' ? 'selected' : ''}>Closed / Holiday</option>
+                    </select>
+                  </div>
+                  <div class="sm:col-span-4">
+                    <select name="brec_${d.date}" class="w-full px-2 py-1.5 rounded border border-slate-300 bg-white">
+                      ${state.recipes.map(r => `<option value="${r.id}" ${r.id === curRecId ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <input name="bport_${d.date}" type="number" min="0" max="250" value="${d.portions}" class="w-full px-2 py-1.5 rounded border border-slate-300 font-bold" />
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save Bulk Menu Schedule</button>
+        </form>
+      </div>
+    `);
+  }
 
   function showPrintableMenuModal(range, refDateStr) {
     const ref = new Date((refDateStr || new Date().toISOString().slice(0, 10)) + 'T12:00:00');
@@ -5960,6 +6226,10 @@
           </div>
         </div>
         <p class="text-[11px] text-slate-500">Leave Alert Time blank to post immediately, or set a date &amp; time for it to automatically go live on everyone's Dashboard.</p>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Auto-Delete After Date (Optional)</label>
+          <input name="expiresAt" type="date" value="${isEdit && a.expiresAt ? escapeHtml(a.expiresAt) : ''}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        </div>
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Message</label>
           <textarea name="body" rows="3" required placeholder="Details for staff and volunteers..." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">${isEdit ? escapeHtml(a.body) : ''}</textarea>
@@ -6638,6 +6908,18 @@
       showAnnouncementEditorModal(editAnnBtn.dataset.editAnnouncement);
       return;
     }
+    const dismissAnnBtn = e.target.closest('[data-dismiss-ann]');
+    if (dismissAnnBtn) {
+      const ann = (state.announcements || []).find(a => a.id === dismissAnnBtn.dataset.dismissAnn);
+      if (ann) {
+        if (!ann.dismissedBy || typeof ann.dismissedBy !== 'object') ann.dismissedBy = {};
+        ann.dismissedBy[getActiveUser().id] = true;
+        saveState();
+        render();
+        showToast('Dismissed for your account');
+      }
+      return;
+    }
     const delAnnBtn = e.target.closest('[data-del-announcement]');
     if (delAnnBtn) {
       state.announcements = (state.announcements || []).filter(a => a.id !== delAnnBtn.dataset.delAnnouncement);
@@ -6848,25 +7130,78 @@
       return;
     }
 
-    const commitMenuBtn = e.target.closest('[data-commit-menu]');
-    if (commitMenuBtn) {
-      const mp = (state.menuPlan || []).find(m => m.id === commitMenuBtn.dataset.commitMenu);
-      const rec = mp && state.recipes.find(r => r.id === mp.recipeId);
+    if (e.target.id === 'btn-bulk-schedule-menu') {
+      showBulkScheduleMenuModal('week', localDateStr());
+      return;
+    }
+    if (e.target.id === 'btn-reload-bulk-menu') {
+      const m = document.getElementById('bulk-menu-mode')?.value || 'week';
+      const rd = document.getElementById('bulk-menu-refdate')?.value || localDateStr();
+      showBulkScheduleMenuModal(m, rd);
+      return;
+    }
+    if (e.target.id === 'btn-toggle-add-menu') {
+      state._showAddMenuForm = !state._showAddMenuForm;
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-print-meal-showcase') {
+      window.print();
+      return;
+    }
+    const selMenuBtn = e.target.closest('[data-select-menu]');
+    if (selMenuBtn) {
+      state._selectedMenuId = selMenuBtn.dataset.selectMenu;
+      render();
+      return;
+    }
+    const confirmMenuBtn = e.target.closest('[data-confirm-menu]');
+    if (confirmMenuBtn) {
+      const mp = (state.menuPlan || []).find(m => m.id === confirmMenuBtn.dataset.confirmMenu);
+      const rec = mp && mp.recipeId ? state.recipes.find(r => r.id === mp.recipeId) : null;
+      if (mp && mp.status === 'PLANNED') {
+        mp.status = 'CONFIRMED';
+        if (rec && !state.prepQueue.some(p => p.recipeId === rec.id && p.targetDate === mp.date)) {
+          state.prepQueue.push({
+            id: uid('prep'),
+            recipeId: rec.id,
+            recipeName: rec.name,
+            portions: mp.portions,
+            deducted: false,
+            targetDate: mp.date,
+            checkedItems: {}
+          });
+        }
+        saveState();
+        render();
+        showToast(`Confirmed ${mp.customTitle || (rec ? rec.name : 'Meal')} & queued for Prep (stock not deducted yet).`);
+      }
+      return;
+    }
+    const deductMenuBtn = e.target.closest('[data-deduct-menu]');
+    if (deductMenuBtn) {
+      const mp = (state.menuPlan || []).find(m => m.id === deductMenuBtn.dataset.deductMenu);
+      const rec = mp && mp.recipeId ? state.recipes.find(r => r.id === mp.recipeId) : null;
       if (mp && rec && mp.status !== 'DEDUCTED') {
         deductRecipeFromInventory(rec, mp.portions, `Menu Plan (${mp.date})`);
         mp.status = 'DEDUCTED';
-        state.prepQueue.push({
-          id: uid('prep'),
-          recipeId: rec.id,
-          recipeName: rec.name,
-          portions: mp.portions,
-          deducted: true,
-          targetDate: mp.date,
-          checkedItems: {}
-        });
+        const existingPrep = state.prepQueue.find(p => p.recipeId === rec.id && p.targetDate === mp.date);
+        if (existingPrep) {
+          existingPrep.deducted = true;
+        } else {
+          state.prepQueue.push({
+            id: uid('prep'),
+            recipeId: rec.id,
+            recipeName: rec.name,
+            portions: mp.portions,
+            deducted: true,
+            targetDate: mp.date,
+            checkedItems: {}
+          });
+        }
         saveState();
         render();
-        showToast(`Committed ${rec.name} (${mp.portions} portions): Stock deducted & added to Prep`);
+        showToast(`Deducted Living Stock for ${rec.name} (${mp.portions} portions).`);
       }
       return;
     }
@@ -6931,31 +7266,6 @@
       saveState();
       render();
       showToast(added ? `Scheduled ${added} upcoming Pre-Holiday Feast(s) on the service day before each holiday!` : 'All upcoming Pre-Holiday Feasts (next 120 days) are already scheduled.');
-      return;
-    }
-
-    if (e.target.id === 'btn-commit-all-menu') {
-      let committed = 0;
-      (state.menuPlan || []).forEach(mp => {
-        if (mp.status === 'DEDUCTED' || mp.status === 'CLOSED') return;
-        const rec = state.recipes.find(r => r.id === mp.recipeId);
-        if (!rec) return;
-        deductRecipeFromInventory(rec, mp.portions, `Menu Plan (${mp.date})`);
-        mp.status = 'DEDUCTED';
-        state.prepQueue.push({
-          id: uid('prep'),
-          recipeId: rec.id,
-          recipeName: rec.name,
-          portions: mp.portions,
-          deducted: true,
-          targetDate: mp.date,
-          checkedItems: {}
-        });
-        committed++;
-      });
-      saveState();
-      render();
-      showToast(`Committed ${committed} planned meal(s) & updated Living Stock`);
       return;
     }
 
@@ -7290,13 +7600,14 @@
       return;
     }
 
-    if (e.target.id === 'btn-print-modal') {
+    if (e.target.id === 'btn-print-modal' || e.target.id === 'btn-print-qr-now' || e.target.id === 'btn-print-menu-now') {
       document.body.classList.add('printing-modal');
       window.print();
-      setTimeout(() => document.body.classList.remove('printing-modal'), 500);
+      setTimeout(() => document.body.classList.remove('printing-modal'), 1000);
       return;
     }
-    if (e.target.id === 'btn-print-current' || e.target.id === 'btn-print-recipe' || e.target.id === 'btn-print-prep' || e.target.id === 'btn-print-orders' || e.target.id === 'btn-print-haccp' || e.target.id === 'btn-print-help' || e.target.id === 'btn-print-qr-now' || e.target.id === 'btn-print-checklists' || e.target.id === 'btn-print-menu-now') {
+    if (e.target.id === 'btn-print-current' || e.target.id === 'btn-print-recipe' || e.target.id === 'btn-print-prep' || e.target.id === 'btn-print-orders' || e.target.id === 'btn-print-haccp' || e.target.id === 'btn-print-help' || e.target.id === 'btn-print-checklists') {
+      document.body.classList.remove('printing-modal');
       window.print();
       return;
     }
@@ -7848,6 +8159,7 @@
           a.priority = fd.get('priority') || 'reminder';
           a.alertAt = alertAt;
           a.body = fd.get('body').trim();
+          a.expiresAt = (fd.get('expiresAt') || '').trim();
           a.liveAnnounced = false;
           saveState();
           closeModal();
@@ -7861,6 +8173,7 @@
           title: fd.get('title').trim(),
           body: fd.get('body').trim(),
           alertAt,
+          expiresAt: (fd.get('expiresAt') || '').trim(),
           liveAnnounced: !alertAt || new Date(alertAt).getTime() <= Date.now(),
           author: getActiveUser().name,
           createdAt: new Date().toISOString().slice(0, 10)
@@ -8503,6 +8816,7 @@
         saveState();
         closeModal();
         render();
+        showUserHandoutModal({ user: u, tempPin: '', isNew: false });
         showToast(`Updated user account: ${u.name}`);
       }
       return;
@@ -8550,10 +8864,12 @@
         u.role = fd.get('role');
         setUserPin(u, String(fd.get('pin')).trim());
         u.mustChangePin = !!fd.get('mustChangePin');
+        const plainTemp = String(fd.get('pin')).trim();
         saveState();
         closeModal();
         render();
-        showToast(`Updated role & PIN for ${u.name}${u.mustChangePin ? ' (will prompt to change on next login)' : ''}`);
+        showUserHandoutModal({ user: u, tempPin: plainTemp, isNew: false });
+        showToast(`Updated role & PIN for ${u.name}`);
       }
       return;
     }
@@ -8575,6 +8891,76 @@
       saveState();
       render();
       showToast(`Added task to ${freq} checklist`);
+      return;
+    }
+
+    if (e.target.id === 'form-swap-menu-day') {
+      const srcId = fd.get('sourceId');
+      const tgtId = fd.get('targetId');
+      const m1 = (state.menuPlan || []).find(m => m.id === srcId);
+      const m2 = (state.menuPlan || []).find(m => m.id === tgtId);
+      if (m1 && m2) {
+        const tmp = {
+          recipeId: m1.recipeId,
+          menuType: m1.menuType,
+          customTitle: m1.customTitle,
+          portions: m1.portions,
+          status: m1.status,
+          mealSlot: m1.mealSlot
+        };
+        m1.recipeId = m2.recipeId; m1.menuType = m2.menuType; m1.customTitle = m2.customTitle; m1.portions = m2.portions; m1.status = m2.status; m1.mealSlot = m2.mealSlot;
+        m2.recipeId = tmp.recipeId; m2.menuType = tmp.menuType; m2.customTitle = tmp.customTitle; m2.portions = tmp.portions; m2.status = tmp.status; m2.mealSlot = tmp.mealSlot;
+        saveState();
+        render();
+        showToast(`Swapped meals between ${m1.date} and ${m2.date}!`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-bulk-schedule-menu') {
+      let count = 0;
+      if (!Array.isArray(state.menuPlan)) state.menuPlan = [];
+      for (const [k, v] of fd.entries()) {
+        if (!k.startsWith('btype_') || v === 'SKIP') continue;
+        const dateStr = k.slice(6);
+        const mType = v;
+        const recId = (mType === 'LEFTOVERS' || mType === 'CLOSED') ? '' : (fd.get('brec_' + dateStr) || '');
+        const rec = state.recipes.find(r => r.id === recId);
+        const portions = mType === 'CLOSED' ? 0 : (Number(fd.get('bport_' + dateStr)) || 65);
+        const customTitle = mType === 'CLOSED'
+          ? (getFederalHolidayName(dateStr) || 'Office Closed')
+          : mType === 'LEFTOVERS'
+            ? 'Leftovers Service'
+            : mType === 'COMBO' && rec
+              ? `Leftovers or ${rec.name}`
+              : (rec ? rec.name : 'Scheduled Meal');
+        const existing = state.menuPlan.find(m => m.date === dateStr);
+        if (existing) {
+          existing.recipeId = recId;
+          existing.menuType = mType;
+          existing.customTitle = customTitle;
+          existing.portions = portions;
+          existing.mealSlot = mType === 'CLOSED' ? 'Closed' : 'Lunch (11:30 AM)';
+          if (mType === 'CLOSED') existing.status = 'CLOSED';
+          else if (existing.status === 'CLOSED') existing.status = 'PLANNED';
+        } else {
+          state.menuPlan.push({
+            id: uid('mp'),
+            date: dateStr,
+            mealSlot: mType === 'CLOSED' ? 'Closed' : 'Lunch (11:30 AM)',
+            recipeId: recId,
+            menuType: mType,
+            customTitle,
+            portions,
+            status: mType === 'CLOSED' ? 'CLOSED' : 'PLANNED'
+          });
+        }
+        count++;
+      }
+      saveState();
+      closeModal();
+      render();
+      showToast(`Saved ${count} scheduled day(s) to Menu Plan!`);
       return;
     }
 
@@ -8656,11 +9042,13 @@
       };
       const startIssue = pinProblem(fd.get('pin'));
       if (startIssue) { showToast(startIssue); return; }
-      setUserPin(newUser, String(fd.get('pin')).trim());
+      const plainStartPin = String(fd.get('pin')).trim();
+      setUserPin(newUser, plainStartPin);
       state.users.push(newUser);
       saveState();
       render();
-      showToast(`Added ${newUser.name} (${newUser.role}) — PIN change & training queued for first login`);
+      showUserHandoutModal({ user: newUser, tempPin: plainStartPin, isNew: true });
+      showToast(`Added ${newUser.name} (${newUser.role}) — printable info sheet ready!`);
     }
   });
 
@@ -8756,7 +9144,19 @@
     return carriedCount;
   }
 
+  function pruneExpiredAlerts() {
+    const todayStr = localDateStr();
+    let changed = false;
+    if (Array.isArray(state.announcements)) {
+      const before = state.announcements.length;
+      state.announcements = state.announcements.filter(a => !a.expiresAt || a.expiresAt >= todayStr);
+      if (state.announcements.length !== before) changed = true;
+    }
+    return changed;
+  }
+
   function bootApp() {
+    if (pruneExpiredAlerts()) saveState();
     runDailyCarryoverCheck(false);
     if (syncPlannedPortionsFromForecasts() > 0) saveState();
     resetInactivityTimer();
