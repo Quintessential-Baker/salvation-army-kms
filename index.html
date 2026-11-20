@@ -76,6 +76,10 @@
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span id="header-user-badge">William Clark (Management)</span>
         </button>
+        <button id="btn-open-chat" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold transition flex items-center gap-1.5" title="Inter-Kitchen Instant Messaging">
+          <span>Chat</span>
+          <span id="chat-unread-badge" class="hidden px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold leading-none">0</span>
+        </button>
         <button id="btn-sync-status" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium transition flex items-center gap-1.5" title="Cloud Sync Status">
           <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
           <span id="sync-label">Connecting...</span>
@@ -120,6 +124,7 @@
         <button data-tab="storage" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Storage &amp; Date Labels</button>
         <button data-tab="forecasting" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Served &amp; Forecasting</button>
         <button data-tab="reports" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Daily Reports</button>
+        <button data-tab="announcements" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Announcements</button>
         <button data-tab="users" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Users &amp; Activity</button>
         <button data-tab="help" class="nav-tab px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition">Help / Guide</button>
       </div>
@@ -836,6 +841,10 @@
       autoLockMinutes: 5,
       isLocked: false,
       auditLogs: [],
+      activityLogs: [],
+      activeSessions: {},
+      kitchenMessages: [],
+      chatSeenBy: {},
       blindAuditDraft: { zone: 'ALL', revealed: false, packs: {}, partials: {}, counts: {}, units: {}, reasons: {}, submittedBy: '', submittedAt: '' },
       purchaseOrders: [],
       manualPoRequests: {},
@@ -1043,7 +1052,7 @@
     }
   });
   // ===== Safety layer: confirmations + undo for risky actions =====
-  const SAFETY_VOLATILE = ['activeUserId', 'isLocked', 'activeTab', 'selectedRecipeId', '_recSearch', '_recCat'];
+  const SAFETY_VOLATILE = ['activeUserId', 'isLocked', 'activeTab', 'selectedRecipeId', '_recSearch', '_recCat', 'activeSessions', '_accSearch', '_accUser', '_accCat', 'chatSeenBy', '_chatFilter'];
   const undoStack = [];
   let safetyBypass = false;
   let undoBarTimer = null;
@@ -1314,6 +1323,10 @@
           if (!Array.isArray(parsed.users) || !parsed.users.length) parsed.users = def.users;
           if (!parsed.activeUserId) parsed.activeUserId = parsed.users[0].id;
           if (!Array.isArray(parsed.auditLogs)) parsed.auditLogs = [];
+          if (!Array.isArray(parsed.activityLogs)) parsed.activityLogs = [];
+          if (!parsed.activeSessions || typeof parsed.activeSessions !== 'object') parsed.activeSessions = {};
+          if (!Array.isArray(parsed.kitchenMessages)) parsed.kitchenMessages = [];
+          if (!parsed.chatSeenBy || typeof parsed.chatSeenBy !== 'object') parsed.chatSeenBy = {};
           if (!parsed.blindAuditDraft) parsed.blindAuditDraft = def.blindAuditDraft;
           if (!Array.isArray(parsed.storageTags)) parsed.storageTags = [];
           if (Array.isArray(parsed.transactions)) {
@@ -1403,7 +1416,7 @@
   }
 
   const ROLE_TABS = {
-    Management: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'storage', 'forecasting', 'reports', 'users', 'help'],
+    Management: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'storage', 'forecasting', 'reports', 'announcements', 'users', 'help'],
     Staff: ['dashboard', 'inventory', 'transactions', 'orders', 'recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'storage', 'forecasting', 'help'],
     Volunteer: ['recipes', 'menu', 'prep', 'checklists', 'audit', 'haccp', 'storage', 'help'],
     Other: ['dashboard', 'menu', 'prep', 'checklists', 'help']
@@ -1441,6 +1454,9 @@
       serviceHistory: state.serviceHistory,
       users: state.users,
       auditLogs: state.auditLogs,
+      activityLogs: state.activityLogs,
+      activeSessions: state.activeSessions,
+      kitchenMessages: state.kitchenMessages,
       purchaseOrders: state.purchaseOrders,
       manualPoRequests: state.manualPoRequests,
       announcements: state.announcements,
@@ -1499,6 +1515,31 @@
       state.haccpLogs = data.filter(h => !/^hac-[123]$/.test(String(h.id || '')));
     } else if (id === 'serviceHistory' && Array.isArray(data)) {
       state.serviceHistory = data.filter(s => !/^srv-\d+$/.test(String(s.id || '')));
+    } else if (id === 'activeSessions' && data && typeof data === 'object') {
+      const merged = { ...data };
+      if (!state.isLocked && state.activeSessions && state.activeSessions[CLIENT_SESSION_ID]) {
+        merged[CLIENT_SESSION_ID] = state.activeSessions[CLIENT_SESSION_ID];
+      } else {
+        delete merged[CLIENT_SESSION_ID];
+      }
+      state.activeSessions = merged;
+      pruneActiveSessions();
+    } else if (id === 'kitchenMessages' && Array.isArray(data)) {
+      const prevIds = new Set((state.kitchenMessages || []).map(m => m.id));
+      state.kitchenMessages = data;
+      const u = getActiveUser();
+      const incoming = data.filter(m => !prevIds.has(m.id) && m.senderId !== u.id && (m.recipientId === 'ALL' || m.recipientId === u.id));
+      if (incoming.length > 0 && !state.isLocked) {
+        const latest = incoming[incoming.length - 1];
+        playChatChime(latest.priority === 'urgent');
+        if (document.getElementById('kitchen-chat-panel')) {
+          if (!state.chatSeenBy) state.chatSeenBy = {};
+          state.chatSeenBy[u.id] = Date.now();
+          openKitchenChatModal(true);
+        } else {
+          showToast(`${latest.priority === 'urgent' ? 'URGENT ' : ''}Chat from ${latest.senderName}: ${latest.text.slice(0, 60)}`, latest.priority === 'urgent' ? 'warn' : 'info');
+        }
+      }
     } else if (id in state && data !== undefined) {
       state[id] = data;
     }
@@ -1653,6 +1694,97 @@
   function nowStamp() {
     const d = new Date();
     return localDateStr(d) + ' ' + d.toTimeString().slice(0, 5);
+  }
+
+  const CLIENT_SESSION_ID = (() => {
+    try {
+      let sid = sessionStorage.getItem('sa_client_session_id');
+      if (!sid) {
+        sid = 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+        sessionStorage.setItem('sa_client_session_id', sid);
+      }
+      return sid;
+    } catch (e) {
+      return 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+    }
+  })();
+
+  function getDeviceLabel() {
+    const ua = navigator.userAgent || '';
+    let os = 'Device';
+    if (/iPad/i.test(ua)) os = 'iPad';
+    else if (/iPhone/i.test(ua)) os = 'iPhone';
+    else if (/Android/i.test(ua)) os = 'Android';
+    else if (/Mac OS X|Macintosh/i.test(ua)) os = 'Mac';
+    else if (/Windows/i.test(ua)) os = 'Windows';
+    else if (/Linux/i.test(ua)) os = 'Linux';
+    let br = 'Browser';
+    if (/Edg\//i.test(ua)) br = 'Edge';
+    else if (/Chrome\//i.test(ua) && !/Edg\//i.test(ua)) br = 'Chrome';
+    else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) br = 'Safari';
+    else if (/Firefox\//i.test(ua)) br = 'Firefox';
+    return `${os} • ${br}`;
+  }
+
+  function pruneActiveSessions() {
+    if (!state.activeSessions || typeof state.activeSessions !== 'object') {
+      state.activeSessions = {};
+      return;
+    }
+    const cutoff = Date.now() - 5 * 60 * 1000;
+    Object.keys(state.activeSessions).forEach(k => {
+      const s = state.activeSessions[k];
+      if (!s || !s.userId || Number(s.lastSeenAt || 0) < cutoff) {
+        delete state.activeSessions[k];
+      }
+    });
+  }
+
+  function registerActiveSession(userOverride) {
+    const u = userOverride || getActiveUser();
+    if (!u || state.isLocked) return;
+    pruneActiveSessions();
+    const existing = state.activeSessions[CLIENT_SESSION_ID];
+    state.activeSessions[CLIENT_SESSION_ID] = {
+      sessionId: CLIENT_SESSION_ID,
+      userId: u.id,
+      userName: u.name,
+      role: normalizeRole(u.role),
+      initials: u.initials || '?',
+      loggedInAt: (existing && existing.userId === u.id && existing.loggedInAt) ? existing.loggedInAt : nowStamp(),
+      lastSeenAt: Date.now(),
+      deviceLabel: getDeviceLabel()
+    };
+  }
+
+  function clearActiveSession() {
+    if (!state.activeSessions || typeof state.activeSessions !== 'object') state.activeSessions = {};
+    delete state.activeSessions[CLIENT_SESSION_ID];
+    pruneActiveSessions();
+  }
+
+  function formatRelativeTime(ms) {
+    const diffSec = Math.max(0, Math.floor((Date.now() - Number(ms || 0)) / 1000));
+    if (diffSec < 45) return 'Just now';
+    const mins = Math.floor(diffSec / 60);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    return `${hrs}h ago`;
+  }
+
+  function logActivity(category, detail, userOverride) {
+    const actor = userOverride || getActiveUser();
+    if (!Array.isArray(state.activityLogs)) state.activityLogs = [];
+    state.activityLogs.unshift({
+      id: uid('act'),
+      timestamp: nowStamp(),
+      user: actor ? actor.name : 'System',
+      userId: actor ? actor.id : '',
+      role: actor ? normalizeRole(actor.role) : '',
+      category: String(category || 'ACTION'),
+      detail: String(detail || '')
+    });
+    if (state.activityLogs.length > 500) state.activityLogs.length = 500;
   }
 
   function escapeHtml(str) {
@@ -2177,6 +2309,7 @@
       storage: 'Storage & Date Labels',
       forecasting: 'Served & Forecasting',
       reports: 'Daily Reports',
+      announcements: 'Announcements',
       users: 'Users & Activity',
       help: 'Help / Guide'
     };
@@ -2186,7 +2319,7 @@
       stock: ['inventory', 'transactions', 'orders', 'audit'],
       kitchen: ['recipes', 'menu', 'prep'],
       safety: ['checklists', 'haccp', 'storage', 'forecasting'],
-      admin: ['reports', 'users', 'help']
+      admin: ['reports', 'announcements', 'users', 'help']
     };
     const activeGroup = Object.keys(NAV_GROUPS).find(g => NAV_GROUPS[g].includes(state.activeTab)) || 'home';
     const groupLabels = {
@@ -2264,6 +2397,9 @@
 
   function render() {
     renderNav();
+    updateChatBadge();
+    const chatBtn = document.getElementById('btn-open-chat');
+    if (chatBtn) chatBtn.classList.toggle('hidden', !!state.isLocked);
     const main = document.getElementById('app-main');
     if (state.isLocked) {
       if (forecastChartInstance) { forecastChartInstance.destroy(); forecastChartInstance = null; }
@@ -2317,12 +2453,15 @@
       case 'storage': renderStorageLabels(main); break;
       case 'forecasting': renderForecasting(main); break;
       case 'reports': renderReports(main); break;
+      case 'announcements': renderAnnouncementsAdmin(main); break;
       case 'users': renderUsers(main); break;
       case 'help': renderHelp(main); break;
       default: renderDashboard(main);
     }
     if (state.activeTab === 'help') main.insertAdjacentHTML('beforeend', glossaryHtml());
     else main.insertAdjacentHTML('afterbegin', tipBannerHtml(state.activeTab));
+    const chatBanner = renderUnreadChatBannerHtml();
+    if (chatBanner) main.insertAdjacentHTML('afterbegin', chatBanner);
 
     if (tourState.active) {
       const steps = getRoleTourSteps();
@@ -2484,11 +2623,10 @@
               const nowMs = Date.now();
               const curUid = getActiveUser().id;
               const todayAnnStr = localDateStr();
+              const nowAnnObj = new Date();
               const allAnns = (state.announcements || []).filter(a => {
                 if (a.dismissedBy && a.dismissedBy[curUid] === todayAnnStr) return false;
-                if (!a.alertAt) return true;
-                const goLiveMs = new Date(a.alertAt).getTime();
-                return isNaN(goLiveMs) || goLiveMs <= nowMs;
+                return isAnnouncementActiveToday(a, nowAnnObj);
               });
               if (!allAnns.length) return '<p class="text-xs text-slate-500">No announcements posted.</p>';
               return allAnns.map(a => {
@@ -2514,6 +2652,7 @@
                         </span>
                         ${isScheduled ? `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-white">Scheduled: ${escapeHtml(a.alertAt.replace('T', ' '))}</span>` : ''}
                         <strong class="text-sm">${escapeHtml(a.title)}</strong>
+                        ${formatRepeatLabel(a) ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/80 border border-current/20">${escapeHtml(formatRepeatLabel(a))}</span>` : ''}
                       </div>
                       <p class="mt-1 leading-relaxed">${escapeHtml(a.body)}</p>
                       <div class="text-[11px] opacity-75 mt-1">Posted by ${escapeHtml(a.author)} &bull; ${escapeHtml(a.createdAt)}</div>
@@ -5020,18 +5159,88 @@
     `;
   }
 
-  // 10. USERS & REAL-TIME ACCOUNTABILITY FEED
-  function renderUsers(main) {
-    const activeUser = getActiveUser();
+  function renderAnnouncementsAdmin(main) {
+    main.innerHTML = `
+      <div class="space-y-5">
+        <!-- Announcements & Alerts Manager (Management Only) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Announcements, Reminders &amp; Alerts Manager</h3>
+              <p class="text-xs text-slate-500">Create, schedule, edit, or globally delete announcements. Dismissing on the Home page only hides an alert for that user's account.</p>
+            </div>
+            <button id="btn-new-announcement" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">+ Post / Schedule Announcement</button>
+          </div>
+          ${(state.announcements || []).length === 0
+            ? '<p class="text-xs text-slate-500">No announcements configured.</p>'
+            : `<div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                ${(state.announcements || []).map(a => {
+                  const todayAdm = localDateStr();
+                  const disCount = a.dismissedBy ? Object.values(a.dismissedBy).filter(v => v === todayAdm).length : 0;
+                  return `
+                    <div class="p-3 flex flex-wrap items-start justify-between gap-2 text-xs bg-white">
+                      <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="px-2 py-0.5 rounded font-bold uppercase text-[10px] ${a.priority === 'urgent' ? 'bg-rose-100 text-rose-800' : a.priority === 'reminder' ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'}">${escapeHtml(a.priority || 'info')}</span>
+                          <strong class="text-sm text-slate-900">${escapeHtml(a.title)}</strong>
+                          ${formatRepeatLabel(a) ? `<span class="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-800 font-semibold">${escapeHtml(formatRepeatLabel(a))}</span>` : ''}
+                          ${a.alertAt ? `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">${a.repeat && a.repeat !== 'none' ? 'Starts / Time:' : 'Go-Live:'} ${escapeHtml(a.alertAt.replace('T', ' '))}</span>` : ''}
+                          ${a.expiresAt ? `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">Ends: ${escapeHtml(a.expiresAt)}</span>` : ''}
+                        </div>
+                        <p class="text-slate-600 mt-1">${escapeHtml(a.body)}</p>
+                        <div class="text-[11px] text-slate-400 mt-0.5">By ${escapeHtml(a.author)} &bull; Dismissed today by ${disCount} account(s)</div>
+                      </div>
+                      <div class="flex items-center gap-2 shrink-0">
+                        <button data-edit-announcement="${a.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 font-semibold text-slate-700">Edit</button>
+                        <button data-del-announcement="${a.id}" class="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold">Delete Globally</button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>`
+          }
+        </div>
+      </div>
+    `;
+  }
 
-    // Combine all accountability events into a unified chronological feed
+  // 10. USERS & REAL-TIME ACCOUNTABILITY FEED
+  function buildAccountabilityFeed() {
     const feed = [];
+    (state.activityLogs || []).forEach(a => feed.push({ timestamp: a.timestamp, user: a.user, category: a.category, detail: a.detail }));
     state.transactions.forEach(t => feed.push({ timestamp: t.timestamp, user: t.staff, category: t.type, detail: `${t.itemName} (${t.grams >= 0 ? '+' : ''}${formatShortMass(t.grams)}) — ${t.note}` }));
     state.haccpLogs.forEach(h => feed.push({ timestamp: h.timestamp, user: h.staff, category: 'HACCP ' + h.status, detail: `${h.type}: ${h.target} @ ${h.tempF}°F` }));
     state.auditLogs.forEach(a => feed.push({ timestamp: a.timestamp, user: a.userName, category: 'BLIND AUDIT', detail: `${a.itemName}: System ${formatShortMass(a.systemGrams)} → Physical ${formatShortMass(a.physicalGrams)} (${a.varianceGrams >= 0 ? '+' : ''}${formatShortMass(a.varianceGrams)})` }));
     (state.checklistLogs || []).forEach(c => feed.push({ timestamp: c.timestamp, user: c.user, category: 'CHECKLIST (' + c.freq.toUpperCase() + ')', detail: `[${c.category}] ${c.title}` }));
     (state.trainingLogs || []).forEach(t => feed.push({ timestamp: t.timestamp, user: t.user, category: 'TRAINING COMPLETE', detail: `Completed mandatory onboarding (${t.modulesCount} modules)` }));
-    feed.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    feed.sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+    return feed;
+  }
+
+  function renderUsers(main) {
+    const activeUser = getActiveUser();
+    pruneActiveSessions();
+    const sessionsList = Object.values(state.activeSessions || {}).sort((a, b) => Number(b.lastSeenAt || 0) - Number(a.lastSeenAt || 0));
+    const onlineUserIds = new Set(sessionsList.map(s => s.userId));
+
+    const feed = buildAccountabilityFeed();
+    const accSearch = (state._accSearch || '').trim().toLowerCase();
+    const accUser = state._accUser || 'ALL';
+    const accCat = state._accCat || 'ALL';
+    const filteredFeed = feed.filter(f => {
+      if (accUser !== 'ALL' && f.user !== accUser) return false;
+      if (accCat !== 'ALL') {
+        const c = String(f.category || '').toUpperCase();
+        if (accCat === 'AUTH' && !/(LOGIN|LOCK|PIN|RECOVERY|SWITCH)/.test(c)) return false;
+        else if (accCat === 'INVENTORY' && !/(RECEIVE|WASTE|USE|ITEM|ZONE|PAR|PRICE|INIT|AUDIT|CHECKIN)/.test(c)) return false;
+        else if (accCat === 'MENU' && !/(MENU|RECIPE|PREP|HOLIDAY)/.test(c)) return false;
+        else if (accCat === 'PO' && !/PO /.test(c)) return false;
+        else if (accCat === 'SAFETY' && !/(HACCP|CHECKLIST|DATE TAG|ATTENDANCE|TRAINING)/.test(c)) return false;
+        else if (accCat === 'ADMIN' && !/(USER|ANNOUNCEMENT|RE-TRAIN|RESET|RECOVERY)/.test(c)) return false;
+      }
+      if (accSearch && !`${f.user} ${f.category} ${f.detail} ${f.timestamp}`.toLowerCase().includes(accSearch)) return false;
+      return true;
+    });
 
     main.innerHTML = `
       <div class="space-y-5">
@@ -5104,7 +5313,7 @@
                         <td class="py-2.5 pr-3 font-semibold text-slate-900">${escapeHtml(u.name)} <span class="text-xs font-mono text-slate-400">(${escapeHtml(u.initials)})</span></td>
                         <td class="py-2.5 pr-3 text-xs text-slate-600">${escapeHtml(u.role)}</td>
                         <td class="py-2.5 pr-3 text-xs font-bold text-slate-800">${count}</td>
-                        <td class="py-2.5 pr-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${u.active !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${u.active !== false ? 'Active' : 'Inactive'}</span></td>
+                        <td class="py-2.5 pr-3"><div class="flex items-center gap-1.5 flex-wrap"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${u.active !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${u.active !== false ? 'Active' : 'Inactive'}</span>${onlineUserIds.has(u.id) ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-100 text-sky-800"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Online</span>' : ''}</div></td>
                         <td class="py-2.5 text-right space-x-1 whitespace-nowrap">
                           <button data-edit-user="${u.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Edit</button>
                           <button data-edit-pin="${u.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 text-xs font-medium">Set PIN</button>
@@ -5177,15 +5386,16 @@
             </div>
             <div class="divide-y divide-slate-100">
               ${(state.trainingModules || []).map((m, idx) => `
-                <div class="py-2.5 flex items-start justify-between gap-3">
-                  <div>
-                    <div class="flex items-center gap-2">
+                <div class="py-2 flex items-start justify-between gap-3">
+                  <details class="flex-1 min-w-0">
+                    <summary class="flex items-center gap-2 cursor-pointer list-none">
                       <span class="text-xs font-bold text-slate-400">#${idx + 1}</span>
-                      <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">${escapeHtml(m.role === 'ALL' ? 'All Roles' : m.role)}</span>
-                      <span class="font-semibold text-sm text-slate-900">${escapeHtml(m.title)}</span>
-                    </div>
-                    <p class="text-xs text-slate-600 mt-1 whitespace-pre-line">${escapeHtml(m.content)}</p>
-                  </div>
+                      <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 shrink-0">${escapeHtml(m.role === 'ALL' ? 'All Roles' : m.role)}</span>
+                      <span class="font-semibold text-xs sm:text-sm text-slate-900 truncate">${escapeHtml(m.title)}</span>
+                      <span class="text-[11px] text-slate-400 ml-1 shrink-0">(click to read)</span>
+                    </summary>
+                    <p class="text-xs text-slate-600 mt-2 pl-6 whitespace-pre-line leading-relaxed">${escapeHtml(m.content)}</p>
+                  </details>
                   <div class="flex items-center gap-2 shrink-0">
                     <button data-edit-training="${m.id}" class="text-xs font-medium text-slate-700 hover:underline">Edit</button>
                     <button data-del-training="${m.id}" class="text-xs text-rose-600 hover:underline">Delete</button>
@@ -5196,37 +5406,35 @@
           </div>
         </div>
 
-        <!-- Announcements & Alerts Manager (Management Only) -->
+
+
+        <!-- Currently Logged In (Live Sessions) -->
         <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 class="text-sm font-bold text-slate-900">Announcements, Reminders &amp; Alerts Manager</h3>
-              <p class="text-xs text-slate-500">Create, schedule, edit, or globally delete announcements. Dismissing on the Home page only hides an alert for that user's account.</p>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Currently Logged In (${sessionsList.length} Active Session${sessionsList.length === 1 ? '' : 's'})
+              </h3>
+              <p class="text-xs text-slate-500">Live view of unlocked accounts across devices &amp; tabs (updates every 45s and on login/lock).</p>
             </div>
-            <button id="btn-new-announcement" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">+ Post / Schedule Announcement</button>
           </div>
-          ${(state.announcements || []).length === 0
-            ? '<p class="text-xs text-slate-500">No announcements configured.</p>'
-            : `<div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-                ${(state.announcements || []).map(a => {
-                  const todayAdm = localDateStr();
-                  const disCount = a.dismissedBy ? Object.values(a.dismissedBy).filter(v => v === todayAdm).length : 0;
+          ${sessionsList.length === 0
+            ? '<div class="text-xs text-slate-400 italic py-2">No active unlocked sessions recorded yet.</div>'
+            : `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                ${sessionsList.map(s => {
+                  const isMe = s.sessionId === CLIENT_SESSION_ID;
                   return `
-                    <div class="p-3 flex flex-wrap items-start justify-between gap-2 text-xs bg-white">
-                      <div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <span class="px-2 py-0.5 rounded font-bold uppercase text-[10px] ${a.priority === 'urgent' ? 'bg-rose-100 text-rose-800' : a.priority === 'reminder' ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'}">${escapeHtml(a.priority || 'info')}</span>
-                          <strong class="text-sm text-slate-900">${escapeHtml(a.title)}</strong>
-                          ${a.alertAt ? `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">Go-Live: ${escapeHtml(a.alertAt.replace('T', ' '))}</span>` : ''}
-                          ${a.expiresAt ? `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">Expires: ${escapeHtml(a.expiresAt)}</span>` : ''}
+                    <div class="p-3 rounded-lg border ${isMe ? 'border-emerald-300 bg-emerald-50/50' : 'border-slate-200 bg-slate-50'} flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-8 h-8 rounded-full bg-red-700 text-white text-xs font-bold flex items-center justify-center shrink-0">${escapeHtml(s.initials || '?')}</span>
+                        <div class="min-w-0">
+                          <div class="text-xs sm:text-sm font-bold text-slate-900 truncate">${escapeHtml(s.userName)} ${isMe ? '<span class="text-[10px] font-semibold text-emerald-700">(This Device)</span>' : ''}</div>
+                          <div class="text-[11px] text-slate-600 truncate">${escapeHtml(s.role)} &bull; ${escapeHtml(s.deviceLabel || 'Browser')}</div>
+                          <div class="text-[10px] text-slate-400">In: ${escapeHtml(s.loggedInAt)} &bull; Active ${escapeHtml(formatRelativeTime(s.lastSeenAt))}</div>
                         </div>
-                        <p class="text-slate-600 mt-1">${escapeHtml(a.body)}</p>
-                        <div class="text-[11px] text-slate-400 mt-0.5">By ${escapeHtml(a.author)} &bull; Dismissed today by ${disCount} account(s)</div>
                       </div>
-                      <div class="flex items-center gap-2 shrink-0">
-                        <button data-edit-announcement="${a.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 font-semibold text-slate-700">Edit</button>
-                        <button data-del-announcement="${a.id}" class="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold">Delete Globally</button>
-                      </div>
+                      ${!isMe && activeUser.role === 'Management' ? `<button data-clear-session="${escapeHtml(s.sessionId)}" class="px-2 py-1 rounded border border-slate-300 hover:bg-white text-[11px] font-medium text-slate-600 shrink-0" title="Clear stale session">Clear</button>` : ''}
                     </div>
                   `;
                 }).join('')}
@@ -5235,25 +5443,57 @@
         </div>
 
         <!-- Real-Time Accountability Feed -->
-        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h3 class="text-sm font-bold text-slate-900">Real-Time Accountability Feed (All Actions)</h3>
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-500">Auto-syncs across open tabs</span>
-              ${getActiveUser().role === 'Management' ? '<button id="btn-reset-accountability" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Reset Accountability</button>' : ''}
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Real-Time Accountability Feed (All Actions)</h3>
+              <p class="text-xs text-slate-500">Showing ${Math.min(filteredFeed.length, 150)} of ${filteredFeed.length} matching actions (${feed.length} total logged).</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button id="btn-export-accountability-csv" class="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold">Export CSV</button>
+              ${activeUser.role === 'Management' ? '<button id="btn-reset-accountability" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold">Reset Accountability</button>' : ''}
             </div>
           </div>
-          <div class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-            ${feed.slice(0, 40).map(f => `
-              <div class="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                <div class="flex items-center gap-2">
-                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-800">${escapeHtml(f.user)}</span>
-                  <span class="px-2 py-0.5 rounded text-xs font-semibold ${f.category.includes('WASTE') || f.category.includes('FLAGGED') ? 'bg-amber-100 text-amber-800' : f.category.includes('AUDIT') ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}">${escapeHtml(f.category)}</span>
-                  <span class="text-slate-700 text-xs sm:text-sm">${escapeHtml(f.detail)}</span>
-                </div>
-                <span class="text-xs text-slate-400 font-mono">${escapeHtml(f.timestamp)}</span>
-              </div>
-            `).join('')}
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input id="accountability-search" type="text" value="${escapeHtml(state._accSearch || '')}" placeholder="Search actions, items, or users..." class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs" />
+            <select id="accountability-user-filter" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
+              <option value="ALL">All Users</option>
+              ${Array.from(new Set(feed.map(f => f.user).filter(Boolean))).sort().map(u => `<option value="${escapeHtml(u)}" ${accUser === u ? 'selected' : ''}>${escapeHtml(u)}</option>`).join('')}
+            </select>
+            <select id="accountability-cat-filter" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
+              <option value="ALL" ${accCat === 'ALL' ? 'selected' : ''}>All Action Types</option>
+              <option value="AUTH" ${accCat === 'AUTH' ? 'selected' : ''}>Logins, Locks &amp; PINs</option>
+              <option value="INVENTORY" ${accCat === 'INVENTORY' ? 'selected' : ''}>Inventory, Audits &amp; Waste</option>
+              <option value="MENU" ${accCat === 'MENU' ? 'selected' : ''}>Menu, Recipes &amp; Prep</option>
+              <option value="PO" ${accCat === 'PO' ? 'selected' : ''}>Purchase Orders</option>
+              <option value="SAFETY" ${accCat === 'SAFETY' ? 'selected' : ''}>HACCP, Tags, Attendance &amp; Checklists</option>
+              <option value="ADMIN" ${accCat === 'ADMIN' ? 'selected' : ''}>Users, Training &amp; Announcements</option>
+            </select>
+          </div>
+          <div class="divide-y divide-slate-100 max-h-[28rem] overflow-y-auto">
+            ${filteredFeed.length === 0
+              ? '<div class="py-6 text-center text-xs text-slate-400">No logged actions match your filter yet.</div>'
+              : filteredFeed.slice(0, 150).map(f => {
+                  const cat = String(f.category || '').toUpperCase();
+                  const badgeCls = (cat.includes('WASTE') || cat.includes('FLAGGED') || cat.includes('FAILED') || cat.includes('DELETE') || cat.includes('REMOVE'))
+                    ? 'bg-amber-100 text-amber-800'
+                    : cat.includes('AUDIT')
+                      ? 'bg-purple-100 text-purple-800'
+                      : (cat.includes('LOGIN') || cat.includes('LOCK') || cat.includes('PIN') || cat.includes('SWITCH'))
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-blue-100 text-blue-800';
+                  return `
+                    <div class="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-800 shrink-0">${escapeHtml(f.user)}</span>
+                        <span class="px-2 py-0.5 rounded text-[11px] font-semibold ${badgeCls} shrink-0">${escapeHtml(f.category)}</span>
+                        <span class="text-slate-700 text-xs sm:text-sm">${escapeHtml(f.detail)}</span>
+                      </div>
+                      <span class="text-xs text-slate-400 font-mono shrink-0">${escapeHtml(f.timestamp)}</span>
+                    </div>
+                  `;
+                }).join('')
+            }
           </div>
         </div>
       </div>
@@ -6220,12 +6460,21 @@
   function showAnnouncementEditorModal(annId) {
     const a = annId ? (state.announcements || []).find(x => x.id === annId) : null;
     const isEdit = !!a;
+    const rep = (isEdit && a.repeat) ? a.repeat : 'none';
+    const repDays = isEdit && Array.isArray(a.repeatDays) ? a.repeatDays.map(Number) : [];
+    const dayOpts = [[0,'Sun'],[1,'Mon'],[2,'Tue'],[3,'Wed'],[4,'Thu'],[5,'Fri'],[6,'Sat']];
     openModal(isEdit ? 'Edit Announcement / Reminder' : 'Post Kitchen Announcement or Reminder', `
       <form id="form-save-announcement" class="space-y-3">
         <input type="hidden" name="annId" value="${isEdit ? escapeHtml(a.id) : ''}" />
+        ${!isEdit ? `
+          <div class="flex flex-wrap items-center gap-1.5 pb-1">
+            <span class="text-[11px] font-semibold text-slate-500">Quick Preset:</span>
+            <button type="button" id="btn-preset-weekly-order" class="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-[11px] font-semibold">Weekly Order Reminder (Fridays)</button>
+          </div>
+        ` : ''}
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Title</label>
-          <input name="title" type="text" required value="${isEdit ? escapeHtml(a.title) : ''}" placeholder="e.g. Christmas Eve Closing / Delivery Time" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          <input name="title" type="text" required value="${isEdit ? escapeHtml(a.title) : ''}" placeholder="e.g. Weekly Marberger &amp; Produce Order" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -6237,14 +6486,38 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Alert / Go-Live Time (Optional)</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Start / Alert Time (Optional)</label>
             <input name="alertAt" type="datetime-local" value="${isEdit && a.alertAt ? escapeHtml(a.alertAt) : ''}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
           </div>
         </div>
-        <p class="text-[11px] text-slate-500">Leave Alert Time blank to post immediately, or set a date &amp; time for it to automatically go live on everyone's Dashboard.</p>
-        <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Auto-Delete After Date (Optional)</label>
-          <input name="expiresAt" type="date" value="${isEdit && a.expiresAt ? escapeHtml(a.expiresAt) : ''}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+        <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Repeat Schedule</label>
+              <select id="ann-repeat-select" name="repeat" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-medium">
+                <option value="none" ${rep === 'none' ? 'selected' : ''}>No Repeat (One-Time)</option>
+                <option value="daily" ${rep === 'daily' ? 'selected' : ''}>Daily (Every Day)</option>
+                <option value="weekly" ${rep === 'weekly' ? 'selected' : ''}>Weekly (Pick Day(s))</option>
+                <option value="biweekly" ${rep === 'biweekly' ? 'selected' : ''}>Every 2 Weeks (Pick Day(s))</option>
+                <option value="monthly" ${rep === 'monthly' ? 'selected' : ''}>Monthly (Same Day of Month)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Auto-Delete After Date (Optional)</label>
+              <input name="expiresAt" type="date" value="${isEdit && a.expiresAt ? escapeHtml(a.expiresAt) : ''}" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs" />
+            </div>
+          </div>
+          <div id="ann-repeat-days-wrap" class="${rep === 'weekly' || rep === 'biweekly' ? '' : 'hidden'} pt-1">
+            <label class="block text-[11px] font-medium text-slate-600 mb-1">Repeat on Day(s) of Week</label>
+            <div class="flex flex-wrap gap-1.5">
+              ${dayOpts.map(([dVal, dLbl]) => `
+                <label class="inline-flex items-center gap-1 px-2 py-1 rounded border border-slate-300 bg-white text-xs cursor-pointer">
+                  <input type="checkbox" name="repeatDays" value="${dVal}" ${repDays.includes(dVal) ? 'checked' : ''} class="accent-red-700" />
+                  <span>${dLbl}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Message</label>
@@ -6512,6 +6785,188 @@
     return owner;
   }
 
+  function getUnreadMessages() {
+    if (state.isLocked) return [];
+    const u = getActiveUser();
+    const seenAt = Number((state.chatSeenBy && state.chatSeenBy[u.id]) || 0);
+    return (state.kitchenMessages || []).filter(m =>
+      m.senderId !== u.id &&
+      (m.recipientId === 'ALL' || m.recipientId === u.id) &&
+      Number(m.createdAtMs || 0) > seenAt
+    );
+  }
+
+  function getUnreadChatCount() {
+    return getUnreadMessages().length;
+  }
+
+  function playChatChime(isUrgent) {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const notes = isUrgent ? [880, 1174.66, 880] : [659.25, 880];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = isUrgent ? 'triangle' : 'sine';
+        osc.frequency.value = freq;
+        const t0 = ctx.currentTime + idx * 0.14;
+        gain.gain.setValueAtTime(0.001, t0);
+        gain.gain.exponentialRampToValueAtTime(isUrgent ? 0.14 : 0.08, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.13);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.14);
+      });
+    } catch (e) {}
+  }
+
+  function updateChatBadge() {
+    const unread = getUnreadMessages();
+    const count = unread.length;
+    const hasUrgent = unread.some(m => m.priority === 'urgent');
+    const badge = document.getElementById('chat-unread-badge');
+    const btn = document.getElementById('btn-open-chat');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = hasUrgent ? `${count} URGENT` : `${count} NEW`;
+        badge.className = hasUrgent
+          ? 'px-1.5 py-0.5 rounded-full bg-white text-red-700 text-[10px] font-extrabold leading-none'
+          : 'px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold leading-none';
+      } else {
+        badge.className = 'hidden';
+      }
+    }
+    if (btn) {
+      if (hasUrgent) {
+        btn.className = 'px-2.5 py-1.5 rounded-lg border border-red-700 bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition flex items-center gap-1.5 animate-pulse shadow-sm';
+      } else if (count > 0) {
+        btn.className = 'px-2.5 py-1.5 rounded-lg border border-red-400 bg-red-50 hover:bg-red-100 text-red-800 text-xs font-bold transition flex items-center gap-1.5';
+      } else {
+        btn.className = 'px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold transition flex items-center gap-1.5';
+      }
+    }
+    if (hasUrgent) {
+      document.title = `(${count}) URGENT MESSAGE — Salvation Army Community Meals`;
+    } else if (count > 0) {
+      document.title = `(${count}) New Message — Salvation Army Community Meals`;
+    } else {
+      document.title = 'Salvation Army Community Meals — Inventory & Kitchen OS';
+    }
+  }
+
+  function renderUnreadChatBannerHtml() {
+    const unread = getUnreadMessages();
+    if (!unread.length) return '';
+    const urgentMsgs = unread.filter(m => m.priority === 'urgent');
+    const latest = urgentMsgs.length ? urgentMsgs[urgentMsgs.length - 1] : unread[unread.length - 1];
+    const isUrgent = urgentMsgs.length > 0;
+    return `
+      <div class="mb-4 rounded-xl border ${isUrgent ? 'border-red-400 bg-red-50 shadow-sm' : 'border-sky-300 bg-sky-50'} px-4 py-3 flex flex-wrap items-center justify-between gap-3 no-print">
+        <div class="flex items-start gap-2.5 min-w-0">
+          <span class="mt-1 w-2.5 h-2.5 rounded-full ${isUrgent ? 'bg-red-600 animate-ping' : 'bg-sky-600 animate-pulse'} shrink-0"></span>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="px-2 py-0.5 rounded text-[11px] font-extrabold uppercase ${isUrgent ? 'bg-red-600 text-white' : 'bg-sky-700 text-white'}">${isUrgent ? 'Urgent Kitchen Message' : 'New Kitchen Message'}${unread.length > 1 ? ` (${unread.length})` : ''}</span>
+              <span class="text-xs font-bold ${isUrgent ? 'text-red-900' : 'text-sky-900'}">${escapeHtml(latest.senderName)} (${escapeHtml(latest.senderRole)})</span>
+              <span class="text-[11px] text-slate-500">${escapeHtml(latest.timestamp)}</span>
+            </div>
+            <p class="text-xs sm:text-sm font-medium ${isUrgent ? 'text-red-950' : 'text-slate-800'} mt-1 break-words">${escapeHtml(latest.text)}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button type="button" id="btn-banner-open-chat" class="px-3 py-1.5 rounded-lg ${isUrgent ? 'bg-red-700 hover:bg-red-800' : 'bg-sky-700 hover:bg-sky-800'} text-white text-xs font-semibold">Open Chat</button>
+          <button type="button" id="btn-banner-ack-chat" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-medium">Acknowledge</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function openKitchenChatModal(preserveInput) {
+    const u = getActiveUser();
+    if (!state.chatSeenBy || typeof state.chatSeenBy !== 'object') state.chatSeenBy = {};
+    state.chatSeenBy[u.id] = Date.now();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    updateChatBadge();
+
+    const prevDraft = preserveInput && document.getElementById('chat-msg-input') ? document.getElementById('chat-msg-input').value : '';
+    const filter = state._chatFilter || 'ALL';
+    const visibleMsgs = (state.kitchenMessages || []).filter(m => {
+      const canSee = m.recipientId === 'ALL' || m.recipientId === u.id || m.senderId === u.id || u.role === 'Management';
+      if (!canSee) return false;
+      if (filter === 'DM') return m.recipientId !== 'ALL';
+      if (filter === 'URGENT') return m.priority === 'urgent';
+      return true;
+    }).slice(-100);
+
+    const activeUsers = (state.users || []).filter(x => x.active !== false);
+
+    openModal('Kitchen Instant Messaging', `
+      <div id="kitchen-chat-panel" class="space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5">
+            <button type="button" data-chat-filter="ALL" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${filter === 'ALL' ? 'bg-red-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">All Messages</button>
+            <button type="button" data-chat-filter="DM" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${filter === 'DM' ? 'bg-red-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">Direct Messages</button>
+            <button type="button" data-chat-filter="URGENT" class="px-2.5 py-1 rounded-lg text-xs font-semibold ${filter === 'URGENT' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">Urgent Only</button>
+          </div>
+          <span class="text-[11px] text-slate-500">Real-time sync across all kitchen devices</span>
+        </div>
+
+        <div id="kitchen-chat-scroll" class="bg-slate-50 border border-slate-200 rounded-xl p-3 h-72 overflow-y-auto space-y-2.5">
+          ${visibleMsgs.length === 0
+            ? '<div class="h-full flex items-center justify-center text-xs text-slate-400">No messages yet. Send a quick note to the kitchen team below!</div>'
+            : visibleMsgs.map(m => {
+                const isMine = m.senderId === u.id;
+                const isUrgent = m.priority === 'urgent';
+                const canDel = isMine || u.role === 'Management';
+                return `
+                  <div class="flex flex-col ${isMine ? 'items-end' : 'items-start'}">
+                    <div class="max-w-[88%] rounded-xl px-3 py-2 border ${isUrgent ? 'bg-amber-50 border-amber-300' : isMine ? 'bg-red-700 text-white border-red-700' : 'bg-white border-slate-200 text-slate-800'} shadow-sm">
+                      <div class="flex items-center justify-between gap-3 text-[10px] ${isMine && !isUrgent ? 'text-red-100' : 'text-slate-500'} mb-0.5">
+                        <span class="font-bold">${escapeHtml(m.senderName)} (${escapeHtml(m.senderRole)}) ${m.recipientId !== 'ALL' ? '&rarr; ' + escapeHtml(m.recipientName) : '&bull; Everyone'}</span>
+                        <span>${escapeHtml(m.timestamp)}</span>
+                      </div>
+                      <div class="text-xs sm:text-sm leading-snug whitespace-pre-wrap ${isUrgent ? 'text-slate-900 font-semibold' : ''}">
+                        ${isUrgent ? '<span class="inline-block px-1.5 py-0.5 mr-1 rounded bg-red-600 text-white text-[10px] font-bold uppercase align-middle">Urgent</span>' : ''}${escapeHtml(m.text)}
+                      </div>
+                      ${canDel ? `<div class="mt-1 text-right"><button type="button" data-del-chat-msg="${escapeHtml(m.id)}" class="text-[10px] ${isMine && !isUrgent ? 'text-red-200 hover:text-white' : 'text-slate-400 hover:text-rose-600'} underline">Delete</button></div>` : ''}
+                    </div>
+                  </div>
+                `;
+              }).join('')
+          }
+        </div>
+
+        <div class="flex flex-wrap gap-1.5">
+          ${['Delivery arrived at back door', 'Need help on serving line', 'Running low on item — check stock', 'Temp check needed', 'Ready for 11:30 AM service'].map(preset => `
+            <button type="button" data-chat-preset="${escapeHtml(preset)}" class="px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium">${escapeHtml(preset)}</button>
+          `).join('')}
+        </div>
+
+        <form id="form-send-kitchen-msg" class="space-y-2 pt-1 border-t border-slate-200">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <select name="recipientId" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-medium">
+              <option value="ALL">To: Everyone (Kitchen Broadcast)</option>
+              ${activeUsers.filter(x => x.id !== u.id).map(x => `<option value="${escapeHtml(x.id)}">DM: ${escapeHtml(x.name)} (${escapeHtml(x.role)})</option>`).join('')}
+            </select>
+            <label class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white cursor-pointer">
+              <input name="urgent" type="checkbox" class="accent-red-700 rounded" />
+              <span class="font-semibold text-amber-800">Mark as URGENT alert</span>
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <input id="chat-msg-input" name="text" type="text" required maxlength="400" value="${escapeHtml(prevDraft)}" placeholder="Type a quick note or detail for the kitchen..." class="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            <button type="submit" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold shrink-0">Send</button>
+          </div>
+        </form>
+      </div>
+    `);
+    const sc = document.getElementById('kitchen-chat-scroll');
+    if (sc) sc.scrollTop = sc.scrollHeight;
+  }
+
   function openSuperAdminConsole() {
     const owner = ensureOwnerIntegrity();
     openModal('System Recovery & Repair Console', `
@@ -6599,6 +7054,9 @@
       state.activeUserId = owner.id;
       state.isLocked = false;
       setSessionUnlocked(true);
+      registerActiveSession(owner);
+      logActivity('RECOVERY LOGIN', 'Unlocked via Super-Admin Recovery Console (' + getDeviceLabel() + ')', owner);
+      resetInactivityTimer();
       saveState();
       closeModal();
       render();
@@ -6613,6 +7071,7 @@
       const s = newSalt();
       state.customRecoverySalt = s;
       state.customRecoveryHash = hashPin(code, s);
+      logActivity('RECOVERY CODE CHANGED', 'Updated custom Super-Admin recovery code');
       saveState();
       showToast('Custom Owner Recovery Code updated!');
       return;
@@ -6718,7 +7177,7 @@
         stock: ['inventory', 'transactions', 'orders', 'audit'],
         kitchen: ['recipes', 'menu', 'prep'],
         safety: ['checklists', 'haccp', 'storage', 'forecasting'],
-        admin: ['reports', 'users', 'help']
+        admin: ['reports', 'announcements', 'users', 'help']
       };
       const allowed = getAllowedTabs(getActiveUser());
       const first = (map[grp] || []).find(t => allowed.includes(t));
@@ -6829,6 +7288,47 @@
       if (e.target.id === 'btn-tour-finish') showToast('Interactive tutorial complete!');
       return;
     }
+    if (e.target.closest('#btn-open-chat') || e.target.id === 'btn-banner-open-chat') {
+      openKitchenChatModal(false);
+      return;
+    }
+    if (e.target.id === 'btn-banner-ack-chat') {
+      const u = getActiveUser();
+      if (!state.chatSeenBy || typeof state.chatSeenBy !== 'object') state.chatSeenBy = {};
+      state.chatSeenBy[u.id] = Date.now();
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+      render();
+      return;
+    }
+    if (false) {
+      openKitchenChatModal(false);
+      return;
+    }
+    const chatFilterBtn = e.target.closest('[data-chat-filter]');
+    if (chatFilterBtn) {
+      state._chatFilter = chatFilterBtn.dataset.chatFilter;
+      openKitchenChatModal(true);
+      return;
+    }
+    const chatPresetBtn = e.target.closest('[data-chat-preset]');
+    if (chatPresetBtn) {
+      const inp = document.getElementById('chat-msg-input');
+      if (inp) { inp.value = chatPresetBtn.dataset.chatPreset; inp.focus(); }
+      return;
+    }
+    const delChatBtn = e.target.closest('[data-del-chat-msg]');
+    if (delChatBtn) {
+      const mid = delChatBtn.dataset.delChatMsg;
+      const msg = (state.kitchenMessages || []).find(m => m.id === mid);
+      const u = getActiveUser();
+      if (msg && (msg.senderId === u.id || u.role === 'Management')) {
+        state.kitchenMessages = (state.kitchenMessages || []).filter(m => m.id !== mid);
+        logActivity('KITCHEN CHAT DELETED', `Deleted message from ${msg.senderName}`);
+        saveState();
+        openKitchenChatModal(true);
+      }
+      return;
+    }
     if (e.target.closest('#btn-sync-status')) {
       showSyncModal();
       return;
@@ -6916,6 +7416,19 @@
       }
       return;
     }
+    if (e.target.id === 'btn-preset-weekly-order') {
+      const f = document.getElementById('form-save-announcement');
+      if (f) {
+        f.querySelector('[name="title"]').value = 'Weekly Order Reminder (Marberger & Produce)';
+        f.querySelector('[name="priority"]').value = 'reminder';
+        f.querySelector('[name="repeat"]').value = 'weekly';
+        f.querySelector('[name="body"]').value = 'Review Order Suggestions and submit weekly Draft POs for Marberger (Dairy) and Produce today.';
+        const wrap = document.getElementById('ann-repeat-days-wrap');
+        if (wrap) wrap.classList.remove('hidden');
+        f.querySelectorAll('input[name="repeatDays"]').forEach(cb => { cb.checked = (cb.value === '5'); });
+      }
+      return;
+    }
     if (e.target.id === 'btn-new-announcement') {
       showAnnouncementEditorModal(null);
       return;
@@ -6931,6 +7444,7 @@
       if (ann) {
         if (!ann.dismissedBy || typeof ann.dismissedBy !== 'object') ann.dismissedBy = {};
         ann.dismissedBy[getActiveUser().id] = localDateStr();
+        logActivity('ANNOUNCEMENT DISMISSED', `Dismissed "${ann.title}" for today`);
         saveState();
         render();
         showToast('Dismissed for today (will reappear tomorrow until expired)');
@@ -6939,7 +7453,9 @@
     }
     const delAnnBtn = e.target.closest('[data-del-announcement]');
     if (delAnnBtn) {
+      const removedAnn = (state.announcements || []).find(a => a.id === delAnnBtn.dataset.delAnnouncement);
       state.announcements = (state.announcements || []).filter(a => a.id !== delAnnBtn.dataset.delAnnouncement);
+      if (removedAnn) logActivity('ANNOUNCEMENT DELETED', `Deleted "${removedAnn.title}"`);
       saveState();
       render();
       showToast('Announcement removed');
@@ -6988,6 +7504,7 @@
       const item = state.inventory.find(i => i.id === toggleDiscBtn.dataset.toggleDisc);
       if (item) {
         item.discontinued = !item.discontinued;
+        logActivity(item.discontinued ? 'ITEM DISCONTINUED' : 'ITEM REACTIVATED', `${item.name} (${item.sku})`);
         saveState();
         render();
         showToast(`${item.name} ${item.discontinued ? 'discontinued' : 'reactivated'}`);
@@ -7179,6 +7696,7 @@
       const rec = mp && mp.recipeId ? state.recipes.find(r => r.id === mp.recipeId) : null;
       if (mp && mp.status === 'PLANNED') {
         mp.status = 'CONFIRMED';
+        logActivity('MENU CONFIRMED', `${mp.date}: ${mp.customTitle || (rec ? rec.name : 'Meal')} (${mp.portions || 65} portions)`);
         if (rec && !state.prepQueue.some(p => p.recipeId === rec.id && p.targetDate === mp.date)) {
           state.prepQueue.push({
             id: uid('prep'),
@@ -7203,6 +7721,7 @@
       if (mp && rec && mp.status !== 'DEDUCTED') {
         deductRecipeFromInventory(rec, mp.portions, `Menu Plan (${mp.date})`);
         mp.status = 'DEDUCTED';
+        logActivity('MENU STOCK DEDUCTED', `${mp.date}: ${rec.name} (${mp.portions} portions)`);
         const existingPrep = state.prepQueue.find(p => p.recipeId === rec.id && p.targetDate === mp.date);
         if (existingPrep) {
           existingPrep.deducted = true;
@@ -7295,7 +7814,9 @@
         setTimeout(() => { if (removeMenuBtn.isConnected) { removeMenuBtn.dataset.confirmed = '0'; removeMenuBtn.textContent = 'Remove'; } }, 3000);
         return;
       }
+      const remMp = (state.menuPlan || []).find(m => m.id === removeMenuBtn.dataset.removeMenu);
       state.menuPlan = (state.menuPlan || []).filter(m => m.id !== removeMenuBtn.dataset.removeMenu);
+      if (remMp) logActivity('MENU REMOVED', `${remMp.date}: ${remMp.customTitle || 'Scheduled meal'}`);
       saveState();
       render();
       return;
@@ -7342,6 +7863,7 @@
         po.status = 'RECEIVED';
         po.receivedBy = user.name;
         po.receivedAt = nowStamp();
+        logActivity('PO RECEIVED', `Reconciled & checked in ${po.poNumber} (${po.vendor}, ${addedCount} items)`);
         saveState();
         render();
         showToast(`Checked in ${addedCount} approved item(s) from ${po.poNumber}`);
@@ -7371,7 +7893,9 @@
     }
     const delPoBtn = e.target.closest('[data-delete-po]');
     if (delPoBtn) {
+      const delPo = (state.purchaseOrders || []).find(p => p.id === delPoBtn.dataset.deletePo);
       state.purchaseOrders = (state.purchaseOrders || []).filter(p => p.id !== delPoBtn.dataset.deletePo);
+      if (delPo) logActivity('PO DELETED', `Cancelled ${delPo.poNumber} (${delPo.vendor})`);
       saveState();
       render();
       showToast('Purchase order cancelled');
@@ -7567,6 +8091,7 @@
         tag.status = action;
         tag.closedBy = getActiveUser().name;
         tag.closedAt = nowStamp();
+        logActivity('DATE TAG ' + action, `${tag.itemName} (${tag.zone}, Use By ${tag.useByDate})`);
         saveState();
         render();
         showToast(`${tag.itemName} marked as ${tag.status}`);
@@ -7632,6 +8157,27 @@
       return;
     }
 
+    const clearSessBtn = e.target.closest('[data-clear-session]');
+    if (clearSessBtn && getActiveUser().role === 'Management') {
+      const sid = clearSessBtn.dataset.clearSession;
+      const s = state.activeSessions && state.activeSessions[sid];
+      if (s) {
+        delete state.activeSessions[sid];
+        logActivity('SESSION CLEARED', `Cleared active session for ${s.userName} (${s.deviceLabel || 'Device'})`);
+        saveState();
+        render();
+        showToast(`Cleared session for ${s.userName}`);
+      }
+      return;
+    }
+    if (e.target.id === 'btn-export-accountability-csv') {
+      const feed = buildAccountabilityFeed();
+      const rows = [['Timestamp', 'User', 'Category', 'Detail']];
+      feed.forEach(f => rows.push([f.timestamp, f.user, f.category, f.detail]));
+      downloadCsv(`salvation_army_accountability_${localDateStr()}.csv`, rows);
+      showToast(`Exported ${feed.length} accountability entries`);
+      return;
+    }
     if (e.target.id === 'btn-export-tx-csv') {
       const rows = [['Timestamp', 'Type', 'Item', 'Grams', 'Notes', 'Staff']];
       state.transactions.forEach(t => rows.push([t.timestamp, t.type, t.itemName, t.grams, t.note, t.staff]));
@@ -7761,6 +8307,8 @@
       return;
     }
     if (e.target.id === 'btn-lock-app') {
+      logActivity('LOCK', 'Locked screen / logged out (' + getDeviceLabel() + ')');
+      clearActiveSession();
       state.isLocked = true;
       setSessionUnlocked(false);
       saveState();
@@ -7861,7 +8409,9 @@
     }
     const delTrnBtn = e.target.closest('[data-del-training]');
     if (delTrnBtn) {
+      const delM = (state.trainingModules || []).find(m => m.id === delTrnBtn.dataset.delTraining);
       state.trainingModules = (state.trainingModules || []).filter(m => m.id !== delTrnBtn.dataset.delTraining);
+      if (delM) logActivity('TRAINING DELETED', `Deleted module "${delM.title}"`);
       saveState();
       render();
       return;
@@ -7878,6 +8428,9 @@
       state.auditLogs = [];
       state.checklistLogs = [];
       state.haccpLogs = [];
+      state.activityLogs = [];
+      state.kitchenMessages = [];
+      logActivity('ACCOUNTABILITY RESET', 'Cleared accountability history for fresh tracking');
       saveState();
       if (typeof pushAllToCloud === 'function') pushAllToCloud();
       render();
@@ -7898,6 +8451,9 @@
       state.trainingLogs = [];
       state.auditLogs = [];
       state.checklistLogs = [];
+      state.activityLogs = [];
+      state.kitchenMessages = [];
+      logActivity('GO-LIVE RESET', 'Performed Fresh Go-Live Reset (kept items, recipes, menu & users)');
       state.purchaseOrders = [];
       state.manualPoRequests = {};
       state.prepQueue = [];
@@ -7977,6 +8533,13 @@
   }
 
   document.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'accountability-search') {
+      state._accSearch = e.target.value;
+      render();
+      const el = document.getElementById('accountability-search');
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      return;
+    }
     if (e.target.closest('#form-served') && ['planned', 'served'].includes(e.target.name)) {
       updateLeftoverPredictorCard();
     }
@@ -8036,6 +8599,21 @@
       saveState();
       resetInactivityTimer();
       showToast(state.autoLockMinutes > 0 ? `Auto-lock set to ${state.autoLockMinutes} min` : 'Auto-lock disabled');
+      return;
+    }
+    if (e.target.id === 'ann-repeat-select') {
+      const wrap = document.getElementById('ann-repeat-days-wrap');
+      if (wrap) wrap.classList.toggle('hidden', !['weekly', 'biweekly'].includes(e.target.value));
+      return;
+    }
+    if (e.target.id === 'accountability-user-filter') {
+      state._accUser = e.target.value;
+      render();
+      return;
+    }
+    if (e.target.id === 'accountability-cat-filter') {
+      state._accCat = e.target.value;
+      render();
       return;
     }
     if (e.target.id === 'audit-zone-filter') {
@@ -8177,18 +8755,25 @@
     if (e.target.id === 'form-save-announcement') {
       const existingId = fd.get('annId');
       const alertAt = (fd.get('alertAt') || '').trim();
+      const repeat = fd.get('repeat') || 'none';
+      const repeatDays = fd.getAll('repeatDays').map(Number).filter(n => !isNaN(n));
       if (existingId) {
         const a = (state.announcements || []).find(x => x.id === existingId);
         if (a) {
           a.title = fd.get('title').trim();
           a.priority = fd.get('priority') || 'reminder';
           a.alertAt = alertAt;
+          a.repeat = repeat;
+          a.repeatDays = repeatDays;
           a.body = fd.get('body').trim();
           a.expiresAt = (fd.get('expiresAt') || '').trim();
           a.liveAnnounced = false;
+          a.lastLiveDate = '';
           saveState();
           closeModal();
           render();
+          logActivity('ANNOUNCEMENT EDITED', `${a.title} (${a.priority})`);
+          saveState();
           showToast(`Updated announcement: ${a.title}`);
         }
       } else {
@@ -8198,10 +8783,13 @@
           title: fd.get('title').trim(),
           body: fd.get('body').trim(),
           alertAt,
+          repeat,
+          repeatDays,
           expiresAt: (fd.get('expiresAt') || '').trim(),
           liveAnnounced: !alertAt || new Date(alertAt).getTime() <= Date.now(),
+          lastLiveDate: '',
           author: getActiveUser().name,
-          createdAt: new Date().toISOString().slice(0, 10)
+          createdAt: localDateStr()
         };
         if (!Array.isArray(state.announcements)) state.announcements = [];
         state.announcements.unshift(ann);
@@ -8274,6 +8862,8 @@
       saveState();
       closeModal();
       render();
+      logActivity('OFFICIAL INIT', `Initialized ${updatedCount} inventory items (+10% Par)`);
+      saveState();
       showToast(`Initialized ${updatedCount} inventory items with +10% Par & 25%/10%/5% alerts!`);
       return;
     }
@@ -8288,6 +8878,8 @@
       saveState();
       closeModal();
       render();
+      logActivity('PAR UPDATED', 'Updated Par Levels for inventory items');
+      saveState();
       showToast('Updated Par Levels for all items');
       return;
     }
@@ -8310,6 +8902,8 @@
         saveState();
         closeModal();
         render();
+        logActivity('ITEM EDITED', `Updated ${item.name} (${item.sku})`);
+        saveState();
         showToast(`Updated ${item.name}`);
       }
       return;
@@ -8322,6 +8916,8 @@
       saveState();
       closeModal();
       render();
+      logActivity('ITEM DELETED', `Deleted ${removed ? removed.name : 'item'}`);
+      saveState();
       showToast(`Deleted ${removed ? removed.name : 'item'}`);
       return;
     }
@@ -8347,6 +8943,8 @@
       saveState();
       closeModal();
       render();
+      logActivity('ITEM ADDED', `Added ${newItem.name} (${newItem.sku})`);
+      saveState();
       showToast(`Added ${newItem.name} to Living Stock`);
       return;
     }
@@ -8384,6 +8982,8 @@
           saveState();
           closeModal();
           render();
+          logActivity('RECIPE EDITED', `Updated recipe: ${rec.name}`);
+          saveState();
           showToast(`Updated recipe: ${rec.name}`);
         }
       } else {
@@ -8418,6 +9018,8 @@
       saveState();
       closeModal();
       render();
+      logActivity('RECIPE DELETED', `Deleted recipe: ${removed ? removed.name : ''}`);
+      saveState();
       showToast(`Deleted recipe: ${removed ? removed.name : ''}`);
       return;
     }
@@ -8470,6 +9072,8 @@
       state.storageTags.unshift(tag);
       saveState();
       render();
+      logActivity('DATE TAG CREATED', `${tag.itemName} (${tag.zone}, Use By ${useByDate})`);
+      saveState();
       showToast(`Tagged ${tag.itemName} — Use By ${useByDate}`);
       return;
     }
@@ -8530,6 +9134,8 @@
       saveState();
       closeModal();
       render();
+      logActivity('ATTENDANCE BULK LOGGED', `Saved ${saved} attendance record(s)`);
+      saveState();
       showToast(`Saved ${saved} attendance record(s) — forecasts updated!`);
       return;
     }
@@ -8550,6 +9156,8 @@
       saveState();
         closeModal();
         render();
+        logActivity('ATTENDANCE EDITED', `Updated ${s.date}: ${s.served} served (${s.mealName})`);
+        saveState();
         showToast(`Updated attendance record (${s.date})`);
       }
       return;
@@ -8562,6 +9170,8 @@
       saveState();
       closeModal();
       render();
+      logActivity('ATTENDANCE DELETED', 'Deleted attendance record');
+      saveState();
       showToast('Deleted attendance record — forecasts recalculated');
       return;
     }
@@ -8626,6 +9236,7 @@
         }
       }
       syncPlannedPortionsFromForecasts();
+      logActivity('ATTENDANCE LOGGED', `${date}: ${servedNum} served / ${plannedNum} planned (${meal})`);
       saveState();
       render();
       showToast(chkAdded || invAdded
@@ -8647,6 +9258,9 @@
         state.activeUserId = owner.id;
         state.isLocked = false;
         setSessionUnlocked(true);
+        registerActiveSession(owner);
+        logActivity('RECOVERY LOGIN', 'Unlocked via recovery code (' + getDeviceLabel() + ')', owner);
+        resetInactivityTimer();
         saveState();
         closeModal();
         render();
@@ -8656,6 +9270,8 @@
       const targetUser = state.users.find(u => u.id === fd.get('userId') && u.active !== false);
       if (!targetUser || !verifyPin(targetUser, pin)) {
         registerLoginFailure();
+        logActivity('FAILED PIN', 'Failed PIN attempt for ' + (targetUser ? targetUser.name : 'Unknown') + ' (' + getDeviceLabel() + ')', targetUser || getActiveUser());
+        saveState();
         const errEl = document.getElementById(e.target.id === 'form-unlock-user' ? 'unlock-error' : 'switch-error');
         if (errEl) { errEl.textContent = loginLockedSeconds() > 0 ? 'Too many wrong attempts. Please wait ' + loginLockedSeconds() + ' seconds.' : 'Incorrect password or PIN.'; errEl.classList.remove('hidden'); }
         return;
@@ -8664,6 +9280,9 @@
       state.activeUserId = targetUser.id;
       state.isLocked = false;
       setSessionUnlocked(true);
+      registerActiveSession(targetUser);
+      logActivity(e.target.id === 'form-switch-user' ? 'SWITCH USER' : 'LOGIN', (e.target.id === 'form-switch-user' ? 'Switched active user to ' : 'Logged in as ') + targetUser.name + ' (' + getDeviceLabel() + ')', targetUser);
+      resetInactivityTimer();
       onboardingStepIdx = 0;
       const allowed = getAllowedTabs(targetUser);
       if (!allowed.includes(state.activeTab)) state.activeTab = allowed[0];
@@ -8707,6 +9326,8 @@
       saveState();
       e.target.reset();
       render();
+      logActivity('PIN CHANGED', `Changed personal PIN for ${user.name}`, user);
+      saveState();
       showToast(`Personal PIN saved for ${user.name}`);
       return;
     }
@@ -8764,6 +9385,8 @@
         state.manualPoRequests[id] = packs;
         saveState();
         render();
+        logActivity('PO REQUEST', `Added ${item.name} (${packs} × ${item.packLabel}) to PO request`);
+        saveState();
         showToast(`Added ${item.name} (${packs} × ${item.packLabel}) to PO request form`);
       }
       return;
@@ -8829,6 +9452,8 @@
         saveState();
         closeModal();
         render();
+        logActivity('PO APPROVED', `Approved ${po.poNumber} (${po.vendor}, ETA ${po.expectedArrival})`);
+        saveState();
         showToast(`Approved ${po.poNumber} — ETA ${po.expectedArrival}`);
       }
       return;
@@ -8844,6 +9469,8 @@
         closeModal();
         render();
         showUserHandoutModal({ user: u, tempPin: '', isNew: false });
+        logActivity('USER EDITED', `Updated ${u.name} (${u.role})`);
+        saveState();
         showToast(`Updated user account: ${u.name}`);
       }
       return;
@@ -8857,6 +9484,8 @@
         saveState();
         closeModal();
         render();
+        logActivity('USER DELETED', `Deleted ${removed ? removed.name : 'user'}`);
+        saveState();
         showToast(`Deleted user account: ${removed ? removed.name : ''}`);
       }
       return;
@@ -8878,6 +9507,8 @@
         saveState();
         closeModal();
         render();
+        logActivity('TRAINING EDITED', `Updated module: ${m.title}`);
+        saveState();
         showToast(`Updated training module: ${m.title}`);
       }
       return;
@@ -8917,6 +9548,8 @@
       state.checklistFreq = freq;
       saveState();
       render();
+      logActivity('CHECKLIST TASK ADDED', `Added ${title} to ${freq} checklist`);
+      saveState();
       showToast(`Added task to ${freq} checklist`);
       return;
     }
@@ -8939,6 +9572,8 @@
         m2.recipeId = tmp.recipeId; m2.menuType = tmp.menuType; m2.customTitle = tmp.customTitle; m2.portions = tmp.portions; m2.status = tmp.status; m2.mealSlot = tmp.mealSlot;
         saveState();
         render();
+        logActivity('MENU SWAPPED', `Swapped meals between ${m1.date} and ${m2.date}`);
+        saveState();
         showToast(`Swapped meals between ${m1.date} and ${m2.date}!`);
       }
       return;
@@ -8987,6 +9622,8 @@
       saveState();
       closeModal();
       render();
+      logActivity('MENU BULK SCHEDULED', `Scheduled ${count} day(s) on Menu Plan`);
+      saveState();
       showToast(`Saved ${count} scheduled day(s) to Menu Plan!`);
       return;
     }
@@ -9014,6 +9651,8 @@
       state.menuPlan.push(mp);
       saveState();
       render();
+      logActivity('MENU SCHEDULED', `Added ${entry.customTitle || 'recipe'} on ${entry.date}`);
+      saveState();
       showToast('Added recipe to Menu Plan (Order Suggestions updated)');
       return;
     }
@@ -9052,7 +9691,40 @@
       state.trainingModules.push(mod);
       saveState();
       render();
+      logActivity('TRAINING ADDED', `Added module: ${mod.title}`);
+      saveState();
       showToast(`Added training module: ${mod.title}`);
+      return;
+    }
+
+    if (e.target.id === 'form-send-kitchen-msg') {
+      const text = String(fd.get('text') || '').trim();
+      if (!text) return;
+      const u = getActiveUser();
+      const recipientId = String(fd.get('recipientId') || 'ALL');
+      const recUser = recipientId === 'ALL' ? null : (state.users || []).find(x => x.id === recipientId);
+      const priority = fd.get('urgent') ? 'urgent' : 'normal';
+      if (!Array.isArray(state.kitchenMessages)) state.kitchenMessages = [];
+      const msg = {
+        id: uid('msg'),
+        timestamp: nowStamp(),
+        createdAtMs: Date.now(),
+        senderId: u.id,
+        senderName: u.name,
+        senderInitials: u.initials || '?',
+        senderRole: normalizeRole(u.role),
+        recipientId,
+        recipientName: recUser ? recUser.name : 'Everyone',
+        priority,
+        text
+      };
+      state.kitchenMessages.push(msg);
+      if (state.kitchenMessages.length > 200) state.kitchenMessages = state.kitchenMessages.slice(-200);
+      if (!state.chatSeenBy) state.chatSeenBy = {};
+      state.chatSeenBy[u.id] = Date.now();
+      logActivity('KITCHEN CHAT', `${priority === 'urgent' ? '[URGENT] ' : ''}${recipientId === 'ALL' ? 'Broadcast' : 'DM to ' + msg.recipientName}: ${text.slice(0, 80)}`);
+      saveState();
+      openKitchenChatModal(false);
       return;
     }
 
@@ -9114,9 +9786,11 @@
     if (!mins || mins <= 0 || state.isLocked) return;
     inactivityTimerId = setTimeout(() => {
       if (!state.isLocked) {
+        logActivity('AUTO-LOCK', 'Session auto-locked after inactivity (' + getDeviceLabel() + ')');
+        clearActiveSession();
         state.isLocked = true;
         setSessionUnlocked(false);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        saveState();
         render();
         showToast('Session auto-locked due to inactivity', 'warn');
       }
@@ -9130,8 +9804,15 @@
   setInterval(() => {
     const nowMs = Date.now();
     let wentLive = null;
+    const nowObj = new Date();
+    const todayLiveStr = localDateStr(nowObj);
     (state.announcements || []).forEach(a => {
-      if (a.alertAt && !a.liveAnnounced) {
+      if (a.repeat && a.repeat !== 'none') {
+        if (a.lastLiveDate !== todayLiveStr && isAnnouncementActiveToday(a, nowObj)) {
+          a.lastLiveDate = todayLiveStr;
+          wentLive = a;
+        }
+      } else if (a.alertAt && !a.liveAnnounced) {
         const t = new Date(a.alertAt).getTime();
         if (!isNaN(t) && t <= nowMs) {
           a.liveAnnounced = true;
@@ -9172,6 +9853,52 @@
     return carriedCount;
   }
 
+  function formatRepeatLabel(a) {
+    if (!a || !a.repeat || a.repeat === 'none') return '';
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const days = Array.isArray(a.repeatDays) && a.repeatDays.length
+      ? a.repeatDays.map(d => dayNames[Number(d)] || '').filter(Boolean).join(', ')
+      : '';
+    if (a.repeat === 'daily') return 'Repeats Daily';
+    if (a.repeat === 'weekly') return `Repeats Weekly${days ? ' (' + days + ')' : ''}`;
+    if (a.repeat === 'biweekly') return `Repeats Every 2 Wks${days ? ' (' + days + ')' : ''}`;
+    if (a.repeat === 'monthly') return 'Repeats Monthly';
+    return '';
+  }
+
+  function isAnnouncementActiveToday(a, nowObj) {
+    const now = nowObj || new Date();
+    const todayStr = localDateStr(now);
+    if (a.expiresAt && a.expiresAt < todayStr) return false;
+    const rep = a.repeat || 'none';
+    if (rep === 'none') {
+      if (!a.alertAt) return true;
+      const goLiveMs = new Date(a.alertAt).getTime();
+      return isNaN(goLiveMs) || goLiveMs <= now.getTime();
+    }
+    const startStr = (a.alertAt && a.alertAt.slice(0, 10)) || a.createdAt || todayStr;
+    if (todayStr < startStr) return false;
+    if (a.alertAt && a.alertAt.includes('T')) {
+      const targetTime = a.alertAt.slice(11, 16);
+      const curTime = now.toTimeString().slice(0, 5);
+      if (targetTime && curTime < targetTime) return false;
+    }
+    if (rep === 'daily') return true;
+    const dow = now.getDay();
+    const startParts = startStr.split('-').map(Number);
+    const startDate = new Date(startParts[0], (startParts[1] || 1) - 1, startParts[2] || 1);
+    const days = Array.isArray(a.repeatDays) && a.repeatDays.length ? a.repeatDays.map(Number) : [startDate.getDay()];
+    if (rep === 'weekly') return days.includes(dow);
+    if (rep === 'biweekly') {
+      if (!days.includes(dow)) return false;
+      const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffWeeks = Math.floor((todayMid.getTime() - startDate.getTime()) / (7 * 86400000));
+      return diffWeeks >= 0 && diffWeeks % 2 === 0;
+    }
+    if (rep === 'monthly') return now.getDate() === startDate.getDate();
+    return true;
+  }
+
   function pruneExpiredAlerts() {
     const todayStr = localDateStr();
     let changed = false;
@@ -9194,14 +9921,32 @@
     try { return sessionStorage.getItem('sa_session_unlocked') === '1'; } catch (e) { return false; }
   }
 
+  setInterval(() => {
+    if (!state.isLocked && isSessionUnlocked()) {
+      registerActiveSession();
+      saveState();
+      if (state.activeTab === 'users') render();
+    }
+  }, 45000);
+
   window.addEventListener('pagehide', () => {
+    if (!state.isLocked) {
+      logActivity('LOGOUT', 'Closed or left app (' + getDeviceLabel() + ')');
+    }
+    clearActiveSession();
     state.isLocked = true;
     setSessionUnlocked(false);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    pushChangedSlicesToCloud(false);
   });
 
   function bootApp() {
-    if (!isSessionUnlocked()) state.isLocked = true;
+    if (!isSessionUnlocked()) {
+      state.isLocked = true;
+      clearActiveSession();
+    } else {
+      registerActiveSession();
+    }
     if (pruneExpiredAlerts()) saveState();
     runDailyCarryoverCheck(false);
     if (syncPlannedPortionsFromForecasts() > 0) saveState();
