@@ -570,113 +570,113 @@
       forecastHorizon: 'days', // 'days' | 'weeks' | 'months' | 'years'
       zones: ['Dry Storage', 'Walk-In Cooler', 'Walk-In Freezer', 'Kitchen Dry Goods / Currently Using', 'Kitchen Cooler', 'Kitchen Freezer'],
       inventory: [
-        { id: 'inv-1', sku: 'DRY-101', name: 'All-Purpose Flour', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 11340, unitLabel: 'g', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
-        { id: 'inv-2', sku: 'DRY-102', name: 'Rolled Oats', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 4536, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
-        { id: 'inv-3', sku: 'DRY-103', name: 'Granulated Sugar', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 9072, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
-        { id: 'inv-4', sku: 'DRY-104', name: 'Kosher Salt', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 2268, unitLabel: 'g', packSizeGrams: 1360, packLabel: '3 lb box', lastUpdated: today },
-        { id: 'inv-5', sku: 'DRY-105', name: 'Penne Pasta', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 6804, unitLabel: 'g', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
-        { id: 'inv-6', sku: 'DRY-106', name: 'Crushed Tomatoes (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 24000, parGrams: 12000, unitLabel: 'g', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
-        { id: 'inv-7', sku: 'PRO-201', name: 'Yellow Onions', category: 'Produce', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 4536, unitLabel: 'g', packSizeGrams: 22680, packLabel: '50 lb sack', lastUpdated: today },
-        { id: 'inv-8', sku: 'PRO-202', name: 'Carrots (Whole)', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 3402, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
-        { id: 'inv-9', sku: 'PRO-203', name: 'Celery', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 2268, unitLabel: 'g', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-10', sku: 'PRO-204', name: 'Romaine Lettuce', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 3600, parGrams: 1800, unitLabel: 'g', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
-        { id: 'inv-11', sku: 'DAI-301', name: 'Whole Milk', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 15140, parGrams: 7570, unitLabel: 'g', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
-        { id: 'inv-12', sku: 'DAI-302', name: 'Unsalted Butter', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 5443, parGrams: 2722, unitLabel: 'g', packSizeGrams: 454, packLabel: '1 lb block', lastUpdated: today },
-        { id: 'inv-13', sku: 'DAI-303', name: 'Shredded Mozzarella', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 4536, parGrams: 2268, unitLabel: 'g', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
-        { id: 'inv-14', sku: 'PRO-401', name: 'Chicken Breast (Boneless)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 9072, unitLabel: 'g', packSizeGrams: 18144, packLabel: '40 lb case', lastUpdated: today },
-        { id: 'inv-15', sku: 'PRO-402', name: 'Ground Beef (80/20)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 6804, unitLabel: 'g', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
-        { id: 'inv-16', sku: 'FRZ-501', name: 'Frozen Breadsticks (144 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13000, parGrams: 6500, unitLabel: 'g', packSizeGrams: 6500, packLabel: 'case (144 ct)', lastUpdated: today },
-        { id: 'inv-17', sku: 'FRZ-502', name: 'Frozen Dinner Rolls (120 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 10800, parGrams: 5400, unitLabel: 'g', packSizeGrams: 5400, packLabel: 'case (120 ct)', lastUpdated: today },
-        { id: 'inv-18', sku: 'FRZ-503', name: 'Frozen Biscuits (108 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 12000, parGrams: 6000, unitLabel: 'g', packSizeGrams: 6000, packLabel: 'case (108 ct)', lastUpdated: today },
-        { id: 'inv-19', sku: 'PRO-403', name: 'Turkey Breast (Roast / Boneless)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb roast', lastUpdated: today },
-        { id: 'inv-20', sku: 'PRO-205', name: 'Russet Potatoes (50 lb)', category: 'Produce', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 11340, unitLabel: 'pack', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
-        { id: 'inv-21', sku: 'DRY-108', name: 'Herb Stuffing Mix', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 4536, unitLabel: 'pack', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
-        { id: 'inv-22', sku: 'DRY-109', name: 'Green Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18000, parGrams: 9000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
-        { id: 'inv-23', sku: 'DRY-110', name: 'Cranberry Sauce (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9000, parGrams: 4500, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
-        { id: 'inv-24', sku: 'FRZ-504', name: 'Pumpkin Pies (Frozen 10")', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 10800, parGrams: 5400, unitLabel: 'pack', packSizeGrams: 5400, packLabel: 'case (6 pies)', lastUpdated: today },
-        { id: 'inv-25', sku: 'DAI-304', name: 'Yogurt Cups (Individual 6 oz)', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 2040, packLabel: '12 ct case', lastUpdated: today },
-        { id: 'inv-26', sku: 'DRY-111', name: 'Pudding Cups (Individual 4 oz)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 5443, packLabel: '48 ct case', lastUpdated: today },
-        { id: 'inv-27', sku: 'PRO-206', name: 'Fresh / Chilled Fruit (Salad Bar)', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
-        { id: 'inv-28', sku: 'DRY-112', name: 'Salad Dressing & Toppings', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 15140, packLabel: '4x 1 gal case', lastUpdated: today },
-        { id: 'inv-29', sku: 'DRY-113', name: 'Egg Noodles (Wide)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
-        { id: 'inv-30', sku: 'DRY-114', name: 'Long-Grain White Rice', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
-        { id: 'inv-31', sku: 'DRY-115', name: 'Elbow Macaroni', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
-        { id: 'inv-32', sku: 'DRY-116', name: 'Black / Pinto / Kidney Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
-        { id: 'inv-33', sku: 'DRY-117', name: 'Diced Tomatoes (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
-        { id: 'inv-34', sku: 'DRY-118', name: 'Marinara / Pasta Sauce (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
-        { id: 'inv-35', sku: 'DRY-119', name: 'Chicken & Beef Broth / Base', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '12x 32 oz case', lastUpdated: today },
-        { id: 'inv-36', sku: 'DAI-305', name: 'Shredded Cheddar Cheese', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
-        { id: 'inv-37', sku: 'DRY-120', name: 'Cream of Chicken / Mushroom Soup (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
-        { id: 'inv-38', sku: 'FRZ-505', name: 'Frozen Mixed Vegetables', category: 'Frozen Produce', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
-        { id: 'inv-39', sku: 'FRZ-506', name: 'Frozen Beef Meatballs (Precooked)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb bag', lastUpdated: today },
-        { id: 'inv-40', sku: 'FRZ-507', name: 'Pulled Pork / BBQ Beef (Precooked)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
-        { id: 'inv-41', sku: 'FRZ-508', name: 'Italian Sausage / Smoked Sausage', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
-        { id: 'inv-42', sku: 'FRZ-509', name: 'Hot Dogs & Hamburger Patties', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
-        { id: 'inv-43', sku: 'DRY-121', name: 'Hot Dog, Burger & Sandwich Buns', category: 'Bakery / Bread', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '48 ct case', lastUpdated: today },
-        { id: 'inv-44', sku: 'DRY-122', name: 'Flour Tortillas (10")', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '72 ct case', lastUpdated: today },
-        { id: 'inv-45', sku: 'PRO-404', name: 'Deli Turkey / Ham (Sliced)', category: 'Protein', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
-        { id: 'inv-46', sku: 'DRY-123', name: 'Canned Tuna (#10 / 66.5 oz)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 11340, packLabel: '6x 66.5 oz case', lastUpdated: today },
-        { id: 'inv-47', sku: 'DRY-124', name: 'BBQ Sauce, Mayo & Mustard', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 15140, packLabel: '4x 1 gal case', lastUpdated: today },
-        { id: 'inv-48', sku: 'DRY-125', name: 'Individual Potato Chips', category: 'Sides / Snacks', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 1500, packLabel: '50 ct case', lastUpdated: today },
-        { id: 'inv-49', sku: 'DRY-126', name: 'Scalloped Potatoes (Box)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 12474, parGrams: 6237, unitLabel: 'pack', packSizeGrams: 1134, packLabel: 'box', lastUpdated: today },
-        { id: 'inv-50', sku: 'DRY-127', name: 'Crackers (Individual)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3402, parGrams: 1701, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-51', sku: 'DRY-128', name: 'Tomato Soup (Condensed)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 3402, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-52', sku: 'DRY-129', name: 'Manwich Sloppy Joe Sauce', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 3000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-53', sku: 'DRY-130', name: 'Ketchup (Large)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6400, parGrams: 3200, unitLabel: 'pack', packSizeGrams: 3200, packLabel: 'jug', lastUpdated: today },
-        { id: 'inv-54', sku: 'DRY-131', name: 'Mustard (Large)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 3000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: 'jug', lastUpdated: today },
-        { id: 'inv-55', sku: 'DRY-132', name: 'Mustard Packets', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 2268, parGrams: 1134, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-56', sku: 'DRY-133', name: 'Italian Dressing (Individual)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 2268, parGrams: 1134, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-57', sku: 'DRY-134', name: 'Vegetable Oil', category: 'Oils & Fats', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 43470, parGrams: 21735, unitLabel: 'pack', packSizeGrams: 1890, packLabel: 'bottle', lastUpdated: today },
-        { id: 'inv-58', sku: 'DRY-135', name: 'Mixed Fruit (Canned)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 40824, parGrams: 20412, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-59', sku: 'DRY-136', name: 'Apricots (Canned)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 4536, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-60', sku: 'DRY-137', name: 'Chocolate Pudding (#10 Can)', category: 'Desserts', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 15000, parGrams: 7500, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-61', sku: 'DRY-138', name: 'Vanilla Pudding (#10 Can)', category: 'Desserts', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18000, parGrams: 9000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-62', sku: 'DRY-139', name: 'Butterscotch Pudding (#10 Can)', category: 'Desserts', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3000, parGrams: 1500, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-63', sku: 'DRY-140', name: 'Kidney Beans (Small Cans)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 47628, parGrams: 23814, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-64', sku: 'DRY-141', name: 'Mixed Vegetables (Small Cans)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 27216, parGrams: 13608, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-65', sku: 'DRY-142', name: 'Corn (Small Cans)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 17010, parGrams: 8505, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-66', sku: 'DRY-143', name: 'Black Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 3000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-67', sku: 'DRY-144', name: 'Pork & Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18000, parGrams: 9000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-68', sku: 'DRY-145', name: 'Whole Potatoes (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 3000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-69', sku: 'DRY-146', name: 'Tomato Sauce (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 15000, parGrams: 7500, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-70', sku: 'DRY-147', name: 'Spaghetti Pasta (Boxes)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 5442, parGrams: 2721, unitLabel: 'pack', packSizeGrams: 907, packLabel: 'box', lastUpdated: today },
-        { id: 'inv-71', sku: 'DRY-148', name: 'Farfalle Pasta (Boxes)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 2721, parGrams: 1360, unitLabel: 'pack', packSizeGrams: 907, packLabel: 'box', lastUpdated: today },
-        { id: 'inv-72', sku: 'DRY-149', name: 'Instant Mashed Potatoes', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 6804, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-73', sku: 'FRZ-510', name: 'Chicken Soup (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 3402, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-74', sku: 'DRY-150', name: 'BBQ Sauce (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3785, parGrams: 1892, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
-        { id: 'inv-75', sku: 'DRY-151', name: 'French Dressing (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3785, parGrams: 1892, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
-        { id: 'inv-76', sku: 'DRY-152', name: 'Honey French Dressing (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 7570, parGrams: 3785, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
-        { id: 'inv-77', sku: 'DRY-153', name: 'Ranch Dressing (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18925, parGrams: 9462, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
-        { id: 'inv-78', sku: 'DRY-154', name: 'Mayonnaise (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 11355, parGrams: 5678, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
-        { id: 'inv-79', sku: 'DRY-155', name: 'Chicken Gravy (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18200, parGrams: 9100, unitLabel: 'pack', packSizeGrams: 1400, packLabel: 'can', lastUpdated: today },
-        { id: 'inv-80', sku: 'DRY-156', name: 'Beef Gravy', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 6804, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-81', sku: 'DRY-157', name: 'Sausage Gravy (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 4200, parGrams: 2100, unitLabel: 'pack', packSizeGrams: 1400, packLabel: 'can', lastUpdated: today },
-        { id: 'inv-82', sku: 'DRY-158', name: 'Beef Stew (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 12066, parGrams: 6033, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-83', sku: 'DRY-159', name: 'Cheese Sauce (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 3000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-84', sku: 'DRY-160', name: 'Pears (Canned)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 3000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-85', sku: 'DRY-161', name: 'Pineapple (Canned)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3000, parGrams: 1500, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
-        { id: 'inv-86', sku: 'DRY-162', name: 'Peaches (Small Cans)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 34020, parGrams: 17010, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-87', sku: 'FRZ-511', name: 'Frozen Omelets', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 3402, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-88', sku: 'FRZ-512', name: 'Frozen Sliced Ham', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-89', sku: 'FRZ-513', name: 'Frozen Green Beans', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 2268, parGrams: 1134, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'bag', lastUpdated: today },
-        { id: 'inv-90', sku: 'FRZ-514', name: 'Hot Dogs (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 11340, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-91', sku: 'FRZ-515', name: 'Whole Chickens (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 6804, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-92', sku: 'FRZ-516', name: 'Cut-Up Chicken (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 4536, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-93', sku: 'FRZ-517', name: 'French Fries (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 27216, parGrams: 13608, unitLabel: 'pack', packSizeGrams: 13608, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-94', sku: 'FRZ-518', name: 'Tater Tots (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 3402, unitLabel: 'pack', packSizeGrams: 13608, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-95', sku: 'FRZ-519', name: 'Pierogies (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 6804, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-96', sku: 'FRZ-520', name: 'Hamburger Patties (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 2268, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-97', sku: 'FRZ-521', name: 'Chicken Patties (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 4536, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-98', sku: 'FRZ-522', name: 'Chicken Nuggets (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 0, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-99', sku: 'FRZ-523', name: 'Fish Sticks (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 2268, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-100', sku: 'FRZ-524', name: 'Cheese Ravioli (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 2268, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
-        { id: 'inv-101', sku: 'DAI-306', name: 'Parmesan Cheese', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 4536, parGrams: 2268, unitLabel: 'pack', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
-        { id: 'inv-102', sku: 'DAI-307', name: 'Feta Cheese', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 2268, parGrams: 1134, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'tub', lastUpdated: today },
-        { id: 'inv-103', sku: 'PRO-207', name: 'Chopped Garlic', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Produce', stockGrams: 3628, parGrams: 1814, unitLabel: 'pack', packSizeGrams: 907, packLabel: 'jar', lastUpdated: today },
-        { id: 'inv-104', sku: 'CLR-601', name: 'Vegetable Stock (Jars)', category: 'Pantry / Base', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 4535, parGrams: 2268, unitLabel: 'pack', packSizeGrams: 907, packLabel: 'jar', lastUpdated: today },
-        { id: 'inv-105', sku: 'DAI-308', name: 'Cottage Cheese', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 4536, parGrams: 2268, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'tub', lastUpdated: today },
-        { id: 'inv-106', sku: 'BEV-701', name: 'Lemonade', category: 'Beverages', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 30280, parGrams: 15140, unitLabel: 'pack', packSizeGrams: 15140, packLabel: 'crate', lastUpdated: today },
-        { id: 'inv-107', sku: 'BEV-702', name: 'Iced Tea', category: 'Beverages', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 15140, parGrams: 7570, unitLabel: 'pack', packSizeGrams: 15140, packLabel: 'crate', lastUpdated: today }
+        { id: 'inv-1', sku: 'DRY-101', name: 'All-Purpose Flour', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 45360, unitLabel: 'g', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
+        { id: 'inv-2', sku: 'DRY-102', name: 'Rolled Oats', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 11340, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
+        { id: 'inv-3', sku: 'DRY-103', name: 'Granulated Sugar', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 22680, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
+        { id: 'inv-4', sku: 'DRY-104', name: 'Kosher Salt', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 4080, unitLabel: 'g', packSizeGrams: 1360, packLabel: '3 lb box', lastUpdated: today },
+        { id: 'inv-5', sku: 'DRY-105', name: 'Penne Pasta', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 18144, unitLabel: 'g', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
+        { id: 'inv-6', sku: 'DRY-106', name: 'Crushed Tomatoes (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 24000, parGrams: 36000, unitLabel: 'g', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-7', sku: 'PRO-201', name: 'Yellow Onions', category: 'Produce', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 22680, unitLabel: 'g', packSizeGrams: 22680, packLabel: '50 lb sack', lastUpdated: today },
+        { id: 'inv-8', sku: 'PRO-202', name: 'Carrots (Whole)', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 11340, unitLabel: 'g', packSizeGrams: 11340, packLabel: '25 lb bag', lastUpdated: today },
+        { id: 'inv-9', sku: 'PRO-203', name: 'Celery', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 9072, unitLabel: 'g', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-10', sku: 'PRO-204', name: 'Romaine Lettuce', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 3600, parGrams: 13608, unitLabel: 'g', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-11', sku: 'DAI-301', name: 'Whole Milk', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 15140, parGrams: 37850, unitLabel: 'g', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
+        { id: 'inv-12', sku: 'DAI-302', name: 'Unsalted Butter', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 5443, parGrams: 2724, unitLabel: 'g', packSizeGrams: 454, packLabel: '1 lb block', lastUpdated: today },
+        { id: 'inv-13', sku: 'DAI-303', name: 'Shredded Mozzarella', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 4536, parGrams: 9072, unitLabel: 'g', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
+        { id: 'inv-14', sku: 'PRO-401', name: 'Chicken Breast (Boneless)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 36288, unitLabel: 'g', packSizeGrams: 18144, packLabel: '40 lb case', lastUpdated: today },
+        { id: 'inv-15', sku: 'PRO-402', name: 'Ground Beef (80/20)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 27216, unitLabel: 'g', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
+        { id: 'inv-16', sku: 'FRZ-501', name: 'Frozen Breadsticks (144 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13000, parGrams: 13000, unitLabel: 'g', packSizeGrams: 6500, packLabel: 'case (144 ct)', lastUpdated: today },
+        { id: 'inv-17', sku: 'FRZ-502', name: 'Frozen Dinner Rolls (120 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 10800, parGrams: 10800, unitLabel: 'g', packSizeGrams: 5400, packLabel: 'case (120 ct)', lastUpdated: today },
+        { id: 'inv-18', sku: 'FRZ-503', name: 'Frozen Biscuits (108 ct)', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 12000, parGrams: 12000, unitLabel: 'g', packSizeGrams: 6000, packLabel: 'case (108 ct)', lastUpdated: today },
+        { id: 'inv-19', sku: 'PRO-403', name: 'Turkey Breast (Roast / Boneless)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 18144, parGrams: 18144, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb roast', lastUpdated: today },
+        { id: 'inv-20', sku: 'PRO-205', name: 'Russet Potatoes (50 lb)', category: 'Produce', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 45360, unitLabel: 'pack', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
+        { id: 'inv-21', sku: 'DRY-108', name: 'Herb Stuffing Mix', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 6804, unitLabel: 'pack', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
+        { id: 'inv-22', sku: 'DRY-109', name: 'Green Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18000, parGrams: 54000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-23', sku: 'DRY-110', name: 'Cranberry Sauce (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9000, parGrams: 18000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-24', sku: 'FRZ-504', name: 'Pumpkin Pies (Frozen 10")', category: 'Frozen Bakery', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 10800, parGrams: 10800, unitLabel: 'pack', packSizeGrams: 5400, packLabel: 'case (6 pies)', lastUpdated: today },
+        { id: 'inv-25', sku: 'DAI-304', name: 'Yogurt Cups (Individual 6 oz)', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 0, parGrams: 8160, unitLabel: 'pack', packSizeGrams: 2040, packLabel: '12 ct case', lastUpdated: today },
+        { id: 'inv-26', sku: 'DRY-111', name: 'Pudding Cups (Individual 4 oz)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 10886, unitLabel: 'pack', packSizeGrams: 5443, packLabel: '48 ct case', lastUpdated: today },
+        { id: 'inv-27', sku: 'PRO-206', name: 'Fresh / Chilled Fruit (Salad Bar)', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 13608, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-28', sku: 'DRY-112', name: 'Salad Dressing & Toppings', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 15140, unitLabel: 'pack', packSizeGrams: 15140, packLabel: '4x 1 gal case', lastUpdated: today },
+        { id: 'inv-29', sku: 'DRY-113', name: 'Egg Noodles (Wide)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-30', sku: 'DRY-114', name: 'Long-Grain White Rice', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 22680, unitLabel: 'pack', packSizeGrams: 22680, packLabel: '50 lb bag', lastUpdated: today },
+        { id: 'inv-31', sku: 'DRY-115', name: 'Elbow Macaroni', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 18144, unitLabel: 'pack', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
+        { id: 'inv-32', sku: 'DRY-116', name: 'Black / Pinto / Kidney Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 36000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-33', sku: 'DRY-117', name: 'Diced Tomatoes (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 36000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-34', sku: 'DRY-118', name: 'Marinara / Pasta Sauce (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 54000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-35', sku: 'DRY-119', name: 'Chicken & Beef Broth / Base', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '12x 32 oz case', lastUpdated: today },
+        { id: 'inv-36', sku: 'DAI-305', name: 'Shredded Cheddar Cheese', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 0, parGrams: 11340, unitLabel: 'pack', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
+        { id: 'inv-37', sku: 'DRY-120', name: 'Cream of Chicken / Mushroom Soup (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 36000, unitLabel: 'pack', packSizeGrams: 18000, packLabel: '6x #10 case', lastUpdated: today },
+        { id: 'inv-38', sku: 'FRZ-505', name: 'Frozen Mixed Vegetables', category: 'Frozen Produce', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 18144, unitLabel: 'pack', packSizeGrams: 9072, packLabel: '20 lb case', lastUpdated: today },
+        { id: 'inv-39', sku: 'FRZ-506', name: 'Frozen Beef Meatballs (Precooked)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 13608, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb bag', lastUpdated: today },
+        { id: 'inv-40', sku: 'FRZ-507', name: 'Pulled Pork / BBQ Beef (Precooked)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-41', sku: 'FRZ-508', name: 'Italian Sausage / Smoked Sausage', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-42', sku: 'FRZ-509', name: 'Hot Dogs & Hamburger Patties', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-43', sku: 'DRY-121', name: 'Hot Dog, Burger & Sandwich Buns', category: 'Bakery / Bread', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 9000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '48 ct case', lastUpdated: today },
+        { id: 'inv-44', sku: 'DRY-122', name: 'Flour Tortillas (10")', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 6000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '72 ct case', lastUpdated: today },
+        { id: 'inv-45', sku: 'PRO-404', name: 'Deli Turkey / Ham (Sliced)', category: 'Protein', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: '10 lb case', lastUpdated: today },
+        { id: 'inv-46', sku: 'DRY-123', name: 'Canned Tuna (#10 / 66.5 oz)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 11340, unitLabel: 'pack', packSizeGrams: 11340, packLabel: '6x 66.5 oz case', lastUpdated: today },
+        { id: 'inv-47', sku: 'DRY-124', name: 'BBQ Sauce, Mayo & Mustard', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 15140, unitLabel: 'pack', packSizeGrams: 15140, packLabel: '4x 1 gal case', lastUpdated: today },
+        { id: 'inv-48', sku: 'DRY-125', name: 'Individual Potato Chips', category: 'Sides / Snacks', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 4500, unitLabel: 'pack', packSizeGrams: 1500, packLabel: '50 ct case', lastUpdated: today },
+        { id: 'inv-49', sku: 'DRY-126', name: 'Scalloped Potatoes (Box)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 12474, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 1134, packLabel: 'box', lastUpdated: today },
+        { id: 'inv-50', sku: 'DRY-127', name: 'Crackers (Individual)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3402, parGrams: 4536, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-51', sku: 'DRY-128', name: 'Tomato Soup (Condensed)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 6804, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-52', sku: 'DRY-129', name: 'Manwich Sloppy Joe Sauce', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 12000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-53', sku: 'DRY-130', name: 'Ketchup (Large)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6400, parGrams: 6400, unitLabel: 'pack', packSizeGrams: 3200, packLabel: 'jug', lastUpdated: today },
+        { id: 'inv-54', sku: 'DRY-131', name: 'Mustard (Large)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 6000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: 'jug', lastUpdated: today },
+        { id: 'inv-55', sku: 'DRY-132', name: 'Mustard Packets', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 2268, parGrams: 2268, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-56', sku: 'DRY-133', name: 'Italian Dressing (Individual)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 2268, parGrams: 2268, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-57', sku: 'DRY-134', name: 'Vegetable Oil', category: 'Oils & Fats', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 43470, parGrams: 11340, unitLabel: 'pack', packSizeGrams: 1890, packLabel: 'bottle', lastUpdated: today },
+        { id: 'inv-58', sku: 'DRY-135', name: 'Mixed Fruit (Canned)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 40824, parGrams: 27216, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-59', sku: 'DRY-136', name: 'Apricots (Canned)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-60', sku: 'DRY-137', name: 'Chocolate Pudding (#10 Can)', category: 'Desserts', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 15000, parGrams: 18000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-61', sku: 'DRY-138', name: 'Vanilla Pudding (#10 Can)', category: 'Desserts', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18000, parGrams: 18000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-62', sku: 'DRY-139', name: 'Butterscotch Pudding (#10 Can)', category: 'Desserts', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3000, parGrams: 9000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-63', sku: 'DRY-140', name: 'Kidney Beans (Small Cans)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 47628, parGrams: 20412, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-64', sku: 'DRY-141', name: 'Mixed Vegetables (Small Cans)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 27216, parGrams: 20412, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-65', sku: 'DRY-142', name: 'Corn (Small Cans)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 17010, parGrams: 20412, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-66', sku: 'DRY-143', name: 'Black Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 18000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-67', sku: 'DRY-144', name: 'Pork & Beans (#10 Can)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18000, parGrams: 18000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-68', sku: 'DRY-145', name: 'Whole Potatoes (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 12000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-69', sku: 'DRY-146', name: 'Tomato Sauce (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 15000, parGrams: 18000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-70', sku: 'DRY-147', name: 'Spaghetti Pasta (Boxes)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 5442, parGrams: 9070, unitLabel: 'pack', packSizeGrams: 907, packLabel: 'box', lastUpdated: today },
+        { id: 'inv-71', sku: 'DRY-148', name: 'Farfalle Pasta (Boxes)', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 2721, parGrams: 5442, unitLabel: 'pack', packSizeGrams: 907, packLabel: 'box', lastUpdated: today },
+        { id: 'inv-72', sku: 'DRY-149', name: 'Instant Mashed Potatoes', category: 'Dry Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 13608, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-73', sku: 'FRZ-510', name: 'Chicken Soup (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 13608, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-74', sku: 'DRY-150', name: 'BBQ Sauce (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3785, parGrams: 7570, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
+        { id: 'inv-75', sku: 'DRY-151', name: 'French Dressing (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3785, parGrams: 7570, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
+        { id: 'inv-76', sku: 'DRY-152', name: 'Honey French Dressing (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 7570, parGrams: 7570, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
+        { id: 'inv-77', sku: 'DRY-153', name: 'Ranch Dressing (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18925, parGrams: 15140, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
+        { id: 'inv-78', sku: 'DRY-154', name: 'Mayonnaise (Gallon)', category: 'Condiments', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 11355, parGrams: 11355, unitLabel: 'pack', packSizeGrams: 3785, packLabel: '1 gal jug', lastUpdated: today },
+        { id: 'inv-79', sku: 'DRY-155', name: 'Chicken Gravy (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 18200, parGrams: 16800, unitLabel: 'pack', packSizeGrams: 1400, packLabel: 'can', lastUpdated: today },
+        { id: 'inv-80', sku: 'DRY-156', name: 'Beef Gravy', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 18144, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-81', sku: 'DRY-157', name: 'Sausage Gravy (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 4200, parGrams: 8400, unitLabel: 'pack', packSizeGrams: 1400, packLabel: 'can', lastUpdated: today },
+        { id: 'inv-82', sku: 'DRY-158', name: 'Beef Stew (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 12066, parGrams: 18144, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-83', sku: 'DRY-159', name: 'Cheese Sauce (Canned)', category: 'Canned Goods', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 12000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-84', sku: 'DRY-160', name: 'Pears (Canned)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 6000, parGrams: 12000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-85', sku: 'DRY-161', name: 'Pineapple (Canned)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 3000, parGrams: 9000, unitLabel: 'pack', packSizeGrams: 3000, packLabel: '#10 can', lastUpdated: today },
+        { id: 'inv-86', sku: 'DRY-162', name: 'Peaches (Small Cans)', category: 'Canned Fruit', zone: 'Dry Storage', vendor: 'Jordan Banana', stockGrams: 34020, parGrams: 20412, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-87', sku: 'FRZ-511', name: 'Frozen Omelets', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 6804, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-88', sku: 'FRZ-512', name: 'Frozen Sliced Ham', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 13608, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-89', sku: 'FRZ-513', name: 'Frozen Green Beans', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 2268, parGrams: 6804, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'bag', lastUpdated: today },
+        { id: 'inv-90', sku: 'FRZ-514', name: 'Hot Dogs (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 22680, parGrams: 13608, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-91', sku: 'FRZ-515', name: 'Whole Chickens (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 18144, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-92', sku: 'FRZ-516', name: 'Cut-Up Chicken (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 18144, unitLabel: 'pack', packSizeGrams: 9072, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-93', sku: 'FRZ-517', name: 'French Fries (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 27216, parGrams: 27216, unitLabel: 'pack', packSizeGrams: 13608, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-94', sku: 'FRZ-518', name: 'Tater Tots (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 6804, parGrams: 27216, unitLabel: 'pack', packSizeGrams: 13608, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-95', sku: 'FRZ-519', name: 'Pierogies (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 13608, parGrams: 13608, unitLabel: 'pack', packSizeGrams: 6804, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-96', sku: 'FRZ-520', name: 'Hamburger Patties (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-97', sku: 'FRZ-521', name: 'Chicken Patties (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 9072, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-98', sku: 'FRZ-522', name: 'Chicken Nuggets (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 0, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-99', sku: 'FRZ-523', name: 'Fish Sticks (Frozen)', category: 'Protein', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-100', sku: 'FRZ-524', name: 'Cheese Ravioli (Frozen)', category: 'Frozen', zone: 'Walk-In Freezer', vendor: 'Jordan Banana', stockGrams: 4536, parGrams: 9072, unitLabel: 'pack', packSizeGrams: 4536, packLabel: 'case', lastUpdated: today },
+        { id: 'inv-101', sku: 'DAI-306', name: 'Parmesan Cheese', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 4536, parGrams: 4536, unitLabel: 'pack', packSizeGrams: 2268, packLabel: '5 lb bag', lastUpdated: today },
+        { id: 'inv-102', sku: 'DAI-307', name: 'Feta Cheese', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 2268, parGrams: 2268, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'tub', lastUpdated: today },
+        { id: 'inv-103', sku: 'PRO-207', name: 'Chopped Garlic', category: 'Produce', zone: 'Walk-In Cooler', vendor: 'Produce', stockGrams: 3628, parGrams: 2721, unitLabel: 'pack', packSizeGrams: 907, packLabel: 'jar', lastUpdated: today },
+        { id: 'inv-104', sku: 'CLR-601', name: 'Vegetable Stock (Jars)', category: 'Pantry / Base', zone: 'Walk-In Cooler', vendor: 'Jordan Banana', stockGrams: 4535, parGrams: 3628, unitLabel: 'pack', packSizeGrams: 907, packLabel: 'jar', lastUpdated: today },
+        { id: 'inv-105', sku: 'DAI-308', name: 'Cottage Cheese', category: 'Dairy', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 4536, parGrams: 6804, unitLabel: 'pack', packSizeGrams: 2268, packLabel: 'tub', lastUpdated: today },
+        { id: 'inv-106', sku: 'BEV-701', name: 'Lemonade', category: 'Beverages', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 30280, parGrams: 30280, unitLabel: 'pack', packSizeGrams: 15140, packLabel: 'crate', lastUpdated: today },
+        { id: 'inv-107', sku: 'BEV-702', name: 'Iced Tea', category: 'Beverages', zone: 'Walk-In Cooler', vendor: 'Marberger', stockGrams: 15140, parGrams: 30280, unitLabel: 'pack', packSizeGrams: 15140, packLabel: 'crate', lastUpdated: today }
       ],
       recipes: [
         {
@@ -901,6 +901,7 @@
       isLocked: false,
       auditLogs: [],
       par50Migrated: true,
+      standardParsApplied: true,
       activityLogs: [],
       activeSessions: {},
       kitchenMessages: [],
@@ -1457,11 +1458,15 @@
 
           if (!Array.isArray(parsed.trainingLogs)) parsed.trainingLogs = [];
           if (parsed.autoLockMinutes === undefined) parsed.autoLockMinutes = 5;
-          if (!parsed.par50Migrated && Array.isArray(parsed.inventory)) {
+          if (!parsed.standardParsApplied && Array.isArray(parsed.inventory)) {
+            const stdMap = {'inv-1': 2, 'inv-2': 1, 'inv-3': 2, 'inv-4': 3, 'inv-5': 2, 'inv-6': 2, 'inv-7': 1, 'inv-8': 1, 'inv-9': 1, 'inv-10': 3, 'inv-11': 10, 'inv-12': 6, 'inv-13': 4, 'inv-14': 2, 'inv-15': 3, 'inv-16': 2, 'inv-17': 2, 'inv-18': 2, 'inv-19': 4, 'inv-20': 2, 'inv-21': 3, 'inv-22': 3, 'inv-23': 1, 'inv-24': 2, 'inv-25': 4, 'inv-26': 2, 'inv-27': 3, 'inv-28': 1, 'inv-29': 2, 'inv-30': 1, 'inv-31': 2, 'inv-32': 2, 'inv-33': 2, 'inv-34': 3, 'inv-35': 2, 'inv-36': 5, 'inv-37': 2, 'inv-38': 2, 'inv-39': 3, 'inv-40': 2, 'inv-41': 2, 'inv-42': 2, 'inv-43': 3, 'inv-44': 2, 'inv-45': 2, 'inv-46': 1, 'inv-47': 1, 'inv-48': 3, 'inv-49': 8, 'inv-50': 2, 'inv-51': 1, 'inv-52': 4, 'inv-53': 2, 'inv-54': 2, 'inv-55': 1, 'inv-56': 1, 'inv-57': 6, 'inv-58': 3, 'inv-59': 1, 'inv-60': 6, 'inv-61': 6, 'inv-62': 3, 'inv-63': 3, 'inv-64': 3, 'inv-65': 3, 'inv-66': 6, 'inv-67': 6, 'inv-68': 4, 'inv-69': 6, 'inv-70': 10, 'inv-71': 6, 'inv-72': 2, 'inv-73': 2, 'inv-74': 2, 'inv-75': 2, 'inv-76': 2, 'inv-77': 4, 'inv-78': 3, 'inv-79': 12, 'inv-80': 2, 'inv-81': 6, 'inv-82': 2, 'inv-83': 4, 'inv-84': 4, 'inv-85': 3, 'inv-86': 3, 'inv-87': 1, 'inv-88': 2, 'inv-89': 3, 'inv-90': 3, 'inv-91': 2, 'inv-92': 2, 'inv-93': 2, 'inv-94': 2, 'inv-95': 2, 'inv-96': 2, 'inv-97': 2, 'inv-98': 2, 'inv-99': 2, 'inv-100': 2, 'inv-101': 2, 'inv-102': 1, 'inv-103': 3, 'inv-104': 4, 'inv-105': 3, 'inv-106': 2, 'inv-107': 2};
             parsed.inventory.forEach(item => {
-              item.parGrams = Math.round((Number(item.stockGrams) || 0) * 0.50);
+              if (stdMap[item.id] !== undefined) {
+                item.parGrams = stdMap[item.id] * (item.packSizeGrams || 1000);
+              }
             });
             parsed.par50Migrated = true;
+            parsed.standardParsApplied = true;
           }
           return parsed;
         }
@@ -1551,11 +1556,15 @@
       defInv.filter(i => ['inv-16','inv-17','inv-18','inv-19','inv-20','inv-21','inv-22','inv-23','inv-24','inv-25','inv-26','inv-27','inv-28','inv-29','inv-30','inv-31','inv-32','inv-33','inv-34','inv-35','inv-36','inv-37','inv-38','inv-39','inv-40','inv-41','inv-42','inv-43','inv-44','inv-45','inv-46','inv-47','inv-48','inv-49','inv-50','inv-51','inv-52','inv-53','inv-54','inv-55','inv-56','inv-57','inv-58','inv-59','inv-60','inv-61','inv-62','inv-63','inv-64','inv-65','inv-66','inv-67','inv-68','inv-69','inv-70','inv-71','inv-72','inv-73','inv-74','inv-75','inv-76','inv-77','inv-78','inv-79','inv-80','inv-81','inv-82','inv-83','inv-84','inv-85','inv-86','inv-87','inv-88','inv-89','inv-90','inv-91','inv-92','inv-93','inv-94','inv-95','inv-96','inv-97','inv-98','inv-99','inv-100','inv-101','inv-102','inv-103','inv-104','inv-105','inv-106','inv-107'].includes(i.id)).forEach(di => {
         if (!mergedInv.some(i => i.id === di.id)) mergedInv.push(di);
       });
-      if (!state.par50Migrated) {
+      if (!state.standardParsApplied) {
+        const stdMap = {'inv-1': 2, 'inv-2': 1, 'inv-3': 2, 'inv-4': 3, 'inv-5': 2, 'inv-6': 2, 'inv-7': 1, 'inv-8': 1, 'inv-9': 1, 'inv-10': 3, 'inv-11': 10, 'inv-12': 6, 'inv-13': 4, 'inv-14': 2, 'inv-15': 3, 'inv-16': 2, 'inv-17': 2, 'inv-18': 2, 'inv-19': 4, 'inv-20': 2, 'inv-21': 3, 'inv-22': 3, 'inv-23': 1, 'inv-24': 2, 'inv-25': 4, 'inv-26': 2, 'inv-27': 3, 'inv-28': 1, 'inv-29': 2, 'inv-30': 1, 'inv-31': 2, 'inv-32': 2, 'inv-33': 2, 'inv-34': 3, 'inv-35': 2, 'inv-36': 5, 'inv-37': 2, 'inv-38': 2, 'inv-39': 3, 'inv-40': 2, 'inv-41': 2, 'inv-42': 2, 'inv-43': 3, 'inv-44': 2, 'inv-45': 2, 'inv-46': 1, 'inv-47': 1, 'inv-48': 3, 'inv-49': 8, 'inv-50': 2, 'inv-51': 1, 'inv-52': 4, 'inv-53': 2, 'inv-54': 2, 'inv-55': 1, 'inv-56': 1, 'inv-57': 6, 'inv-58': 3, 'inv-59': 1, 'inv-60': 6, 'inv-61': 6, 'inv-62': 3, 'inv-63': 3, 'inv-64': 3, 'inv-65': 3, 'inv-66': 6, 'inv-67': 6, 'inv-68': 4, 'inv-69': 6, 'inv-70': 10, 'inv-71': 6, 'inv-72': 2, 'inv-73': 2, 'inv-74': 2, 'inv-75': 2, 'inv-76': 2, 'inv-77': 4, 'inv-78': 3, 'inv-79': 12, 'inv-80': 2, 'inv-81': 6, 'inv-82': 2, 'inv-83': 4, 'inv-84': 4, 'inv-85': 3, 'inv-86': 3, 'inv-87': 1, 'inv-88': 2, 'inv-89': 3, 'inv-90': 3, 'inv-91': 2, 'inv-92': 2, 'inv-93': 2, 'inv-94': 2, 'inv-95': 2, 'inv-96': 2, 'inv-97': 2, 'inv-98': 2, 'inv-99': 2, 'inv-100': 2, 'inv-101': 2, 'inv-102': 1, 'inv-103': 3, 'inv-104': 4, 'inv-105': 3, 'inv-106': 2, 'inv-107': 2};
         mergedInv.forEach(item => {
-          item.parGrams = Math.round((Number(item.stockGrams) || 0) * 0.50);
+          if (stdMap[item.id] !== undefined) {
+            item.parGrams = stdMap[item.id] * (item.packSizeGrams || 1000);
+          }
         });
         state.par50Migrated = true;
+        state.standardParsApplied = true;
       }
       state.inventory = mergedInv;
     } else if (id === 'menuPlan' && Array.isArray(data)) {
@@ -1875,10 +1884,10 @@
     if (!item) return { unitsPerCase: 1, pieceLabel: 'unit', packIsCase: false };
     const pl = String(item.packLabel || 'unit').toLowerCase();
     const nm = String(item.name || '').toLowerCase();
-    const packIsCase = /(case|crate)/i.test(pl);
+    const packIsCase = /\b(case|crate)\b/i.test(pl);
     let units = Number(item.unitsPerCase || 0);
     if (!units || units < 1) {
-      const ctMatch = pl.match(/(\d+)\s*(?:ct|x)/i);
+      const ctMatch = pl.match(/(\d+)\s*(?:ct|x\b)/i);
       if (ctMatch) units = Number(ctMatch[1]);
       else if (/#10\s*can/i.test(pl) || /#10\s*can/i.test(nm)) units = 6;
       else if (/small\s*cans?/i.test(nm)) units = 24;
@@ -1899,7 +1908,7 @@
     }
     let pieceLabel = 'pcs';
     if (/#10\s*can/i.test(pl) || /#10\s*can/i.test(nm)) pieceLabel = 'cans';
-    else if (/can/i.test(pl) || /cans?/i.test(nm)) pieceLabel = 'cans';
+    else if (/\bcan\b/i.test(pl) || /cans?\b/i.test(nm)) pieceLabel = 'cans';
     else if (/jug|gal/i.test(pl)) pieceLabel = 'gal';
     else if (/bottle/i.test(pl)) pieceLabel = 'bottles';
     else if (/box/i.test(pl) || /boxes|macaroni|spaghetti|farfalle/i.test(nm)) pieceLabel = 'boxes';
@@ -1942,20 +1951,63 @@
     return Math.round(c * cp.caseGrams + p * cp.pieceGrams);
   }
 
-  function formatVendorStock(item) {
-    const g = Number(item.stockGrams) || 0;
-    if (item.packSizeGrams) {
-      const cp = gramsToCasePieces(item, g);
-      if (cp.unitsPerCase > 1) {
-        const parts = [];
-        if (cp.cases > 0) parts.push(`${cp.cases} case${cp.cases === 1 ? '' : 's'}`);
-        if (cp.pieces > 0 || cp.cases === 0) parts.push(`${cp.pieces} ${escapeHtml(cp.pieceLabel)}`);
-        return `<span class="font-semibold">${parts.join(' + ')}</span> <span class="text-[11px] text-slate-400 font-normal">(${cp.unitsPerCase}/case)</span>`;
-      }
-      const packs = g / item.packSizeGrams;
-      return `${packs.toFixed(1)} &times; ${escapeHtml(item.packLabel)}`;
+  function singularizeUnit(lbl, n) {
+    if (n === 1) {
+      if (lbl === 'cans') return 'can';
+      if (lbl === 'boxes') return 'box';
+      if (lbl === 'bags') return 'bag';
+      if (lbl === 'bottles') return 'bottle';
+      if (lbl === 'jars') return 'jar';
+      if (lbl === 'tubs') return 'tub';
+      if (lbl === 'cups') return 'cup';
+      if (lbl === 'sticks') return 'stick';
+      if (lbl === 'rolls') return 'roll';
+      if (lbl === 'biscuits') return 'biscuit';
+      if (lbl === 'pcs') return 'pc';
     }
-    return formatKitchenVolume(item, g);
+    return lbl;
+  }
+
+  function formatStockHuman(item, gramsOverride) {
+    const g = Number(gramsOverride !== undefined ? gramsOverride : item.stockGrams) || 0;
+    if (!item.packSizeGrams) return formatKitchenVolume(item, g);
+    const cp = gramsToCasePieces(item, g);
+    if (cp.unitsPerCase > 1) {
+      const parts = [];
+      if (cp.cases > 0) parts.push(`${cp.cases} case${cp.cases === 1 ? '' : 's'}`);
+      if (cp.pieces > 0 || cp.cases === 0) parts.push(`${cp.pieces} ${escapeHtml(singularizeUnit(cp.pieceLabel, cp.pieces))}`);
+      return `<span class="font-semibold">${parts.join(' + ')}</span> <span class="text-[11px] text-slate-400 font-normal">(${cp.unitsPerCase}/case)</span>`;
+    }
+    // Bulk items displayed solely in plain packs + kitchen volume (cups / qt / gal)
+    const pSize = Number(item.packSizeGrams) || 454;
+    const spec = VOLUME_SPECS[item.id];
+    const gPerCup = (spec && spec.gPerCup) ? spec.gPerCup : 150;
+    const pl = String(item.packLabel || 'pack');
+    const unitWordMatch = pl.match(/(bag|sack|box|case|roast|jug|bottle|jar|tub|crate|can|pack)/i);
+    const unitWord = unitWordMatch ? unitWordMatch[1].toLowerCase() : 'pack';
+    const unitPlural = unitWord === 'box' ? 'boxes' : unitWord + 's';
+    const whole = Math.floor((g + 20) / pSize);
+    const remG = Math.max(0, g - whole * pSize);
+    const remCups = Math.round(remG / gPerCup);
+    const totalCups = Math.round(g / gPerCup);
+    const fmtVol = (cupsVal) => {
+      if (spec && spec.isLiquid && cupsVal >= 16) return `${toNiceFraction(cupsVal / 16)} gal`;
+      if (spec && spec.isLiquid && cupsVal >= 4) return `${toNiceFraction(cupsVal / 4)} qt`;
+      return `${cupsVal} cup${cupsVal === 1 ? '' : 's'}`;
+    };
+    if (g <= 20) return `<span class="font-semibold text-rose-700">0 ${escapeHtml(unitPlural)}</span>`;
+    if (whole === 0) {
+      return `<span class="font-semibold">${escapeHtml(fmtVol(Math.max(1, totalCups)))}</span> <span class="text-[11px] text-slate-400 font-normal">(open ${escapeHtml(unitWord)})</span>`;
+    }
+    const wholeLbl = `${whole} ${whole === 1 ? unitWord : unitPlural}`;
+    if (remCups >= 1) {
+      return `<span class="font-semibold">${escapeHtml(wholeLbl)} + ${escapeHtml(fmtVol(remCups))}</span>`;
+    }
+    return `<span class="font-semibold">${escapeHtml(wholeLbl)}</span> <span class="text-[11px] text-slate-400 font-normal">(${escapeHtml(fmtVol(totalCups))})</span>`;
+  }
+
+  function formatVendorStock(item) {
+    return formatStockHuman(item, item.stockGrams);
   }
 
   function formatMass(grams, item) {
@@ -3021,9 +3073,7 @@
                 const st = item.discontinued
                   ? { label: 'Discontinued', cls: 'bg-slate-200 text-slate-700 border-slate-300' }
                   : getStockStatus(item);
-                const parDisplay = item.packSizeGrams
-                  ? `${(item.parGrams / item.packSizeGrams).toFixed(1)} &times; ${escapeHtml(item.packLabel)}`
-                  : formatShortMass(item.parGrams, item);
+                const parDisplay = formatStockHuman(item, item.parGrams);
                 const isChecked = (state._selectedInvIds || []).includes(item.id);
                 return `
                   <tr class="hover:bg-slate-50 ${item.discontinued ? 'opacity-60' : ''}">
@@ -3127,9 +3177,7 @@
         const st = item.discontinued
           ? { label: 'Discontinued', cls: 'bg-slate-200 text-slate-700 border-slate-300' }
           : getStockStatus(item);
-        const parDisplay = item.packSizeGrams
-          ? `${(item.parGrams / item.packSizeGrams).toFixed(1)} &times; ${escapeHtml(item.packLabel)}`
-          : formatShortMass(item.parGrams, item);
+        const parDisplay = formatStockHuman(item, item.parGrams);
         const isChecked = (state._selectedInvIds || []).includes(item.id);
         return `
           <tr class="hover:bg-slate-50 ${item.discontinued ? 'opacity-60' : ''}">
@@ -3273,7 +3321,6 @@
                   <option value="cup">Cups</option>
                   <option value="gal">Gallons</option>
                   <option value="can10">#10 Cans</option>
-                  <option value="lb">Pounds (lb)</option>
                 </select>
               </div>
             </div>
@@ -3321,7 +3368,6 @@
                   <option value="cup">Cups</option>
                   <option value="gal">Gallons</option>
                   <option value="can10">#10 Cans</option>
-                  <option value="lb">Pounds (lb)</option>
                 </select>
               </div>
             </div>
@@ -3623,6 +3669,7 @@
                 <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium">Units: <strong>Volume, Packs &amp; Cans</strong></span>
                 ${getActiveUser().role === 'Management' ? `
                   <button id="btn-edit-recipe" data-edit-recipe="${selected.id}" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-800">Edit</button>
+                  <button data-duplicate-recipe="${selected.id}" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-800">Duplicate</button>
                   <button id="btn-delete-recipe" data-delete-recipe="${selected.id}" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700">Delete</button>
                 ` : ''}
               </div>
@@ -5854,31 +5901,49 @@
     `);
   }
 
+  function getDefaultRecipeUnit(item) {
+    if (!item) return 'piece';
+    const cp = getCasePackInfo(item);
+    if (/#10\s*can/i.test(item.packLabel || '') || /#10\s*can/i.test(item.name || '')) return 'can10';
+    if (/gal/i.test(item.packLabel || '')) return 'gal';
+    if (cp.unitsPerCase > 1) return 'piece';
+    const spec = VOLUME_SPECS[item.id];
+    if (spec) return 'cup';
+    return 'pack';
+  }
+
   function buildRecipeIngredientRowHtml(itemId, qty, unit) {
-    const invOpts = state.inventory.map(i => `<option value="${i.id}" ${i.id === itemId ? 'selected' : ''}>${escapeHtml(i.name)}</option>`).join('');
+    const sortedInv = (state.inventory || []).filter(i => !i.discontinued).slice().sort((a, b) => a.name.localeCompare(b.name));
+    const selItem = sortedInv.find(i => i.id === itemId) || sortedInv[0];
+    const u = unit || getDefaultRecipeUnit(selItem);
+    const cp = getCasePackInfo(selItem);
+    const invOpts = sortedInv.map(i => `<option value="${i.id}" ${i.id === (selItem && selItem.id) ? 'selected' : ''}>${escapeHtml(i.name)}</option>`).join('');
     return `
       <div class="rec-ing-row grid grid-cols-12 gap-1.5 items-center">
         <select class="rec-ing-item col-span-6 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">${invOpts}</select>
         <input type="number" step="0.25" min="0" value="${qty}" placeholder="Qty" class="rec-ing-qty col-span-2 px-2 py-1.5 rounded border border-slate-300 text-xs" />
         <select class="rec-ing-unit col-span-3 px-2 py-1.5 rounded border border-slate-300 text-xs bg-white">
-          <option value="cup" ${unit === 'cup' ? 'selected' : ''}>Cups</option>
-          <option value="gal" ${unit === 'gal' ? 'selected' : ''}>Gallons</option>
-          <option value="can10" ${unit === 'can10' ? 'selected' : ''}>#10 Cans</option>
-          <option value="pack" ${unit === 'pack' ? 'selected' : ''}>Packs/Bags</option>
-          <option value="tbsp" ${unit === 'tbsp' ? 'selected' : ''}>Tbsp</option>
-          <option value="lb" ${unit === 'lb' ? 'selected' : ''}>Pounds</option>
-          <option value="tsp" ${unit === 'tsp' ? 'selected' : ''}>Tsp</option>
+          <option value="piece" ${u === 'piece' ? 'selected' : ''}>${escapeHtml(cp.pieceLabel || 'Pieces')}</option>
+          <option value="case" ${u === 'case' ? 'selected' : ''}>Cases</option>
+          <option value="pack" ${u === 'pack' ? 'selected' : ''}>Packs/Bags</option>
+          <option value="can10" ${u === 'can10' ? 'selected' : ''}>#10 Cans</option>
+          <option value="cup" ${u === 'cup' ? 'selected' : ''}>Cups</option>
+          <option value="gal" ${u === 'gal' ? 'selected' : ''}>Gallons</option>
+          <option value="tbsp" ${u === 'tbsp' ? 'selected' : ''}>Tbsp</option>
+          <option value="tsp" ${u === 'tsp' ? 'selected' : ''}>Tsp</option>
         </select>
         <button type="button" class="btn-remove-ing-row col-span-1 text-center text-rose-600 hover:text-rose-800 font-bold text-sm">&times;</button>
       </div>
     `;
   }
 
-  function showRecipeEditorModal(recipeId) {
-    const rec = recipeId ? state.recipes.find(r => r.id === recipeId) : null;
-    const isEdit = !!rec;
-    const ingRowsHtml = isEdit && rec.ingredients.length
+  function showRecipeEditorModal(recipeId, duplicateFromId) {
+    const rec = recipeId ? state.recipes.find(r => r.id === recipeId) : (duplicateFromId ? state.recipes.find(r => r.id === duplicateFromId) : null);
+    const isEdit = !!recipeId && !!rec;
+    const isDup = !recipeId && !!duplicateFromId && !!rec;
+    const ingRowsHtml = (isEdit || isDup) && rec.ingredients.length
       ? rec.ingredients.map(ing => {
+          const item = (state.inventory || []).find(i => i.id === ing.itemId);
           const spec = VOLUME_SPECS[ing.itemId];
           if (spec && spec.gPerUnit === 3000) {
             return buildRecipeIngredientRowHtml(ing.itemId, +(ing.grams / 3000).toFixed(2), 'can10');
@@ -5892,45 +5957,65 @@
           if (spec) {
             return buildRecipeIngredientRowHtml(ing.itemId, +(ing.grams / spec.gPerCup).toFixed(2), 'cup');
           }
-          return buildRecipeIngredientRowHtml(ing.itemId, ing.grams, 'g');
+          if (item) {
+            const cp = getCaseAndPieceGrams(item);
+            if (cp.unitsPerCase > 1) {
+              return buildRecipeIngredientRowHtml(ing.itemId, +(ing.grams / cp.pieceGrams).toFixed(2), 'piece');
+            }
+            return buildRecipeIngredientRowHtml(ing.itemId, +(ing.grams / (item.packSizeGrams || 454)).toFixed(2), 'pack');
+          }
+          return buildRecipeIngredientRowHtml(ing.itemId, +(ing.grams / 453.592).toFixed(2), 'lb');
         }).join('')
-      : [buildRecipeIngredientRowHtml(state.inventory[0]?.id, 10, 'cup'), buildRecipeIngredientRowHtml(state.inventory[1]?.id, 4, 'cup')].join('');
+      : '';
 
-    openModal(isEdit ? `Edit Recipe — ${rec.name}` : 'Add Standardized Recipe', `
+    openModal(isEdit ? `Edit Recipe — ${rec.name}` : isDup ? `Duplicate Recipe — ${rec.name}` : 'Add Standardized Recipe', `
       <form id="form-save-recipe" class="space-y-3">
         <input type="hidden" name="recipeId" value="${isEdit ? escapeHtml(rec.id) : ''}" />
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Recipe Name</label>
-          <input name="name" type="text" required value="${isEdit ? escapeHtml(rec.name) : ''}" placeholder="e.g. Classic Chili & Cornbread" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          <input name="name" type="text" required value="${isEdit ? escapeHtml(rec.name) : isDup ? escapeHtml(rec.name + ' (Copy)') : ''}" placeholder="e.g. Classic Chili & Cornbread" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div class="col-span-2 sm:col-span-1">
             <label class="block text-xs font-medium text-slate-700 mb-1">Category</label>
-            <input name="category" type="text" value="${isEdit ? escapeHtml(rec.category) : 'Main Entree'}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
+            <input name="category" list="rec-cat-list" type="text" value="${(isEdit || isDup) ? escapeHtml(rec.category) : 'Main Entree'}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
+            <datalist id="rec-cat-list">
+              <option value="Main Entree"></option>
+              <option value="Soup / Stew"></option>
+              <option value="Sandwich / Wrap"></option>
+              <option value="Side Dish"></option>
+              <option value="Salad Bar"></option>
+              <option value="Dessert"></option>
+              <option value="Holiday Feast"></option>
+            </datalist>
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">Base Portions</label>
-            <input name="basePortions" type="number" min="10" value="${isEdit ? rec.basePortions : 50}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
+            <input name="basePortions" type="number" min="10" value="${(isEdit || isDup) ? rec.basePortions : 65}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">Prep (min)</label>
-            <input name="prepMin" type="number" min="0" value="${isEdit ? rec.prepMin : 30}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
+            <input name="prepMin" type="number" min="0" value="${(isEdit || isDup) ? rec.prepMin : 30}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">Cook (min)</label>
-            <input name="cookMin" type="number" min="0" value="${isEdit ? rec.cookMin : 40}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
+            <input name="cookMin" type="number" min="0" value="${(isEdit || isDup) ? rec.cookMin : 40}" required class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm" />
           </div>
         </div>
         <div class="border border-slate-200 rounded-lg p-3 space-y-2 bg-slate-50">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-700">Ingredients (At Base Yield)</span>
-            <button type="button" id="btn-add-ing-row" class="text-xs font-semibold text-red-700 hover:underline">+ Add Ingredient</button>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-bold text-slate-700">Ingredients (Use Cases, Pieces/Cans, Cups, or Pounds)</span>
+            <button type="button" id="btn-add-ing-row" class="px-2 py-1 rounded bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">+ Add Row</button>
           </div>
-          <div id="rec-ing-rows" class="space-y-2 max-h-52 overflow-y-auto">${ingRowsHtml}</div>
+          <div>
+            <input id="rec-ing-quick-search" type="text" placeholder="Quick-find ingredient to add (type e.g. green beans, cheese, pasta)..." class="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs bg-white" />
+            <div id="rec-ing-quick-results" class="hidden flex flex-wrap gap-1.5 mt-1.5"></div>
+          </div>
+          <div id="rec-ing-rows" class="space-y-2 max-h-52 overflow-y-auto">${ingRowsHtml || '<p id="rec-ing-empty-hint" class="text-xs text-slate-400 italic py-1">Search above or click + Add Row to add ingredients.</p>'}</div>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Method &amp; Food Safety Notes</label>
-          <textarea name="instructions" rows="3" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Step-by-step instructions and CCP temps...">${isEdit ? escapeHtml(rec.instructions) : ''}</textarea>
+          <textarea name="instructions" rows="3" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Step-by-step instructions and CCP temps...">${(isEdit || isDup) ? escapeHtml(rec.instructions) : '1. Prep ingredients and cook/heat to ≥165°F. 2. Hold on steam table at ≥135°F. 3. Serve with Daily Salad Bar & bread.'}</textarea>
         </div>
         <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">${isEdit ? 'Save Recipe Changes' : 'Save to Recipe Book'}</button>
       </form>
@@ -6519,7 +6604,7 @@
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <input id="init-new-packlabel" type="text" placeholder="Pack Unit (e.g. 1 gal jug)" value="5 lb bag" class="px-2.5 py-1.5 rounded border border-slate-300 text-xs bg-white" />
-            <input id="init-new-weightlb" type="number" step="0.1" min="0.1" value="5" placeholder="Pack Weight (lb)" class="px-2.5 py-1.5 rounded border border-slate-300 text-xs bg-white" title="Pack weight in pounds" />
+            <input id="init-new-weightlb" type="number" step="0.5" min="0.5" value="12" placeholder="Cups per Pack" class="px-2.5 py-1.5 rounded border border-slate-300 text-xs bg-white" title="Volume per pack in cups (1 gal = 16 cups, #10 can = 12 cups)" />
             <input id="init-new-packs" type="number" min="0" step="1" value="1" placeholder="Full Packs" class="px-2.5 py-1.5 rounded border border-slate-300 text-xs bg-white" title="Starting Full Packs" />
             <select id="init-new-part" class="px-2.5 py-1.5 rounded border border-slate-300 text-xs bg-white" title="Open Partial">
               <option value="0">0 partial</option>
@@ -6702,8 +6787,8 @@
             <input name="packLabel" type="text" required value="${escapeHtml(item.packLabel)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Approx. Weight / Pack (lb)</label>
-            <input name="packWeightLb" type="number" step="0.25" min="0.25" required value="${+((item.packSizeGrams || 454) / 453.592).toFixed(2)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            <label class="block text-xs font-medium text-slate-700 mb-1">Volume / Pack (Cups)</label>
+            <input name="packCups" type="number" step="0.5" min="0.5" required value="${Math.max(1, Math.round((item.packSizeGrams || 454) / ((VOLUME_SPECS[item.id] && VOLUME_SPECS[item.id].gPerCup) || 150)))}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" title="1 gal = 16 cups, #10 can ≈ 12 cups" />
           </div>
         </div>
         <div class="grid grid-cols-3 gap-2">
@@ -7786,10 +7871,10 @@
       const zone = document.getElementById('init-new-zone')?.value || 'Dry Storage';
       const vendor = (document.getElementById('init-new-vendor')?.value || '').trim() || 'Jordan Banana';
       const packLabel = (document.getElementById('init-new-packlabel')?.value || '').trim() || 'pack';
-      const weightLb = Math.max(0.1, Number(document.getElementById('init-new-weightlb')?.value || 1));
+      const packCups = Math.max(0.5, Number(document.getElementById('init-new-weightlb')?.value || 12));
       const packs = Math.max(0, Number(document.getElementById('init-new-packs')?.value || 0));
       const part = Math.max(0, Number(document.getElementById('init-new-part')?.value || 0));
-      const packSizeGrams = Math.round(weightLb * 453.592);
+      const packSizeGrams = Math.round(packCups * 150);
       const stockGrams = Math.round((packs + part) * packSizeGrams);
       const prefix = /freezer/i.test(zone) ? 'FRZ' : /cooler/i.test(zone) ? 'CLR' : 'DRY';
       const sku = prefix + '-' + (100 + (state.inventory || []).length + 1);
@@ -7945,7 +8030,29 @@
       closeModal();
       return;
     }
+    const qAddIng = e.target.closest('[data-quick-add-ing]');
+    if (qAddIng) {
+      const container = document.getElementById('rec-ing-rows');
+      const hint = document.getElementById('rec-ing-empty-hint');
+      if (hint) hint.remove();
+      if (container) {
+        container.insertAdjacentHTML('beforeend', buildRecipeIngredientRowHtml(qAddIng.dataset.quickAddIng, 1, ''));
+        container.scrollTop = container.scrollHeight;
+      }
+      const srch = document.getElementById('rec-ing-quick-search');
+      const box = document.getElementById('rec-ing-quick-results');
+      if (srch) { srch.value = ''; srch.focus(); }
+      if (box) { box.innerHTML = ''; box.classList.add('hidden'); }
+      return;
+    }
+    const dupRecBtn = e.target.closest('[data-duplicate-recipe]');
+    if (dupRecBtn) {
+      showRecipeEditorModal(null, dupRecBtn.dataset.duplicateRecipe);
+      return;
+    }
     if (e.target.id === 'btn-add-ing-row') {
+      const hint = document.getElementById('rec-ing-empty-hint');
+      if (hint) hint.remove();
       const container = document.getElementById('rec-ing-rows');
       if (container) {
         container.insertAdjacentHTML('beforeend', buildRecipeIngredientRowHtml(state.inventory[0]?.id, 1, 'cup'));
@@ -8936,6 +9043,20 @@
   }
 
   document.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'rec-ing-quick-search') {
+      const q = (e.target.value || '').trim().toLowerCase();
+      const box = document.getElementById('rec-ing-quick-results');
+      if (!box) return;
+      if (!q) { box.innerHTML = ''; box.classList.add('hidden'); return; }
+      const matches = (state.inventory || []).filter(i => !i.discontinued && (i.name.toLowerCase().includes(q) || i.sku.toLowerCase().includes(q))).slice(0, 8);
+      if (!matches.length) {
+        box.innerHTML = '<span class="text-[11px] text-slate-400">No matching inventory items</span>';
+      } else {
+        box.innerHTML = matches.map(m => `<button type="button" data-quick-add-ing="${escapeHtml(m.id)}" class="px-2 py-1 rounded bg-white hover:bg-red-50 border border-slate-300 hover:border-red-400 text-[11px] font-semibold text-slate-800">+ ${escapeHtml(m.name)}</button>`).join('');
+      }
+      box.classList.remove('hidden');
+      return;
+    }
     if (e.target && e.target.id === 'mass-inv-search') {
       const q = (e.target.value || '').trim().toLowerCase();
       document.querySelectorAll('.mass-inv-row').forEach(tr => {
@@ -9382,7 +9503,8 @@
     if (e.target.id === 'form-edit-inv') {
       const item = state.inventory.find(i => i.id === fd.get('itemId'));
       if (item) {
-        const packG = Math.max(1, Math.round((Number(fd.get('packWeightLb')) || 1) * 453.592));
+        const gPerCupEdit = (VOLUME_SPECS[item.id] && VOLUME_SPECS[item.id].gPerCup) || 150;
+        const packG = fd.get('packCups') ? Math.max(1, Math.round(Number(fd.get('packCups')) * gPerCupEdit)) : Math.max(1, Math.round((Number(fd.get('packWeightLb')) || 1) * 453.592));
         item.sku = fd.get('sku').trim();
         item.name = fd.get('name').trim();
         item.zone = fd.get('zone');
@@ -9454,8 +9576,11 @@
         if (!id || !qty || qty <= 0) return;
         const item = state.inventory.find(i => i.id === id);
         const spec = VOLUME_SPECS[id];
+        const cp = item ? getCaseAndPieceGrams(item) : { caseGrams: 1000, pieceGrams: 500 };
         let grams = qty;
-        if (unit === 'cup') grams = qty * (spec ? spec.gPerCup : 150);
+        if (unit === 'case') grams = qty * cp.caseGrams;
+        else if (unit === 'piece') grams = qty * cp.pieceGrams;
+        else if (unit === 'cup') grams = qty * (spec ? spec.gPerCup : 150);
         else if (unit === 'gal') grams = qty * 16 * (spec ? spec.gPerCup : 240);
         else if (unit === 'can10') grams = qty * 3000;
         else if (unit === 'pack') grams = qty * (spec ? spec.gPerUnit : (item ? item.packSizeGrams : 454));
