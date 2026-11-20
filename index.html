@@ -1112,7 +1112,7 @@
     }
   });
   // ===== Safety layer: confirmations + undo for risky actions =====
-  const SAFETY_VOLATILE = ['activeUserId', 'isLocked', 'activeTab', 'selectedRecipeId', '_recSearch', '_recCat', 'activeSessions', '_accSearch', '_accUser', '_accCat', 'chatSeenBy', '_chatFilter'];
+  const SAFETY_VOLATILE = ['activeUserId', 'isLocked', 'activeTab', 'selectedRecipeId', '_recSearch', '_recCat', 'activeSessions', '_accSearch', '_accUser', '_accCat', 'chatSeenBy', '_chatFilter', '_selectedInvIds'];
   const undoStack = [];
   let safetyBypass = false;
   let undoBarTimer = null;
@@ -1725,7 +1725,11 @@
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
           suppressCloudPush = false;
           render();
-          showToast(`Live update (${row.id}) from ${row.updated_by || 'another device'}`);
+          const silentSlices = ['activeSessions', 'activityLogs', 'training', 'checklists', 'kitchenMessages'];
+          const curName = (getActiveUser() && getActiveUser().name) || '';
+          if (!state.isLocked && !silentSlices.includes(row.id) && row.updated_by && row.updated_by !== curName) {
+            showToast(`Synced ${row.id} update from ${row.updated_by}`);
+          }
         })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
@@ -2891,6 +2895,7 @@
             ${canManage ? '<button id="btn-manage-zones" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-medium">Manage Zones</button>' : ''}
             ${canManage ? '<button id="btn-init-inventory" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-semibold">Official Inventory Init (+10% Par)</button>' : ''}
             ${canManage ? '<button id="btn-bulk-par" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold">Set Par Levels</button>' : ''}
+            ${canManage ? '<button id="btn-mass-edit-inv" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold">Mass Edit / Delete</button>' : ''}
             ${canManage ? '<button id="btn-add-inv-item" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs sm:text-sm font-medium">+ New Item</button>' : ''}
           </div>
         </div>
@@ -2907,10 +2912,22 @@
           </label>
         </div>
 
+        ${canManage ? `
+          <div id="inv-bulk-bar" class="${(state._selectedInvIds && state._selectedInvIds.length) ? '' : 'hidden'} p-2.5 rounded-lg bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span class="font-semibold"><span id="inv-bulk-count">${(state._selectedInvIds || []).length}</span> item(s) selected</span>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button type="button" id="btn-mass-edit-selected" class="px-2.5 py-1 rounded bg-white text-slate-900 hover:bg-slate-100 font-semibold">Mass Edit Selected</button>
+              <button type="button" id="btn-mass-delete-selected" class="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-semibold">Delete Selected</button>
+              <button type="button" id="btn-inv-clear-sel" class="px-2 py-1 rounded border border-slate-600 hover:bg-slate-800 text-slate-200">Clear</button>
+            </div>
+          </div>
+        ` : ''}
+
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse text-sm">
             <thead>
               <tr class="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                ${canManage ? '<th class="py-2.5 pr-2 w-8"><input id="inv-select-all" type="checkbox" title="Select all visible" class="accent-red-700 rounded cursor-pointer" /></th>' : ''}
                 <th class="py-2.5 pr-3">SKU</th>
                 <th class="py-2.5 pr-3">Item</th>
                 <th class="py-2.5 pr-3">Zone</th>
@@ -2929,8 +2946,10 @@
                 const parDisplay = item.packSizeGrams
                   ? `${(item.parGrams / item.packSizeGrams).toFixed(1)} &times; ${escapeHtml(item.packLabel)}`
                   : formatShortMass(item.parGrams, item);
+                const isChecked = (state._selectedInvIds || []).includes(item.id);
                 return `
                   <tr class="hover:bg-slate-50 ${item.discontinued ? 'opacity-60' : ''}">
+                    ${canManage ? `<td class="py-2.5 pr-2"><input type="checkbox" data-inv-select="${escapeHtml(item.id)}" ${isChecked ? 'checked' : ''} class="accent-red-700 rounded cursor-pointer" /></td>` : ''}
                     <td class="py-2.5 pr-3 font-mono text-xs text-slate-500">${escapeHtml(item.sku)}</td>
                     <td class="py-2.5 pr-3 font-medium text-slate-900">${escapeHtml(item.name)}</td>
                     <td class="py-2.5 pr-3 text-xs text-slate-600">${escapeHtml(item.zone)}</td>
@@ -3033,8 +3052,10 @@
         const parDisplay = item.packSizeGrams
           ? `${(item.parGrams / item.packSizeGrams).toFixed(1)} &times; ${escapeHtml(item.packLabel)}`
           : formatShortMass(item.parGrams, item);
+        const isChecked = (state._selectedInvIds || []).includes(item.id);
         return `
           <tr class="hover:bg-slate-50 ${item.discontinued ? 'opacity-60' : ''}">
+            ${canManage ? `<td class="py-2.5 pr-2"><input type="checkbox" data-inv-select="${escapeHtml(item.id)}" ${isChecked ? 'checked' : ''} class="accent-red-700 rounded cursor-pointer" /></td>` : ''}
             <td class="py-2.5 pr-3 font-mono text-xs text-slate-500">${escapeHtml(item.sku)}</td>
             <td class="py-2.5 pr-3 font-medium text-slate-900">${escapeHtml(item.name)}</td>
             <td class="py-2.5 pr-3 text-xs text-slate-600">${escapeHtml(item.zone)}</td>
@@ -6490,6 +6511,77 @@
     `);
   }
 
+  function showMassEditInventoryModal(selectedIds) {
+    const idSet = Array.isArray(selectedIds) && selectedIds.length ? new Set(selectedIds) : null;
+    const items = (state.inventory || []).filter(i => !idSet || idSet.has(i.id));
+    const zoneOpts = (state.zones && state.zones.length ? state.zones : ['Dry Storage', 'Walk-In Cooler', 'Walk-In Freezer', 'Kitchen Cooler', 'Kitchen Freezer']);
+    openModal(idSet ? `Mass Edit & Delete (${items.length} Selected Items)` : `Mass Edit & Delete All Inventory (${items.length} Items)`, `
+      <form id="form-mass-edit-inv" class="space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <input id="mass-inv-search" type="text" placeholder="Filter by name, SKU, zone, or vendor..." class="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg border border-slate-300 text-xs" />
+          <button type="button" id="btn-mass-par-half" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 text-xs font-semibold text-slate-800">Set All Par = 0.50× Stock</button>
+        </div>
+        <div class="max-h-[55vh] overflow-auto border border-slate-200 rounded-lg">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 text-[11px] text-slate-500 uppercase z-10">
+              <tr>
+                <th class="py-2 px-2">Del</th>
+                <th class="py-2 px-2 min-w-[160px]">Item Name</th>
+                <th class="py-2 px-2 min-w-[130px]">Zone</th>
+                <th class="py-2 px-2 min-w-[110px]">Vendor</th>
+                <th class="py-2 px-2 min-w-[95px]">Pack Unit</th>
+                <th class="py-2 px-2 w-24">Stock (Packs)</th>
+                <th class="py-2 px-2 w-24">Par (Packs)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              ${items.map(item => {
+                const pSize = item.packSizeGrams || 1000;
+                const stockP = +(Number(item.stockGrams || 0) / pSize).toFixed(2);
+                const parP = +(Number(item.parGrams || 0) / pSize).toFixed(2);
+                return `
+                  <tr class="mass-inv-row hover:bg-slate-50" data-search="${escapeHtml((item.name + ' ' + item.sku + ' ' + item.zone + ' ' + item.vendor).toLowerCase())}">
+                    <td class="py-1.5 px-2 text-center">
+                      <input type="checkbox" name="mass_del_${escapeHtml(item.id)}" value="1" class="accent-rose-600 rounded cursor-pointer" title="Check to delete ${escapeHtml(item.name)}" />
+                    </td>
+                    <td class="py-1.5 px-2">
+                      <input type="hidden" name="mass_ids" value="${escapeHtml(item.id)}" />
+                      <input type="text" name="mass_name_${escapeHtml(item.id)}" value="${escapeHtml(item.name)}" required class="w-full px-2 py-1 rounded border border-slate-300 text-xs font-medium" />
+                    </td>
+                    <td class="py-1.5 px-2">
+                      <select name="mass_zone_${escapeHtml(item.id)}" class="w-full px-1.5 py-1 rounded border border-slate-300 text-xs bg-white">
+                        ${zoneOpts.map(z => `<option value="${escapeHtml(z)}" ${item.zone === z ? 'selected' : ''}>${escapeHtml(z)}</option>`).join('')}
+                      </select>
+                    </td>
+                    <td class="py-1.5 px-2">
+                      <input type="text" name="mass_vendor_${escapeHtml(item.id)}" value="${escapeHtml(item.vendor)}" class="w-full px-2 py-1 rounded border border-slate-300 text-xs" />
+                    </td>
+                    <td class="py-1.5 px-2">
+                      <input type="text" name="mass_pack_${escapeHtml(item.id)}" value="${escapeHtml(item.packLabel)}" class="w-full px-2 py-1 rounded border border-slate-300 text-xs" />
+                    </td>
+                    <td class="py-1.5 px-2">
+                      <input type="number" step="0.25" min="0" name="mass_stock_${escapeHtml(item.id)}" value="${stockP}" class="mass-stock-inp w-20 px-2 py-1 rounded border border-slate-300 text-xs font-semibold" />
+                    </td>
+                    <td class="py-1.5 px-2">
+                      <input type="number" step="0.25" min="0" name="mass_par_${escapeHtml(item.id)}" value="${parP}" class="mass-par-inp w-20 px-2 py-1 rounded border border-slate-300 text-xs font-semibold" />
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+          <span class="text-[11px] text-rose-700 font-medium">Checked "Del" boxes will permanently delete those items on save.</span>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="document.getElementById('modal-close').click()" class="px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">Save All Changes &amp; Deletions</button>
+          </div>
+        </div>
+      </form>
+    `);
+  }
+
   function showEditInventoryModal(itemId) {
     const item = state.inventory.find(i => i.id === itemId);
     if (!item) return;
@@ -7662,6 +7754,49 @@
       showOfficialInitModal();
       return;
     }
+    if (e.target.id === 'btn-mass-edit-inv') {
+      showMassEditInventoryModal(null);
+      return;
+    }
+    if (e.target.id === 'btn-mass-edit-selected') {
+      const sel = state._selectedInvIds || [];
+      if (!sel.length) { showToast('Select at least one item first', 'warn'); return; }
+      showMassEditInventoryModal(sel);
+      return;
+    }
+    if (e.target.id === 'btn-inv-clear-sel') {
+      state._selectedInvIds = [];
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-mass-delete-selected') {
+      const sel = state._selectedInvIds || [];
+      if (!sel.length) return;
+      if (e.target.dataset.confirmed !== '1') {
+        e.target.dataset.confirmed = '1';
+        e.target.textContent = `Tap Again to Delete ${sel.length} Item(s)`;
+        setTimeout(() => { if (e.target.isConnected) { e.target.dataset.confirmed = '0'; e.target.textContent = 'Delete Selected'; } }, 3500);
+        return;
+      }
+      const delSet = new Set(sel);
+      const count = sel.length;
+      state.inventory = (state.inventory || []).filter(i => !delSet.has(i.id));
+      state._selectedInvIds = [];
+      logActivity('MASS INVENTORY DELETE', `Deleted ${count} selected inventory item(s)`);
+      saveState();
+      render();
+      showToast(`Deleted ${count} inventory item(s)`, 'warn');
+      return;
+    }
+    if (e.target.id === 'btn-mass-par-half') {
+      document.querySelectorAll('.mass-inv-row').forEach(tr => {
+        const sInp = tr.querySelector('.mass-stock-inp');
+        const pInp = tr.querySelector('.mass-par-inp');
+        if (sInp && pInp) pInp.value = +(Number(sInp.value || 0) * 0.50).toFixed(2);
+      });
+      showToast('Updated all Par fields in editor to 0.50× Stock (click Save to apply)');
+      return;
+    }
     if (e.target.id === 'btn-bulk-par') {
       showBulkParModal();
       return;
@@ -8712,6 +8847,14 @@
   }
 
   document.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'mass-inv-search') {
+      const q = (e.target.value || '').trim().toLowerCase();
+      document.querySelectorAll('.mass-inv-row').forEach(tr => {
+        const hay = tr.dataset.search || '';
+        tr.style.display = (!q || hay.includes(q)) ? '' : 'none';
+      });
+      return;
+    }
     if (e.target && e.target.id === 'init-inv-search') {
       const q = (e.target.value || '').trim().toLowerCase();
       document.querySelectorAll('.init-inv-row').forEach(tr => {
@@ -8791,6 +8934,30 @@
     if (e.target.id === 'ann-repeat-select') {
       const wrap = document.getElementById('ann-repeat-days-wrap');
       if (wrap) wrap.classList.toggle('hidden', !['weekly', 'biweekly'].includes(e.target.value));
+      return;
+    }
+    if (e.target.id === 'inv-select-all') {
+      const checked = e.target.checked;
+      const visibleIds = Array.from(document.querySelectorAll('[data-inv-select]')).map(cb => cb.dataset.invSelect);
+      const cur = new Set(state._selectedInvIds || []);
+      visibleIds.forEach(id => { if (checked) cur.add(id); else cur.delete(id); });
+      state._selectedInvIds = Array.from(cur);
+      document.querySelectorAll('[data-inv-select]').forEach(cb => { cb.checked = checked; });
+      const bar = document.getElementById('inv-bulk-bar');
+      const cnt = document.getElementById('inv-bulk-count');
+      if (bar) bar.classList.toggle('hidden', state._selectedInvIds.length === 0);
+      if (cnt) cnt.textContent = String(state._selectedInvIds.length);
+      return;
+    }
+    if (e.target.matches('[data-inv-select]')) {
+      const id = e.target.dataset.invSelect;
+      const cur = new Set(state._selectedInvIds || []);
+      if (e.target.checked) cur.add(id); else cur.delete(id);
+      state._selectedInvIds = Array.from(cur);
+      const bar = document.getElementById('inv-bulk-bar');
+      const cnt = document.getElementById('inv-bulk-count');
+      if (bar) bar.classList.toggle('hidden', state._selectedInvIds.length === 0);
+      if (cnt) cnt.textContent = String(state._selectedInvIds.length);
       return;
     }
     if (e.target.id === 'accountability-user-filter') {
@@ -9052,6 +9219,48 @@
       logActivity('OFFICIAL INIT', `Initialized ${updatedCount} inventory items (+10% Par)`);
       saveState();
       showToast(`Initialized ${updatedCount} inventory items with +10% Par & 25%/10%/5% alerts!`);
+      return;
+    }
+
+    if (e.target.id === 'form-mass-edit-inv') {
+      const ids = fd.getAll('mass_ids');
+      const delIds = new Set();
+      let editedCount = 0;
+      const todayStr = localDateStr();
+      ids.forEach(id => {
+        if (fd.get('mass_del_' + id)) {
+          delIds.add(id);
+          return;
+        }
+        const item = (state.inventory || []).find(i => i.id === id);
+        if (!item) return;
+        const pSize = item.packSizeGrams || 1000;
+        const newName = String(fd.get('mass_name_' + id) || '').trim();
+        const newZone = String(fd.get('mass_zone_' + id) || item.zone);
+        const newVendor = String(fd.get('mass_vendor_' + id) || '').trim() || item.vendor;
+        const newPack = String(fd.get('mass_pack_' + id) || '').trim() || item.packLabel;
+        const newStockG = Math.round(Math.max(0, Number(fd.get('mass_stock_' + id) || 0)) * pSize);
+        const newParG = Math.round(Math.max(0, Number(fd.get('mass_par_' + id) || 0)) * pSize);
+        if (newName && (item.name !== newName || item.zone !== newZone || item.vendor !== newVendor || item.packLabel !== newPack || item.stockGrams !== newStockG || item.parGrams !== newParG)) {
+          item.name = newName;
+          item.zone = newZone;
+          item.vendor = newVendor;
+          item.packLabel = newPack;
+          item.stockGrams = newStockG;
+          item.parGrams = newParG;
+          item.lastUpdated = todayStr;
+          editedCount++;
+        }
+      });
+      if (delIds.size > 0) {
+        state.inventory = (state.inventory || []).filter(i => !delIds.has(i.id));
+      }
+      state._selectedInvIds = [];
+      logActivity('MASS INVENTORY EDIT', `Updated ${editedCount} item(s)${delIds.size ? ` and deleted ${delIds.size} item(s)` : ''}`);
+      saveState();
+      closeModal();
+      render();
+      showToast(`Saved ${editedCount} edit(s)${delIds.size ? ` & deleted ${delIds.size} item(s)` : ''}`);
       return;
     }
 
