@@ -1,52 +1,37 @@
-# The Salvation Army Community Meals — Inventory & Kitchen OS
+# The Salvation Army Community Meals — Unified Kitchen Management System (KMS)
 
-A standalone, zero-build, real-time synced Kitchen Management & Inventory Operating System built for **The Salvation Army Community Meals** (Butler, PA — Monday, Tuesday, Wednesday & Friday lunch service, 11:30 AM–12:30 PM).
+**Butler, PA · Mon / Tue / Wed / Fri Lunch Service (11:30 AM – 12:30 PM)**
 
-## Key Capabilities
+This unified KMS combines the simplicity, Butler PA stockroom seed, 8-week auto-learning par levels, and printable Daily Sheets of **Community Meals Inventory** with the multi-user security, forecasting, checklists, QR scanning, and relational Supabase cloud sync of **Kitchen OS**.
 
-- **Living Running Stock & Official Initialization**:
-  - Displays all quantities in **Volume (Cups, Quarts, Gallons, Tbsp, Tsp), Vendor Packs/Cases, #10 Cans, and Pieces** (zero metric grams/kg shown in the UI).
-  - **Official Inventory Init (+10% Par)**: Management can enter an official physical count (Full Packs + `1/4`, `1/2`, `3/4` open partials) to reset all stock and auto-set `Par = Count + 10%`.
-  - **25% / 10% / 5% Staple Reorder Alerts**: Tiered alerts on the Home Dashboard and Living Stock as staples drop below Par.
-- **210 Standardized Recipes & Auto-Rescaling**:
-  - 210 standardized recipes, including dedicated special holiday feast recipes for every US Federal Holiday.
-  - Every recipe automatically rescales to the **predicted portions** for its scheduled service day.
-- **Menu Planner, Next-Day Prep & Ordering**:
-  - **Weekly** (`Marberger` Dairy & `Produce`) and **Monthly** (3rd Friday `Jordan Banana` Dry Goods & Frozen) ordering cadence with a 3-step **Request → Management Approval → Expected Delivery Reconciliation** workflow.
-  - **Auto-Schedule Pre-Holiday Feasts** schedules dedicated Holiday Feast meals on the open MTWF service day before each US Federal Holiday (+25% Peak-Day baseline).
-- **Food Safety, Storage & Leftover Tracking**:
-  - **Serving-Day-Only Time & Temp Logs**: 6 daily checks (**Walk-In Cooler**, **Walk-In Freezer**, **Kitchen Cooler**, **Kitchen Freezer**, **Main Entree**, **Steam Table Well #1**) required only on open serving days (MTWF non-holidays), resetting automatically at midnight.
-  - **Storage & Date Labels (>24 Hours)**: Variable shelf-life rules (`7d` cooked entrees, `3d` cut greens/fruit, `4d` dairy/yogurt/pudding/deli salads, `90d` freezer) with **1-Tap Presets** and separate FIFO tables for **Meal Leftovers** and **Daily Salad Bar & Cold Prep**.
-  - **Leftover Predictor**: Automatically predicts leftovers from **Planned vs. Actual Served**, generates the exact ServSafe Date Tag, adds it to the Daily Checklist, and logs it into Meal Leftover Inventory.
-- **Role-Based PIN Security & Mandatory Training**:
-  - **Management / Admin**, **Staff**, **Volunteer**, and **Other** roles with strict access boundaries, 5-minute shared-tablet auto-lock, and 7 mandatory first-login training modules.
-- **Live Multi-Device Sync (Supabase)**:
-  - Real-time synchronization across kitchen tablets, office computers, and phones.
+## What Was Merged & Recreated
 
----
+1. **Community Inventory Core (Base Architecture)**:
+   - **Warm, high-contrast touch UI** (`#f6f4f0` background, `#1b365d` Salvation Army Navy, `#b3122b` Red) with **Dark Mode**, **3-step Text Size toggle**, and **Undo Last Change**.
+   - **Full Butler, PA Seed Inventory** across `Walk-in cooler`, `Walk-in freezer`, and `Stockroom` with exact units (`cases`, `cans`, `boxes`, `bottles`, `jugs`, `bags`, `packs`, `crates`, `pieces`, `tubs`) and `W` (Weekly: Marberger & produce) / `M` (Monthly: Jordan Banana) cadence.
+   - **8-Week Auto-Learning Par Levels**: Automatically computes `par = avg weekly use × cycle weeks × 1.25` after 7+ days of usage; typing a custom par locks that item.
+   - **Smart Recipe Text/Paste Parser + Scaled Recipes**: Paste any recipe text to auto-extract servings, ingredients, steps, and major allergens—or build/edit recipes manually and map ingredients (`per 100 servings`) to Living Stock.
+   - **Printable Daily Service Sheet**: Scaled ingredients, cooking directions, storage pull list grouped by location, blank temperature log, and 7-day leftover labels.
+   - **Monthly Report**: Meals served, total purchases & cost per meal, food received by source, waste breakdown, food safety pass %, top-used items, and below-par summary.
 
-## Deploying to GitHub Pages
+2. **Merged Kitchen OS Features**:
+   - **Home Dashboard**: Quick Shift Actions, *Today's Recipe & To-Do* modal, Priority Carryover alerts, Reorder alerts, Expiring Date-Tag alerts, Scheduled/Repeating Announcements, and 7-Day Menu Strip.
+   - **Role-Based PIN Security & Auto-Lock**: `Management`, `Staff`, `Volunteer`, and `Other` tiers with salted SHA-256 PIN hashing, force-change-PIN on first login, 5-minute configurable inactivity auto-lock, and mandatory first-login training walkthrough.
+   - **Fast Scan Terminal & Printable QR Labels**: Camera QR/barcode scanning (`html5-qrcode`), USB/Bluetooth scanner input, and printable shelf/bin QR labels (`qrcode-generator`).
+   - **Next-Day Prep List**: Tomorrow's pulls grouped by storage zone with checkboxes and FIFO leftovers reminder.
+   - **Operational Checklists**: Daily, Weekly, and Monthly cycles with auto-reset, Priority Carryover for unfinished tasks, and permanent completion log.
+   - **Blind Physical Count**: Hides system quantities during counting, records variances, and updates Living Stock upon reconciliation.
+   - **Storage & Date Labels (>24 Hours)**: Separate FIFO tracking for **Meal Leftovers** and **Daily Salad Bar & Cold Prep** with 1-tap shelf-life presets (`3d` greens/fruit, `4d` dairy/deli, `7d` cooked entrees, `90d` freezer).
+   - **Multi-Horizon Forecasting (Chart.js)**: Predicts patron turnout across Days (7), Weeks (8), Months (12), and Years (3) using weekday, time-of-month, and US Federal Holiday factors.
+   - **Kitchen Instant Messaging (Chat)**: Real-time team broadcast & direct messages with Urgent alerts.
 
-1. Create a new repository on GitHub (e.g., `salvation-army-kitchen-os`).
-2. Upload **`index.html`**, **`README.md`**, **`.nojekyll`**, and **`supabase_setup.sql`** to the root of the `main` branch (or unzip `salvation_army_kms_github_bundle.zip` and push).
-3. In your GitHub repository, go to **Settings → Pages**.
-4. Under **Build and deployment → Source**, select **Deploy from a branch**.
-5. Choose **`main`** and **`/ (root)`**, then click **Save**.
-6. Your live URL will be published at:
-   `https://<your-github-username>.github.io/<repo-name>/`
+3. **Recreated Relational Database (`supabase_setup.sql`)**:
+   - Replaced the single JSON blob with **14 normalized PostgreSQL tables** (`kms_users`, `kms_inventory_items`, `kms_recipes`, `kms_menu_plan`, `kms_purchase_orders`, `kms_transactions`, `kms_safety_logs`, `kms_storage_tags`, `kms_checklists`, `kms_blind_audits`, `kms_announcements`, `kms_messages`, `kms_activity_logs`, `kms_settings`), complete with Row Level Security and Supabase Realtime subscriptions.
 
 ---
 
-## Supabase Setup (Live Multi-Device Sync)
+## Setup & Deployment
 
-Run the included **`supabase_setup.sql`** in your Supabase **SQL Editor** to ensure the `kitchen_records` table, open kitchen sync policy, and Realtime publication are active.
-
----
-
-## Go-Live Checklist (First Day of Service)
-
-1. Open the GitHub Pages URL on your kitchen tablet/computer and sign in as **Management**.
-2. Complete the initial PIN update and **Mandatory Training** walkthrough.
-3. Go to **Inventory & Orders → Living Stock** and click **Official Inventory Init (+10% Par)** to enter your starting physical count.
-4. On the **Home Dashboard**, tap **Today's Recipe & To-Do** to review today's scaled meal, Daily Salad Bar setup, and Daily Checklist.
-5. After lunch service, log **People / Meals Served** in **Safety & Tasks → Served & Forecasting** to update forecasts and generate leftover date tags.
+1. **Database Setup**: Open your Supabase Dashboard → **SQL Editor**, paste and run **`supabase_setup.sql`**.
+2. **Hosting**: Upload **`index.html`**, **`README.md`**, and **`supabase_setup.sql`** to your GitHub Pages repository (`main` branch, `/ (root)`).
+3. **First Login**: Sign in as **William Clark (`Management`)** using PIN `1234` (you will be prompted to set a personal 6+ character PIN and complete the brief role training).
