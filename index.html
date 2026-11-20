@@ -18,8 +18,13 @@
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     @media print {
       .no-print { display: none !important; }
-      body { background: #fff !important; }
+      body { background: #fff !important; color: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .print-only { display: block !important; }
+      main { padding: 0 !important; max-width: 100% !important; }
+      .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl { box-shadow: none !important; }
+      table { width: 100% !important; border-collapse: collapse !important; }
+      thead { display: table-header-group !important; }
+      tr, .rounded-xl { break-inside: avoid; page-break-inside: avoid; }
       .overflow-x-auto, .overflow-y-auto, [class*="max-h-"] { overflow: visible !important; max-height: none !important; }
       body:not(.printing-modal) #modal-backdrop { display: none !important; }
       body.printing-modal #app-main,
@@ -30,6 +35,10 @@
       body.printing-modal #modal-backdrop { position: static !important; inset: auto !important; background: #fff !important; padding: 0 !important; display: block !important; }
       body.printing-modal #modal-box { box-shadow: none !important; border: none !important; max-width: 100% !important; width: 100% !important; max-height: none !important; overflow: visible !important; padding: 0 !important; }
       body.printing-modal #modal-box > div:first-child { display: none !important; }
+      @page { size: letter; margin: 0.4in; }
+      .qr-print-grid { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.14in !important; }
+      .qr-label-card { height: 1.12in !important; padding: 0.1in 0.12in !important; border: 1px dashed #64748b !important; border-radius: 6px !important; break-inside: avoid !important; page-break-inside: avoid !important; overflow: hidden !important; }
+      .qr-label-card svg { width: 68px !important; height: 68px !important; display: block !important; }
     }
     /* ===== Accessibility & tablet comfort ===== */
     html body .text-xs { font-size: 0.875rem; line-height: 1.35rem; }
@@ -3090,7 +3099,7 @@
               <h2 class="text-base font-bold text-slate-900">Smart Order Suggestions &amp; Purchase Orders</h2>
               <p class="text-xs text-slate-500">Select items and send a PO for approval. Inventory is only updated when an <strong>Approved &amp; Ordered</strong> delivery is checked in.</p>
             </div>
-            <div class="flex flex-wrap gap-2 items-center">
+            <div class="flex flex-wrap gap-2 items-center no-print">
               <select id="order-cadence-filter" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white font-medium">
                 <option value="ALL" ${cadenceFilter === 'ALL' ? 'selected' : ''}>All Orders (Weekly + Monthly)</option>
                 <option value="WEEKLY" ${cadenceFilter === 'WEEKLY' ? 'selected' : ''}>Weekly Only (Marberger &amp; Produce)</option>
@@ -3900,7 +3909,7 @@
               <h2 class="text-base font-bold text-slate-900">Tag &amp; Log Stored Leftovers / Prepped Food (&gt;24 Hours)</h2>
               <p class="text-xs text-slate-500">Not everything keeps for 7 days! Select the food type (Cooked Entrees = 7d, Cut Salad Greens/Fruit = 3d, Dairy/Yogurt/Pudding = 4d, Freezer = 90d) or enter a manufacturer Use-By date.</p>
             </div>
-            <button type="button" id="btn-print-storage" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold">Print Storage Tags</button>
+            <button type="button" id="btn-print-storage" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold no-print">Print Storage Tags</button>
           </div>
           <div class="flex flex-wrap items-center gap-1.5 text-xs">
             <span class="font-semibold text-slate-500 mr-1">1-Tap Preset:</span>
@@ -4255,7 +4264,7 @@
     main.innerHTML = `
       <div class="space-y-4">
         <!-- Compact Top Bar -->
-        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3 no-print">
           <div>
             <h2 class="text-base font-bold text-slate-900">Menu Planner &amp; Meal Showcase</h2>
             <p class="text-xs text-slate-500">Tap any day on the left to view its scaled recipe, ingredients, and prep steps on the right.</p>
@@ -4309,7 +4318,7 @@
         <!-- Clean 2-Column Split: Compact Menu Calendar (Left) + Meal & Recipe Showcase (Right) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           <!-- Left: Compact Schedule List -->
-          <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm space-y-2">
+          <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm space-y-2 no-print">
             <div class="text-xs font-bold uppercase text-slate-500 px-1 pb-1">Scheduled Service Days (${sortedPlan.length})</div>
             ${sortedPlan.length === 0
               ? '<p class="text-sm text-slate-500 p-3">No meals scheduled yet. Click "+ Schedule Meal / Leftovers" above.</p>'
@@ -4339,7 +4348,7 @@
           </div>
 
           <!-- Right: Dedicated Meal & Recipe Showcase -->
-          <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+          <div class="lg:col-span-7 print:w-full bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
             ${!selectedMp ? '<p class="text-sm text-slate-500">Select a service day on the left to view the meal details and recipe.</p>' : (() => {
               const isClosed = selectedMp.status === 'CLOSED';
               const isDeducted = selectedMp.status === 'DEDUCTED';
@@ -5670,24 +5679,26 @@
     if (stopBtn) stopBtn.classList.add('hidden');
   }
 
-  function showQrLabelsModal() {
-    const cards = state.inventory.map(item => {
+  function showQrLabelsModal(filterZone) {
+    const zFilter = filterZone || 'ALL';
+    const items = (state.inventory || []).filter(i => !i.discontinued && (zFilter === 'ALL' || i.zone === zFilter));
+    const cards = items.map(item => {
       let svgHtml = '';
       try {
         if (window.qrcode) {
           const qr = window.qrcode(0, 'M');
           qr.addData(item.sku);
           qr.make();
-          svgHtml = qr.createSvgTag({ cellSize: 3, margin: 2 });
+          svgHtml = qr.createSvgTag({ cellSize: 3, margin: 1 });
         }
       } catch (e) {}
       return `
-        <div class="border border-slate-300 rounded-lg p-3 flex items-center gap-3 bg-white break-inside-avoid">
-          <div class="shrink-0">${svgHtml || '<span class="text-xs font-mono">' + escapeHtml(item.sku) + '</span>'}</div>
-          <div class="min-w-0">
-            <div class="font-bold text-xs text-slate-900 truncate">${escapeHtml(item.name)}</div>
-            <div class="text-xs font-mono text-red-700 font-semibold">${escapeHtml(item.sku)}</div>
-            <div class="text-[11px] text-slate-500">${escapeHtml(item.zone)} &bull; ${escapeHtml(item.packLabel)}</div>
+        <div class="qr-label-card border border-dashed border-slate-300 rounded-lg p-2.5 flex items-center gap-3 bg-white break-inside-avoid">
+          <div class="shrink-0 w-[68px] h-[68px] flex items-center justify-center">${svgHtml || '<span class="text-xs font-mono">' + escapeHtml(item.sku) + '</span>'}</div>
+          <div class="min-w-0 flex-1">
+            <div class="font-bold text-xs text-slate-900 leading-tight line-clamp-2">${escapeHtml(item.name)}</div>
+            <div class="text-xs font-mono text-red-700 font-bold mt-0.5">${escapeHtml(item.sku)}</div>
+            <div class="text-[11px] text-slate-600 truncate">${escapeHtml(item.zone)} &bull; ${escapeHtml(item.packLabel)}</div>
           </div>
         </div>
       `;
@@ -5695,11 +5706,14 @@
 
     openModal('Printable Bin & Shelf QR Labels', `
       <div class="space-y-3">
-        <div class="flex items-center justify-between no-print">
-          <p class="text-xs text-slate-600">Print and tape these QR labels to bins or shelves to scan with your iPad/phone camera.</p>
-          <button id="btn-print-qr-now" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">Print Labels</button>
+        <div class="flex flex-wrap items-center justify-between gap-2 no-print">
+          <select id="qr-zone-filter" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white">
+            <option value="ALL" ${zFilter === 'ALL' ? 'selected' : ''}>All Storage Zones (${state.inventory.filter(i => !i.discontinued).length})</option>
+            ${(state.zones || []).map(z => `<option value="${escapeHtml(z)}" ${zFilter === z ? 'selected' : ''}>${escapeHtml(z)}</option>`).join('')}
+          </select>
+          <button id="btn-print-qr-now" class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">Print Labels (${items.length})</button>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">${cards}</div>
+        <div class="qr-print-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5">${cards}</div>
       </div>
     `);
   }
@@ -7146,6 +7160,7 @@
       return;
     }
     if (e.target.id === 'btn-print-meal-showcase') {
+      document.body.classList.remove('printing-modal');
       window.print();
       return;
     }
@@ -7556,10 +7571,12 @@
       return;
     }
     if (e.target.id === 'btn-print-storage') {
+      document.body.classList.remove('printing-modal');
       window.print();
       return;
     }
     if (e.target.id === 'btn-print-report') {
+      document.body.classList.remove('printing-modal');
       window.print();
       return;
     }
@@ -7993,6 +8010,10 @@
       const item = state.inventory.find(i => i.id === e.target.value);
       const packOpt = document.getElementById('checkin-pack-option');
       if (item && packOpt) packOpt.textContent = `${item.packLabel} (${item.vendor})`;
+      return;
+    }
+    if (e.target.id === 'qr-zone-filter') {
+      showQrLabelsModal(e.target.value);
       return;
     }
     if (e.target.id === 'order-cadence-filter') {
