@@ -2424,7 +2424,7 @@
         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2.5">
           <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-bold text-slate-900">Announcements &amp; Reminders</h2>
-            <span class="text-[11px] text-slate-500">Dismiss clears for your account only</span>
+            <span class="text-[11px] text-slate-500">Dismiss hides for today only — returns tomorrow until expired</span>
           </div>
           <div class="space-y-2">
             ${(() => {
@@ -2483,8 +2483,9 @@
             ${(() => {
               const nowMs = Date.now();
               const curUid = getActiveUser().id;
+              const todayAnnStr = localDateStr();
               const allAnns = (state.announcements || []).filter(a => {
-                if (a.dismissedBy && a.dismissedBy[curUid]) return false;
+                if (a.dismissedBy && a.dismissedBy[curUid] === todayAnnStr) return false;
                 if (!a.alertAt) return true;
                 const goLiveMs = new Date(a.alertAt).getTime();
                 return isNaN(goLiveMs) || goLiveMs <= nowMs;
@@ -5208,7 +5209,8 @@
             ? '<p class="text-xs text-slate-500">No announcements configured.</p>'
             : `<div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
                 ${(state.announcements || []).map(a => {
-                  const disCount = a.dismissedBy ? Object.keys(a.dismissedBy).length : 0;
+                  const todayAdm = localDateStr();
+                  const disCount = a.dismissedBy ? Object.values(a.dismissedBy).filter(v => v === todayAdm).length : 0;
                   return `
                     <div class="p-3 flex flex-wrap items-start justify-between gap-2 text-xs bg-white">
                       <div>
@@ -5219,7 +5221,7 @@
                           ${a.expiresAt ? `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">Expires: ${escapeHtml(a.expiresAt)}</span>` : ''}
                         </div>
                         <p class="text-slate-600 mt-1">${escapeHtml(a.body)}</p>
-                        <div class="text-[11px] text-slate-400 mt-0.5">By ${escapeHtml(a.author)} &bull; Dismissed by ${disCount} account(s)</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">By ${escapeHtml(a.author)} &bull; Dismissed today by ${disCount} account(s)</div>
                       </div>
                       <div class="flex items-center gap-2 shrink-0">
                         <button data-edit-announcement="${a.id}" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 font-semibold text-slate-700">Edit</button>
@@ -6596,6 +6598,7 @@
       const owner = ensureOwnerIntegrity();
       state.activeUserId = owner.id;
       state.isLocked = false;
+      setSessionUnlocked(true);
       saveState();
       closeModal();
       render();
@@ -6927,10 +6930,10 @@
       const ann = (state.announcements || []).find(a => a.id === dismissAnnBtn.dataset.dismissAnn);
       if (ann) {
         if (!ann.dismissedBy || typeof ann.dismissedBy !== 'object') ann.dismissedBy = {};
-        ann.dismissedBy[getActiveUser().id] = true;
+        ann.dismissedBy[getActiveUser().id] = localDateStr();
         saveState();
         render();
-        showToast('Dismissed for your account');
+        showToast('Dismissed for today (will reappear tomorrow until expired)');
       }
       return;
     }
@@ -7759,6 +7762,7 @@
     }
     if (e.target.id === 'btn-lock-app') {
       state.isLocked = true;
+      setSessionUnlocked(false);
       saveState();
       render();
       return;
@@ -8642,6 +8646,7 @@
         const owner = ensureOwnerIntegrity();
         state.activeUserId = owner.id;
         state.isLocked = false;
+        setSessionUnlocked(true);
         saveState();
         closeModal();
         render();
@@ -8658,6 +8663,7 @@
       loginGuard.fails = 0;
       state.activeUserId = targetUser.id;
       state.isLocked = false;
+      setSessionUnlocked(true);
       onboardingStepIdx = 0;
       const allowed = getAllowedTabs(targetUser);
       if (!allowed.includes(state.activeTab)) state.activeTab = allowed[0];
@@ -9109,6 +9115,7 @@
     inactivityTimerId = setTimeout(() => {
       if (!state.isLocked) {
         state.isLocked = true;
+        setSessionUnlocked(false);
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
         render();
         showToast('Session auto-locked due to inactivity', 'warn');
@@ -9176,7 +9183,25 @@
     return changed;
   }
 
+  function setSessionUnlocked(unlocked) {
+    try {
+      if (unlocked) sessionStorage.setItem('sa_session_unlocked', '1');
+      else sessionStorage.removeItem('sa_session_unlocked');
+    } catch (e) {}
+  }
+
+  function isSessionUnlocked() {
+    try { return sessionStorage.getItem('sa_session_unlocked') === '1'; } catch (e) { return false; }
+  }
+
+  window.addEventListener('pagehide', () => {
+    state.isLocked = true;
+    setSessionUnlocked(false);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  });
+
   function bootApp() {
+    if (!isSessionUnlocked()) state.isLocked = true;
     if (pruneExpiredAlerts()) saveState();
     runDailyCarryoverCheck(false);
     if (syncPlannedPortionsFromForecasts() > 0) saveState();
