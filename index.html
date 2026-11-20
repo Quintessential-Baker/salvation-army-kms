@@ -962,77 +962,14 @@
 
   let state = loadState();
   migrateUserPins();
-  // ===== Allergens (Big 9) =====
-  const ALLERGENS = [
-    { k: 'milk', l: 'Milk' }, { k: 'eggs', l: 'Eggs' }, { k: 'fish', l: 'Fish' },
-    { k: 'shellfish', l: 'Shellfish' }, { k: 'treenuts', l: 'Tree Nuts' }, { k: 'peanuts', l: 'Peanuts' },
-    { k: 'wheat', l: 'Wheat' }, { k: 'soy', l: 'Soy' }, { k: 'sesame', l: 'Sesame' }
-  ];
-  const ALLERGEN_GUESSES = [
-    [/flour|pasta|penne|macaroni|noodle|stuffing|tortilla|oat/i, ['wheat']],
-    [/egg noodle/i, ['eggs']],
-    [/milk|butter|mozzarella|cheddar|cheese|yogurt|pudding/i, ['milk']],
-    [/breadstick|\brolls?\b|biscuit|\bbuns?\b|\bpie|stuffing/i, ['wheat', 'milk', 'eggs', 'soy']],
-    [/tuna|fish/i, ['fish']],
-    [/mayo|dressing/i, ['eggs', 'soy', 'milk']],
-    [/cream of|soup/i, ['milk', 'wheat', 'soy']],
-    [/meatball|hot dog|patties|sausage|pulled pork|bbq|deli|broth|base/i, ['soy', 'wheat']],
-    [/meatball/i, ['eggs', 'milk']]
-  ];
-  function guessAllergens(name) {
-    const set = new Set();
-    ALLERGEN_GUESSES.forEach(([re, keys]) => { if (re.test(name || '')) keys.forEach(k => set.add(k)); });
-    return Array.from(set);
-  }
-  function migrateAllergens() {
-    if (!state || !Array.isArray(state.inventory)) return;
-    state.inventory.forEach(it => {
-      if (!Array.isArray(it.allergens)) { it.allergens = guessAllergens(it.name); it.allergenReviewed = false; }
-    });
-  }
-  function recipeAllergens(rec) {
-    const keys = new Set(); let unverified = false;
-    ((rec && rec.ingredients) || []).forEach(ing => {
-      const it = state.inventory.find(i => i.id === ing.itemId);
-      if (!it) return;
-      (it.allergens || []).forEach(k => keys.add(k));
-      if (!it.allergenReviewed) unverified = true;
-    });
-    return { keys: ALLERGENS.filter(a => keys.has(a.k)), unverified };
-  }
-  function allergenBadgesHtml(info, compact) {
-    const pills = info.keys.map(a => `<span class="inline-block px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold uppercase">${a.l}</span>`).join(' ');
-    const warn = info.unverified ? `<span class="inline-block px-1.5 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-300 text-[10px] font-semibold">Unverified &ndash; check labels</span>` : '';
-    const none = !info.keys.length && !info.unverified ? `<span class="text-[10px] text-slate-500">No Big 9 allergens listed</span>` : '';
-    return `<div class="${compact ? 'mt-1' : 'mt-1.5'} flex flex-wrap items-center gap-1">${compact && !info.keys.length && !info.unverified ? '' : '<span class="text-[10px] font-bold text-slate-500 uppercase mr-0.5">Allergens:</span>'}${pills}${warn}${compact ? '' : none}</div>`;
-  }
-  function mealAllergenBadges(mp) {
-    const rec = mp && state.recipes.find(r => r.id === mp.recipeId);
-    return rec ? allergenBadgesHtml(recipeAllergens(rec), false) : '';
-  }
-  function allergenCheckboxesHtml(item) {
-    const have = (item && item.allergens) || [];
-    return `<fieldset class="p-3 rounded-lg border border-amber-300 bg-amber-50/50 space-y-2">
-      <legend class="px-1 text-xs font-bold text-amber-900 uppercase">Allergens (Big 9) &ndash; tick all that apply</legend>
-      <div class="grid grid-cols-3 gap-x-3 gap-y-1.5">${ALLERGENS.map(a => `<label class="flex items-center gap-1.5 text-xs text-slate-800 cursor-pointer"><input type="checkbox" name="allergen" value="${a.k}" ${have.includes(a.k) ? 'checked' : ''} class="accent-amber-600" />${a.l}</label>`).join('')}</div>
-      <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 cursor-pointer pt-1 border-t border-amber-200"><input type="checkbox" name="allergenReviewed" ${item && item.allergenReviewed ? 'checked' : ''} class="accent-emerald-600" />I checked the package label and these tags are correct</label>
-      ${item && item.allergenReviewed && item.allergenVerifiedBy ? `<div class="text-[11px] text-slate-500">Verified by ${escapeHtml(item.allergenVerifiedBy)} on ${escapeHtml(item.allergenVerifiedOn || '')}</div>` : ''}
-    </fieldset>`;
-  }
-  function applyAllergenForm(item, fd) {
-    item.allergens = ALLERGENS.map(a => a.k).filter(k => fd.getAll('allergen').includes(k));
-    const rev = !!fd.get('allergenReviewed');
-    if (rev && !item.allergenReviewed) { item.allergenVerifiedBy = getActiveUser().name; item.allergenVerifiedOn = new Date().toISOString().slice(0, 10); }
-    item.allergenReviewed = rev;
-  }
-  migrateAllergens();
+
   // ===== Plain-language tips (tab names unchanged) =====
   const TAB_TIPS = {
     dashboard: { what: 'Your starting page: today\'s meal, alerts, and quick buttons for the daily jobs.', how: 'Read any red or yellow alerts first, then tap the big button for the job you are doing.' },
     inventory: { what: '"Living Stock" is a live list of the food we have on the shelves, in the cooler and in the freezer right now.', how: 'Look up an item to see how much is left. Red or yellow means we are running low.' },
     transactions: { what: 'Log food coming in (Check-In) and food thrown out or used up (Waste).', how: 'Delivery arrived? Choose Check-In and enter what came. Tossing food? Log it as Waste and pick a reason.' },
     orders: { what: 'The app suggests what to reorder when stock gets low. A "PO" (purchase order) is the list of what we order from a vendor.', how: 'Staff build the list. A manager approves it before anything is ordered.' },
-    recipes: { what: 'Our standard recipes. The amounts scale up or down for how many people we expect (40 to 80).', how: 'Pick a recipe, set the number of portions, and the ingredient amounts adjust for you. Check the allergen tags first.' },
+    recipes: { what: 'Our standard recipes. The amounts scale up or down for how many people we expect (40 to 80).', how: 'Pick a recipe, set the number of portions, and the ingredient amounts adjust for you.' },
     menu: { what: 'The calendar of what we are cooking each day.', how: 'Tap a day to see its meal. Staff and managers add meals and press "Commit & Deduct Stock" so the app knows the ingredients were used.' },
     prep: { what: 'Tomorrow\'s prep list: which ingredients to pull from the cooler, freezer and dry storage.', how: 'Pull each item and tick it off. Use the oldest food first.' },
     checklists: { what: 'Daily, weekly and monthly jobs like cleaning and setting up, with a name and time stamped when you tick one off.', how: 'Tick a job only when it is really done. Anything left over from yesterday shows in red at the top.' },
@@ -1056,7 +993,6 @@
     ['Steam table / hot holding', 'Keeping cooked food hot (135\u00b0F or higher) until it is served.'],
     ['FIFO', 'First in, first out: use the oldest food first.'],
     ['Use-by date', 'The last day stored food is safe to serve. After that, throw it out.'],
-    ['Big 9 allergens', 'Milk, eggs, fish, shellfish, tree nuts, peanuts, wheat, soy and sesame.']
   ];
   function tipBannerHtml(tab) {
     const t = TAB_TIPS[tab];
@@ -1553,7 +1489,6 @@
       state[id] = data;
     }
     if (id === 'users') migrateUserPins();
-    if (id === 'inventory') migrateAllergens();
   }
 
   function updateSyncBadge() {
@@ -1680,7 +1615,6 @@
 
   function saveState() {
     migrateUserPins();
-    migrateAllergens();
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
@@ -2462,21 +2396,14 @@
 
     main.innerHTML = `
       <div class="space-y-5">
-        <!-- 1-Tap Shift Quick Actions (Fool-Proof Tablet Bar) -->
-        <div class="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 shadow-sm flex flex-wrap items-center justify-between gap-2 no-print">
-          <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Quick Shift Actions:</span>
-          <div class="flex flex-wrap gap-2">
-            ${allowed.includes('haccp') ? '<button data-goto="haccp" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold">Log Temp Check</button>' : ''}
-            ${allowed.includes('storage') ? '<button data-goto="storage" class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold">Tag Leftovers / Salad Bar</button>' : ''}
-            ${allowed.includes('forecasting') ? '<button data-goto="forecasting" class="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold">Log Meals Served</button>' : ''}
-            ${allowed.includes('audit') ? '<button data-goto="audit" class="px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-xs font-semibold">Blind Count</button>' : ''}
-            ${allowed.includes('checklists') ? '<button data-goto="checklists" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold">Daily Checklists</button>' : ''}
-          </div>
-        </div>
         <!-- Today's Quick Actions -->
         <div class="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 shadow-sm">
-          <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">Quick Actions</div>
-          <div class="flex flex-wrap gap-2">${quickActions}</div>
+          <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">Quick Shift Actions</div>
+          <div class="flex flex-wrap gap-2">
+            ${quickActions}
+            ${allowed.includes('storage') ? '<button data-goto="storage" class="px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs sm:text-sm font-semibold shadow-sm transition">Tag Leftovers / Salad Bar</button>' : ''}
+            ${allowed.includes('forecasting') ? '<button data-goto="forecasting" class="px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs sm:text-sm font-semibold shadow-sm transition">Log Meals Served</button>' : ''}
+          </div>
         </div>
 
         <!-- Announcements & Reminders (Color-Coded Urgency + Scheduled Live-Posting) -->
@@ -2618,7 +2545,7 @@
                         <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${mp.status === 'CLOSED' ? 'bg-slate-200 text-slate-700' : mp.status === 'DEDUCTED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${mp.status === 'CLOSED' ? 'Closed' : mp.status === 'DEDUCTED' ? 'Deducted' : 'Planned'}</span>
                       </div>
                       <div class="font-semibold text-sm text-slate-900 mt-1 line-clamp-2">${escapeHtml(mp.customTitle || (rec ? rec.name : 'Scheduled Meal'))}</div>
-                      ${mealAllergenBadges(mp)}
+                      
                       <div class="text-xs text-slate-500 mt-1">${mp.status === 'CLOSED' ? 'No Meal Service' : mp.portions + ' portions'}</div>
                     </button>
                   `;
@@ -3351,7 +3278,7 @@
               <button data-select-recipe="${r.id}" class="w-full text-left p-2.5 rounded-lg border transition ${selected && r.id === selected.id ? 'border-red-600 bg-red-50' : 'border-slate-200 hover:bg-slate-50'}">
                 <div class="font-semibold text-xs sm:text-sm text-slate-900">${escapeHtml(r.name)}</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(r.category)} &bull; <strong class="text-red-700">${pInfo.portions} portions</strong></div>
-                ${allergenBadgesHtml(recipeAllergens(r), true)}
+                
               </button>
             `;
             }).join('')}
@@ -3365,7 +3292,7 @@
               <div>
                 <span class="text-xs font-semibold uppercase tracking-wide text-red-700">${escapeHtml(selected.category)}</span>
                 <h2 class="text-lg font-bold text-slate-900">${escapeHtml(selected.name)}</h2>
-                ${allergenBadgesHtml(recipeAllergens(selected), false)}
+                
                 ${recipeCostHtml(selected)}
                 <p class="text-xs text-slate-500 mt-0.5">Prep: ${selected.prepMin} min &bull; Cook: ${selected.cookMin} min &bull; Complete: ${selected.prepMin + selected.cookMin} min &bull; Yield: <strong>${portions} portions</strong></p>
               </div>
@@ -3460,7 +3387,7 @@
               <button data-select-recipe="${r.id}" class="w-full text-left p-2.5 rounded-lg border transition ${selected && r.id === selected.id ? 'border-red-600 bg-red-50' : 'border-slate-200 hover:bg-slate-50'}">
                 <div class="font-semibold text-xs sm:text-sm text-slate-900">${escapeHtml(r.name)}</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(r.category)} &bull; <strong class="text-red-700">${pInfo.portions} portions</strong></div>
-                ${allergenBadgesHtml(recipeAllergens(r), true)}
+                
               </button>
             `;
           }).join('');
@@ -4389,7 +4316,7 @@
                         <div>
                           <span class="text-xs font-mono font-semibold text-slate-500">${escapeHtml(mp.date)} &bull; ${escapeHtml(mp.mealSlot)}</span>
                           <h4 class="text-sm sm:text-base font-bold text-slate-900">${escapeHtml(mp.customTitle || (rec ? rec.name : 'Removed Recipe'))} ${!isClosed ? `<span class="text-red-700">(${mp.portions} portions)</span>` : ''}</h4>
-                          ${mealAllergenBadges(mp)}
+                          
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
                           <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${isClosed ? 'bg-slate-200 text-slate-700' : isDeducted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
@@ -5374,7 +5301,7 @@
           <input name="packLabel" type="text" value="10 lb case" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
         </div>
         ${priceFieldHtml(null)}
-        ${allergenCheckboxesHtml(null)}
+        
         <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Add Item to Living Stock</button>
       </form>
     `);
@@ -5986,7 +5913,7 @@
           </div>
         </div>
         ${priceFieldHtml(item)}
-        ${allergenCheckboxesHtml(item)}
+        
         <button type="submit" class="w-full py-2 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-semibold">Save Item Changes</button>
       </form>
     `);
@@ -6085,7 +6012,6 @@
         </div>
 
         <div>
-          ${(() => { const ai = rec ? recipeAllergens(rec) : { keys: [], unverified: false }; return `<div class="mb-3 p-3 rounded-lg border-2 ${ai.keys.length || ai.unverified ? 'border-amber-400 bg-amber-50' : 'border-emerald-300 bg-emerald-50'}"><div class="text-xs font-bold uppercase text-slate-800">Allergen Alert (Big 9)</div>${ai.keys.length ? `<div class="mt-1 flex flex-wrap gap-1">${ai.keys.map(a => `<span class="px-2 py-0.5 rounded bg-amber-200 text-amber-950 text-xs font-bold uppercase">${a.l}</span>`).join('')}</div>` : '<div class="text-xs text-slate-700 mt-1">No Big 9 allergens listed for these ingredients.</div>'}${ai.unverified ? '<div class="text-xs font-semibold text-rose-800 mt-1">Some ingredient tags are not verified yet. Read package labels before serving.</div>' : ''}<div class="text-[11px] text-slate-600 mt-1">Cross-contact is possible. Always confirm with package labels and tell guests who ask.</div></div>`; })()}
           <h4 class="text-xs font-bold uppercase text-slate-500 mb-1.5">1. Ingredients to Pull &amp; Measure (${portions} Portions)</h4>
           <table class="w-full text-left border-collapse text-xs">
             <thead>
@@ -8040,7 +7966,7 @@
         item.packSizeGrams = packG;
         item.stockGrams = Math.round(Number(fd.get('stockPacks') || 0) * packG);
         item.parGrams = Math.round(Number(fd.get('parPacks') || 0) * packG);
-        applyAllergenForm(item, fd);
+        
         item.pricePerPack = parsePrice(fd.get('pricePerPack'));
         item.lastUpdated = new Date().toISOString().slice(0, 10);
         saveState();
@@ -8077,7 +8003,7 @@
         packLabel: fd.get('packLabel'),
         lastUpdated: new Date().toISOString().slice(0, 10)
       };
-      applyAllergenForm(newItem, fd);
+      
       newItem.pricePerPack = parsePrice(fd.get('pricePerPack'));
       state.inventory.push(newItem);
       saveState();
