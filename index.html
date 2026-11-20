@@ -1871,9 +1871,87 @@
       .replace(/"/g, '&quot;');
   }
 
+  function getCasePackInfo(item) {
+    if (!item) return { unitsPerCase: 1, pieceLabel: 'unit', packIsCase: false };
+    const pl = String(item.packLabel || 'unit').toLowerCase();
+    const nm = String(item.name || '').toLowerCase();
+    const packIsCase = /(case|crate)/i.test(pl);
+    let units = Number(item.unitsPerCase || 0);
+    if (!units || units < 1) {
+      const ctMatch = pl.match(/(\d+)\s*(?:ct|x)/i);
+      if (ctMatch) units = Number(ctMatch[1]);
+      else if (/#10\s*can/i.test(pl) || /#10\s*can/i.test(nm)) units = 6;
+      else if (/small\s*cans?/i.test(nm)) units = 24;
+      else if (/gravy.*can/i.test(nm)) units = 12;
+      else if (/1\s*gal\s*jug/i.test(pl) || /ketchup|mustard.*large/i.test(nm)) units = 4;
+      else if (/bottle/i.test(pl) && /oil/i.test(nm)) units = 6;
+      else if (/crate/i.test(pl)) units = 4;
+      else if (/macaroni/i.test(nm)) units = 24;
+      else if (/spaghetti|farfalle/i.test(nm)) units = 20;
+      else if (/scalloped\s*potatoes/i.test(nm)) units = 12;
+      else if (/yogurt|pudding\s*cups/i.test(nm)) units = 48;
+      else if (/patties|nuggets|fish\s*sticks|omelets/i.test(nm)) units = 40;
+      else if (/ravioli|pierogies/i.test(nm)) units = 12;
+      else if (/jar/i.test(pl)) units = 6;
+      else if (/tub/i.test(pl)) units = 4;
+      else if (packIsCase) units = 1;
+      else units = 1;
+    }
+    let pieceLabel = 'pcs';
+    if (/#10\s*can/i.test(pl) || /#10\s*can/i.test(nm)) pieceLabel = 'cans';
+    else if (/can/i.test(pl) || /cans?/i.test(nm)) pieceLabel = 'cans';
+    else if (/jug|gal/i.test(pl)) pieceLabel = 'gal';
+    else if (/bottle/i.test(pl)) pieceLabel = 'bottles';
+    else if (/box/i.test(pl) || /boxes|macaroni|spaghetti|farfalle/i.test(nm)) pieceLabel = 'boxes';
+    else if (/bag/i.test(pl)) pieceLabel = 'bags';
+    else if (/jar/i.test(pl)) pieceLabel = 'jars';
+    else if (/tub/i.test(pl)) pieceLabel = 'tubs';
+    else if (/cup/i.test(nm)) pieceLabel = 'cups';
+    else if (/breadstick/i.test(nm)) pieceLabel = 'sticks';
+    else if (/roll/i.test(nm)) pieceLabel = 'rolls';
+    else if (/biscuit/i.test(nm)) pieceLabel = 'biscuits';
+    else if (/chip/i.test(nm)) pieceLabel = 'bags';
+    return { unitsPerCase: Math.max(1, Math.round(units)), pieceLabel, packIsCase };
+  }
+
+  function getCaseAndPieceGrams(item) {
+    const info = getCasePackInfo(item);
+    const pSize = Number(item.packSizeGrams) || 1000;
+    const caseGrams = info.packIsCase ? pSize : pSize * info.unitsPerCase;
+    const pieceGrams = info.packIsCase ? (pSize / info.unitsPerCase) : pSize;
+    return { ...info, caseGrams, pieceGrams };
+  }
+
+  function gramsToCasePieces(item, grams) {
+    const g = Math.max(0, Number(grams) || 0);
+    const cp = getCaseAndPieceGrams(item);
+    if (cp.unitsPerCase <= 1) {
+      const packs = g / cp.caseGrams;
+      return { cases: Math.floor(packs + 0.001), pieces: 0, totalPieces: +packs.toFixed(1), ...cp };
+    }
+    const totalPieces = Math.round(g / cp.pieceGrams);
+    const cases = Math.floor(totalPieces / cp.unitsPerCase);
+    const pieces = totalPieces % cp.unitsPerCase;
+    return { cases, pieces, totalPieces, ...cp };
+  }
+
+  function casePiecesToGrams(item, cases, pieces) {
+    const cp = getCaseAndPieceGrams(item);
+    const c = Math.max(0, Number(cases) || 0);
+    const p = Math.max(0, Number(pieces) || 0);
+    return Math.round(c * cp.caseGrams + p * cp.pieceGrams);
+  }
+
   function formatVendorStock(item) {
     const g = Number(item.stockGrams) || 0;
     if (item.packSizeGrams) {
+      const cp = gramsToCasePieces(item, g);
+      if (cp.unitsPerCase > 1) {
+        const parts = [];
+        if (cp.cases > 0) parts.push(`${cp.cases} case${cp.cases === 1 ? '' : 's'}`);
+        if (cp.pieces > 0 || cp.cases === 0) parts.push(`${cp.pieces} ${escapeHtml(cp.pieceLabel)}`);
+        return `<span class="font-semibold">${parts.join(' + ')}</span> <span class="text-[11px] text-slate-400 font-normal">(${cp.unitsPerCase}/case)</span>`;
+      }
       const packs = g / item.packSizeGrams;
       return `${packs.toFixed(1)} &times; ${escapeHtml(item.packLabel)}`;
     }
@@ -3190,6 +3268,8 @@
                 <label class="block text-xs font-medium text-slate-700 mb-1">Vendor Pack / Unit</label>
                 <select id="checkin-unit-select" name="unit" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
                   <option id="checkin-pack-option" value="pack" selected>${escapeHtml(firstPackLbl)}</option>
+                  <option value="case">Full Case (by Pieces/Case)</option>
+                  <option value="piece">Loose Piece / Can / Unit (1 each)</option>
                   <option value="cup">Cups</option>
                   <option value="gal">Gallons</option>
                   <option value="can10">#10 Cans</option>
@@ -6394,29 +6474,25 @@
   function showOfficialInitModal() {
     const activeItems = (state.inventory || []).filter(i => !i.discontinued);
     const buildInitRowHtml = (item) => {
-      const pSize = item.packSizeGrams || 1000;
-      const totalPacks = item.stockGrams / pSize;
-      const wholePacks = Math.floor(totalPacks);
-      const frac = totalPacks - wholePacks;
-      const partialVal = frac >= 0.625 ? '0.75' : frac >= 0.375 ? '0.5' : frac >= 0.125 ? '0.25' : '0';
+      const cp = gramsToCasePieces(item, item.stockGrams);
       return `
-        <tr class="border-b border-slate-100 init-inv-row" data-search="${escapeHtml((item.name + ' ' + item.sku + ' ' + item.zone).toLowerCase())}">
+        <tr class="border-b border-slate-100 init-inv-row" data-search="${escapeHtml((item.name + ' ' + item.sku + ' ' + item.zone + ' ' + item.vendor).toLowerCase())}">
           <td class="py-2 px-2">
             <div class="text-xs font-semibold text-slate-900">${escapeHtml(item.name)}</div>
-            <div class="text-[11px] text-slate-500">${escapeHtml(item.zone)} &bull; 1 pack = ${escapeHtml(item.packLabel)}</div>
+            <div class="text-[11px] text-slate-500">${escapeHtml(item.zone)} &bull; ${escapeHtml(item.vendor)} &bull; ${cp.unitsPerCase > 1 ? `${cp.unitsPerCase} ${escapeHtml(cp.pieceLabel)}/case` : escapeHtml(item.packLabel)}</div>
           </td>
           <td class="py-2 px-2 w-24">
-            <input name="init_packs_${escapeHtml(item.id)}" type="number" min="0" step="1" value="${wholePacks}" class="w-20 px-2 py-1 rounded border border-slate-300 text-xs font-bold" />
+            <input name="init_cases_${escapeHtml(item.id)}" type="number" min="0" step="1" value="${cp.cases}" class="w-20 px-2 py-1 rounded border border-slate-300 text-xs font-bold" />
           </td>
-          <td class="py-2 px-2 w-24">
-            <select name="init_part_${escapeHtml(item.id)}" class="px-2 py-1 rounded border border-slate-300 text-xs bg-white">
-              <option value="0" ${partialVal === '0' ? 'selected' : ''}>0</option>
-              <option value="0.25" ${partialVal === '0.25' ? 'selected' : ''}>1/4</option>
-              <option value="0.5" ${partialVal === '0.5' ? 'selected' : ''}>1/2</option>
-              <option value="0.75" ${partialVal === '0.75' ? 'selected' : ''}>3/4</option>
-            </select>
+          <td class="py-2 px-2 w-28">
+            <div class="flex items-center gap-1">
+              <input name="init_pieces_${escapeHtml(item.id)}" type="number" min="0" step="1" value="${cp.pieces}" class="w-16 px-2 py-1 rounded border border-slate-300 text-xs font-bold" ${cp.unitsPerCase <= 1 ? 'disabled title="Counted as whole packs"' : ''} />
+              <span class="text-[10px] text-slate-500">${cp.unitsPerCase > 1 ? escapeHtml(cp.pieceLabel) : ''}</span>
+            </div>
           </td>
-          <td class="py-2 px-2 text-xs text-slate-600">+10% Auto Par</td>
+          <td class="py-2 px-2 w-20">
+            <input name="init_upc_${escapeHtml(item.id)}" type="number" min="1" step="1" value="${cp.unitsPerCase}" class="w-16 px-2 py-1 rounded border border-slate-300 text-xs" title="Pieces per case (Jordan Banana / Marberger)" />
+          </td>
         </tr>
       `;
     };
@@ -6461,10 +6537,10 @@
           <table class="w-full text-left border-collapse">
             <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 text-[11px] text-slate-500 uppercase">
               <tr>
-                <th class="py-2 px-2">Item &amp; Pack</th>
-                <th class="py-2 px-2">Full Packs</th>
-                <th class="py-2 px-2">Open Partial</th>
-                <th class="py-2 px-2">Par Rule</th>
+                <th class="py-2 px-2">Item &amp; Case Pack</th>
+                <th class="py-2 px-2">Cases</th>
+                <th class="py-2 px-2">+ Loose Pieces</th>
+                <th class="py-2 px-2">Pcs / Case</th>
               </tr>
             </thead>
             <tbody id="init-inv-tbody">${rowsHtml}</tbody>
@@ -6529,15 +6605,17 @@
                 <th class="py-2 px-2 min-w-[160px]">Item Name</th>
                 <th class="py-2 px-2 min-w-[130px]">Zone</th>
                 <th class="py-2 px-2 min-w-[110px]">Vendor</th>
-                <th class="py-2 px-2 min-w-[95px]">Pack Unit</th>
-                <th class="py-2 px-2 w-24">Stock (Packs)</th>
+                <th class="py-2 px-2 min-w-[90px]">Pack Unit</th>
+                <th class="py-2 px-2 w-20">Pcs/Case</th>
+                <th class="py-2 px-2 w-20">Cases</th>
+                <th class="py-2 px-2 w-20">+ Loose</th>
                 <th class="py-2 px-2 w-24">Par (Packs)</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
               ${items.map(item => {
                 const pSize = item.packSizeGrams || 1000;
-                const stockP = +(Number(item.stockGrams || 0) / pSize).toFixed(2);
+                const cp = gramsToCasePieces(item, item.stockGrams);
                 const parP = +(Number(item.parGrams || 0) / pSize).toFixed(2);
                 return `
                   <tr class="mass-inv-row hover:bg-slate-50" data-search="${escapeHtml((item.name + ' ' + item.sku + ' ' + item.zone + ' ' + item.vendor).toLowerCase())}">
@@ -6560,7 +6638,13 @@
                       <input type="text" name="mass_pack_${escapeHtml(item.id)}" value="${escapeHtml(item.packLabel)}" class="w-full px-2 py-1 rounded border border-slate-300 text-xs" />
                     </td>
                     <td class="py-1.5 px-2">
-                      <input type="number" step="0.25" min="0" name="mass_stock_${escapeHtml(item.id)}" value="${stockP}" class="mass-stock-inp w-20 px-2 py-1 rounded border border-slate-300 text-xs font-semibold" />
+                      <input type="number" step="1" min="1" name="mass_upc_${escapeHtml(item.id)}" value="${cp.unitsPerCase}" class="w-16 px-2 py-1 rounded border border-slate-300 text-xs" />
+                    </td>
+                    <td class="py-1.5 px-2">
+                      <input type="number" step="1" min="0" name="mass_cases_${escapeHtml(item.id)}" value="${cp.cases}" class="mass-cases-inp w-16 px-2 py-1 rounded border border-slate-300 text-xs font-semibold" />
+                    </td>
+                    <td class="py-1.5 px-2">
+                      <input type="number" step="1" min="0" name="mass_pieces_${escapeHtml(item.id)}" value="${cp.pieces}" class="mass-pieces-inp w-16 px-2 py-1 rounded border border-slate-300 text-xs font-semibold" />
                     </td>
                     <td class="py-1.5 px-2">
                       <input type="number" step="0.25" min="0" name="mass_par_${escapeHtml(item.id)}" value="${parP}" class="mass-par-inp w-20 px-2 py-1 rounded border border-slate-300 text-xs font-semibold" />
@@ -6585,7 +6669,7 @@
   function showEditInventoryModal(itemId) {
     const item = state.inventory.find(i => i.id === itemId);
     if (!item) return;
-    const stockPacks = item.packSizeGrams ? +(item.stockGrams / item.packSizeGrams).toFixed(2) : 0;
+    const cp = gramsToCasePieces(item, item.stockGrams);
     const parPacks = item.packSizeGrams ? +(item.parGrams / item.packSizeGrams).toFixed(2) : 1;
     openModal(`Edit Inventory Item — ${item.name}`, `
       <form id="form-edit-inv" class="space-y-3">
@@ -6622,15 +6706,23 @@
             <input name="packWeightLb" type="number" step="0.25" min="0.25" required value="${+((item.packSizeGrams || 454) / 453.592).toFixed(2)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-3 gap-2">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Current Stock (Packs)</label>
-            <input name="stockPacks" type="number" step="0.25" min="0" required value="${stockPacks}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            <label class="block text-xs font-medium text-slate-700 mb-1">Pieces / Case</label>
+            <input name="unitsPerCase" type="number" step="1" min="1" required value="${cp.unitsPerCase}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" title="How many in 1 case (Jordan Banana / Marberger)" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Par Level (Packs)</label>
-            <input name="parPacks" type="number" step="0.25" min="0" required value="${parPacks}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+            <label class="block text-xs font-medium text-slate-700 mb-1">Stock: Cases</label>
+            <input name="stockCases" type="number" step="1" min="0" required value="${cp.cases}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
           </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">+ Loose ${escapeHtml(cp.pieceLabel)}</label>
+            <input name="stockPieces" type="number" step="1" min="0" required value="${cp.pieces}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Par Level (Packs)</label>
+          <input name="parPacks" type="number" step="0.25" min="0" required value="${parPacks}" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
         </div>
         ${priceFieldHtml(item)}
         
@@ -7728,20 +7820,17 @@
         tr.innerHTML = `
           <td class="py-2 px-2">
             <div class="text-xs font-semibold text-slate-900">${escapeHtml(newItem.name)} <span class="text-[10px] font-bold text-emerald-700">NEW</span></div>
-            <div class="text-[11px] text-slate-500">${escapeHtml(newItem.zone)} &bull; 1 pack = ${escapeHtml(newItem.packLabel)}</div>
+            <div class="text-[11px] text-slate-500">${escapeHtml(newItem.zone)} &bull; ${escapeHtml(newItem.vendor)} &bull; ${escapeHtml(newItem.packLabel)}</div>
           </td>
           <td class="py-2 px-2 w-24">
-            <input name="init_packs_${escapeHtml(newItem.id)}" type="number" min="0" step="1" value="${packs}" class="w-20 px-2 py-1 rounded border border-slate-300 text-xs font-bold" />
+            <input name="init_cases_${escapeHtml(newItem.id)}" type="number" min="0" step="1" value="${packs}" class="w-20 px-2 py-1 rounded border border-slate-300 text-xs font-bold" />
           </td>
-          <td class="py-2 px-2 w-24">
-            <select name="init_part_${escapeHtml(newItem.id)}" class="px-2 py-1 rounded border border-slate-300 text-xs bg-white">
-              <option value="0" ${partStr === '0' ? 'selected' : ''}>0</option>
-              <option value="0.25" ${partStr === '0.25' ? 'selected' : ''}>1/4</option>
-              <option value="0.5" ${partStr === '0.5' ? 'selected' : ''}>1/2</option>
-              <option value="0.75" ${partStr === '0.75' ? 'selected' : ''}>3/4</option>
-            </select>
+          <td class="py-2 px-2 w-28">
+            <input name="init_pieces_${escapeHtml(newItem.id)}" type="number" min="0" step="1" value="0" class="w-16 px-2 py-1 rounded border border-slate-300 text-xs font-bold" />
           </td>
-          <td class="py-2 px-2 text-xs text-slate-600">+10% Auto Par</td>
+          <td class="py-2 px-2 w-20">
+            <input name="init_upc_${escapeHtml(newItem.id)}" type="number" min="1" step="1" value="1" class="w-16 px-2 py-1 rounded border border-slate-300 text-xs" />
+          </td>
         `;
         tbody.prepend(tr);
       }
@@ -9048,13 +9137,16 @@
       const rawQty = Number(fd.get('qty'));
       const unit = fd.get('unit');
       const spec = VOLUME_SPECS[item.id];
-      const grams = unit === 'cup' ? rawQty * (spec ? spec.gPerCup : 150)
+      const cp = getCaseAndPieceGrams(item);
+      const grams = unit === 'case' ? rawQty * cp.caseGrams
+        : unit === 'piece' ? rawQty * cp.pieceGrams
+        : unit === 'cup' ? rawQty * (spec ? spec.gPerCup : 150)
         : unit === 'gal' ? rawQty * 16 * (spec ? spec.gPerCup : 240)
         : unit === 'can10' ? rawQty * 3000
         : unit === 'lb' ? rawQty * 453.592
         : unit === 'pack' ? rawQty * (item.packSizeGrams || 1000)
         : rawQty;
-      const qtyLabel = unit === 'pack' ? `${rawQty} × ${item.packLabel}` : formatShortMass(grams);
+      const qtyLabel = unit === 'case' ? `${rawQty} case(s)` : unit === 'piece' ? `${rawQty} ${cp.pieceLabel}` : unit === 'pack' ? `${rawQty} × ${item.packLabel}` : formatShortMass(grams);
       item.stockGrams += Math.round(grams);
       item.lastUpdated = new Date().toISOString().slice(0, 10);
       state.transactions.unshift({
@@ -9080,8 +9172,11 @@
       const rawQty = Number(fd.get('qty'));
       const unit = fd.get('unit');
       const spec = VOLUME_SPECS[item.id];
+      const cp = getCaseAndPieceGrams(item);
       const grams = Math.round(
-        unit === 'pack' ? rawQty * (item.packSizeGrams || 1000)
+        unit === 'case' ? rawQty * cp.caseGrams
+        : unit === 'piece' ? rawQty * cp.pieceGrams
+        : unit === 'pack' ? rawQty * (item.packSizeGrams || 1000)
         : unit === 'cup' ? rawQty * (spec ? spec.gPerCup : 150)
         : unit === 'gal' ? rawQty * 16 * (spec ? spec.gPerCup : 240)
         : unit === 'can10' ? rawQty * 3000
@@ -9194,10 +9289,11 @@
       let updatedCount = 0;
       (state.inventory || []).forEach(item => {
         if (item.discontinued) return;
-        const packs = Math.max(0, Number(fd.get('init_packs_' + item.id) || 0));
-        const part = Math.max(0, Number(fd.get('init_part_' + item.id) || 0));
-        const pSize = item.packSizeGrams || 1000;
-        const newGrams = Math.round((packs + part) * pSize);
+        const upc = Math.max(1, Math.round(Number(fd.get('init_upc_' + item.id) || getCasePackInfo(item).unitsPerCase)));
+        item.unitsPerCase = upc;
+        const cases = Math.max(0, Number(fd.get('init_cases_' + item.id) || 0));
+        const pieces = Math.max(0, Number(fd.get('init_pieces_' + item.id) || 0));
+        const newGrams = casePiecesToGrams(item, cases, pieces);
         item.stockGrams = newGrams;
         item.parGrams = Math.round(newGrams * 1.10);
         item.lastUpdated = todayStr;
@@ -9239,13 +9335,16 @@
         const newZone = String(fd.get('mass_zone_' + id) || item.zone);
         const newVendor = String(fd.get('mass_vendor_' + id) || '').trim() || item.vendor;
         const newPack = String(fd.get('mass_pack_' + id) || '').trim() || item.packLabel;
-        const newStockG = Math.round(Math.max(0, Number(fd.get('mass_stock_' + id) || 0)) * pSize);
+        const newUpc = Math.max(1, Math.round(Number(fd.get('mass_upc_' + id) || getCasePackInfo(item).unitsPerCase)));
+        const tempItem = { ...item, packLabel: newPack, unitsPerCase: newUpc };
+        const newStockG = casePiecesToGrams(tempItem, fd.get('mass_cases_' + id), fd.get('mass_pieces_' + id));
         const newParG = Math.round(Math.max(0, Number(fd.get('mass_par_' + id) || 0)) * pSize);
-        if (newName && (item.name !== newName || item.zone !== newZone || item.vendor !== newVendor || item.packLabel !== newPack || item.stockGrams !== newStockG || item.parGrams !== newParG)) {
+        if (newName && (item.name !== newName || item.zone !== newZone || item.vendor !== newVendor || item.packLabel !== newPack || item.unitsPerCase !== newUpc || item.stockGrams !== newStockG || item.parGrams !== newParG)) {
           item.name = newName;
           item.zone = newZone;
           item.vendor = newVendor;
           item.packLabel = newPack;
+          item.unitsPerCase = newUpc;
           item.stockGrams = newStockG;
           item.parGrams = newParG;
           item.lastUpdated = todayStr;
@@ -9290,7 +9389,8 @@
         item.vendor = fd.get('vendor').trim();
         item.packLabel = fd.get('packLabel').trim();
         item.packSizeGrams = packG;
-        item.stockGrams = Math.round(Number(fd.get('stockPacks') || 0) * packG);
+        item.unitsPerCase = Math.max(1, Math.round(Number(fd.get('unitsPerCase') || 1)));
+        item.stockGrams = casePiecesToGrams(item, fd.get('stockCases'), fd.get('stockPieces'));
         item.parGrams = Math.round(Number(fd.get('parPacks') || 0) * packG);
         
         item.pricePerPack = parsePrice(fd.get('pricePerPack'));
