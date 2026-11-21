@@ -41,3 +41,10 @@ This unified KMS combines the simplicity, Butler PA stockroom seed, 8-week auto-
 1. Open your **Supabase Dashboard** → **Authentication** → **Users** → **Add User**.
 2. Create an email and strong password for your Admin / Tech-Support recovery account.
 3. On the app's Lock Screen, expand **Admin / Tech-Support Login (Supabase Auth)** and sign in with that email and password—verified server-side by Supabase with no secrets stored in `index.html`.
+
+
+## Free Automated Background Email Alerts (Supabase Edge Function + Resend)
+1. Create a free **Resend** account (`resend.com`, 3,000 emails/month free) and copy your API key.
+2. In **Supabase Dashboard → Edge Functions**, create a function named `notify-alert` and paste the contents of `supabase_edge_notify.ts`.
+3. Under **Edge Functions → Secrets**, add `RESEND_API_KEY` with your Resend key.
+4. In the KMS **Users & Activity** tab, enter each user's **Email** and (optionally) **Mobile # + Carrier**—the app will automatically send background email and email-to-SMS alerts whenever a PO is submitted for approval or an urgent Broadcast/DM is sent.

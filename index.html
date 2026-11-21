@@ -409,6 +409,111 @@
     return '';
   }
 
+  function getThirdFriday(year, month0) {
+    const firstDow = new Date(year, month0, 1).getDay();
+    const firstFri = 1 + ((5 - firstDow + 7) % 7);
+    return localDateStr(new Date(year, month0, firstFri + 14));
+  }
+
+  function isHolidayOrClosedDay(ds) {
+    if (getFederalHoliday(ds)) return getFederalHoliday(ds);
+    const mp = (state.menuPlan || []).find(m => m.service_date === ds && m.status === 'CLOSED');
+    return mp ? (mp.custom_title || 'Office Closed') : '';
+  }
+
+  function adjustOrderDateForHoliday(targetDateStr) {
+    // If order date falls on a holiday OR within +/- 1 day of a federal holiday, move to preceding open MTWF/business day
+    let d = targetDateStr;
+    const holOn = isHolidayOrClosedDay(d);
+    const holPrev = getFederalHoliday(addDays(d, -1));
+    const holNext = getFederalHoliday(addDays(d, 1));
+    const nearHol = holOn || holPrev || holNext;
+    if (!nearHol) return { date: d, adjusted: false, reason: '' };
+    let cursor = d;
+    for (let i = 0; i < 7; i++) {
+      const dow = new Date(cursor + 'T12:00:00').getDay();
+      if ([1, 2, 3, 4, 5].includes(dow) && !isHolidayOrClosedDay(cursor) && !getFederalHoliday(addDays(cursor, 1))) {
+        return { date: cursor, adjusted: cursor !== targetDateStr, reason: nearHol };
+      }
+      cursor = addDays(cursor, -1);
+    }
+    return { date: d, adjusted: false, reason: nearHol };
+  }
+
+  function getAutoHolidayAndOrderAnnouncements(todayStr) {
+    const today = todayStr || localDateStr();
+    const list = [];
+
+    // 1. Upcoming Federal Holiday Closings (next 14 days, grouped if consecutive like Thanksgiving Thu+Fri)
+    const holHits = [];
+    for (let i = 0; i <= 14; i++) {
+      const ds = addDays(today, i);
+      const h = getFederalHoliday(ds);
+      if (h) holHits.push({ date: ds, name: h, daysAway: i });
+    }
+    if (holHits.length) {
+      const first = holHits[0];
+      const labels = holHits.map(x => `${dLabel(x.date)} (${x.name})`).join(', ');
+      list.push({
+        id: 'auto-hol-' + first.date,
+        isAuto: true,
+        priority: 'urgent',
+        title: `Upcoming Holiday Closing: ${first.name}`,
+        body: `Salvation Army Community Kitchen is closed on ${labels}. Plan extra portions on the open service day before the holiday and adjust deliveries accordingly.`,
+        author: 'Holiday Schedule',
+        created_at: today
+      });
+    }
+
+    // 2. Weekly Order (Marberger Dairy & Produce — Fridays, adjusted if on/near holiday)
+    const todayDow = new Date(today + 'T12:00:00').getDay();
+    const daysToFri = (5 - todayDow + 7) % 7;
+    const nextFri = addDays(today, daysToFri);
+    const wAdj = adjustOrderDateForHoliday(nextFri);
+    const wLowCount = state.items.filter(x => !x.discontinued && x.cadence === 'W' && itemStatus(x) !== 'OK').length;
+    if (wAdj.date >= today && wAdj.date <= addDays(today, 4)) {
+      list.push({
+        id: 'auto-ord-w-' + wAdj.date,
+        isAuto: true,
+        priority: wAdj.adjusted ? 'urgent' : 'reminder',
+        title: wAdj.adjusted
+          ? `Weekly Marberger & Produce Order — Adjusted for ${wAdj.reason}`
+          : `Weekly Marberger & Produce Order Due ${wAdj.date === today ? 'Today' : dLabel(wAdj.date)}`,
+        body: wAdj.adjusted
+          ? `Normal Friday order (${dLabel(nextFri)}) falls on or near ${wAdj.reason}. Submit & approve your weekly PO early on ${dLabel(wAdj.date)}. (${wLowCount} item(s) below par)`
+          : `Review Orders & POs and submit your weekly Marberger & Produce order on ${dLabel(wAdj.date)}. (${wLowCount} item(s) below par)`,
+        author: 'Order Schedule',
+        created_at: today
+      });
+    }
+
+    // 3. Monthly Order (Jordan Banana Dry & Frozen — 3rd Friday, adjusted if on/near holiday)
+    const nowD = new Date(today + 'T12:00:00');
+    let m3Fri = getThirdFriday(nowD.getFullYear(), nowD.getMonth());
+    if (addDays(m3Fri, 1) < today) {
+      const nextMo = new Date(nowD.getFullYear(), nowD.getMonth() + 1, 1, 12);
+      m3Fri = getThirdFriday(nextMo.getFullYear(), nextMo.getMonth());
+    }
+    const mAdj = adjustOrderDateForHoliday(m3Fri);
+    const mLowCount = state.items.filter(x => !x.discontinued && x.cadence === 'M' && itemStatus(x) !== 'OK').length;
+    if (mAdj.date >= today && mAdj.date <= addDays(today, 7)) {
+      list.push({
+        id: 'auto-ord-m-' + mAdj.date,
+        isAuto: true,
+        priority: mAdj.adjusted ? 'urgent' : 'reminder',
+        title: mAdj.adjusted
+          ? `Monthly Jordan Banana Order — Adjusted for ${mAdj.reason}`
+          : `Monthly Jordan Banana Order Due ${mAdj.date === today ? 'Today' : dLabel(mAdj.date)}`,
+        body: mAdj.adjusted
+          ? `3rd-Friday order (${dLabel(m3Fri)}) falls on or near ${mAdj.reason}. Submit & approve your monthly whole-case PO early on ${dLabel(mAdj.date)}. (${mLowCount} item(s) below par)`
+          : `Monthly dry & frozen whole-case order for Jordan Banana is due ${dLabel(mAdj.date)}. (${mLowCount} item(s) below par)`,
+        author: 'Order Schedule',
+        created_at: today
+      });
+    }
+    return list;
+  }
+
   function buildSeedInventory() {
     return SEED_ITEMS.map((r, i) => {
       const prefix = r[1] === 'Walk-in freezer' ? 'FRZ' : r[1] === 'Walk-in cooler' ? 'CLR' : 'STK';
@@ -1113,6 +1218,7 @@
     const allowed = getAllowedTabs(u);
     if (!allowed.includes(state.activeTab)) state.activeTab = allowed[0];
     document.getElementById('hdr-user').textContent = `${u.name} (${u.role})`;
+    updateChatBadge();
 
     const activeGrp = NAV_GROUPS.find(g => g.tabs.some(t => t.id === state.activeTab)) || NAV_GROUPS[0];
     const grpEl = document.getElementById('nav-groups');
@@ -1421,10 +1527,13 @@
     const nextPred = forecastWeekday(today);
 
     const nowObj = new Date();
-    const anns = (state.announcements || []).filter(a => {
+    const disAuto = (state.dismissedAutoAnns && state.dismissedAutoAnns[u.id]) || {};
+    const autoAnns = getAutoHolidayAndOrderAnnouncements(today).filter(a => disAuto[a.id] !== today);
+    const manualAnns = (state.announcements || []).filter(a => {
       if (a.dismissed_by && a.dismissed_by[u.id] === today) return false;
       return isAnnouncementActiveToday(a, nowObj);
     });
+    const anns = [...autoAnns, ...manualAnns];
 
     main.innerHTML = `
       <div class="space-y-4">
@@ -2942,7 +3051,17 @@
             </div>
             <button type="button" id="btn-new-announcement" class="kms-btn-primary px-3 py-1.5 text-xs">+ Post / Schedule Announcement</button>
           </div>
-          ${!(state.announcements || []).length ? '<p class="text-xs opacity-70">No announcements configured.</p>' : `
+          ${(() => {
+            const autoList = getAutoHolidayAndOrderAnnouncements(todayAdm);
+            if (!autoList.length) return '';
+            return `
+              <div class="p-3 rounded-lg bg-black/5 border border-[var(--line)] space-y-1.5 text-xs">
+                <div class="font-bold uppercase opacity-70">Active Auto-Holiday &amp; Adjusted Order Alerts (${autoList.length})</div>
+                ${autoList.map(a => `<div><span class="tag ${a.priority === 'urgent' ? 'tag-OUT' : 'tag-LOW'} mr-1">${a.priority.toUpperCase()}</span><strong>${esc(a.title)}</strong> — ${esc(a.body)}</div>`).join('')}
+              </div>
+            `;
+          })()}
+          ${!(state.announcements || []).length ? '<p class="text-xs opacity-70">No custom announcements configured.</p>' : `
             <div class="divide-y divide-[var(--line)] border border-[var(--line)] rounded-lg overflow-hidden">
               ${(state.announcements || []).map(a => {
                 const disCount = a.dismissed_by ? Object.values(a.dismissed_by).filter(v => v === todayAdm).length : 0;
@@ -2979,6 +3098,7 @@
               <input name="initials" maxlength="4" required placeholder="Initials" class="kms-input text-sm uppercase" />
             </div>
             <input name="pin" required minlength="6" placeholder="Starting PIN (6+ chars)" class="kms-input w-full text-sm" />
+            <input name="email" type="email" placeholder="Email (for alerts &amp; PO notifications)" class="kms-input w-full text-xs" />
             <button type="submit" class="kms-btn-primary w-full py-2 text-sm">Add User</button>
           </form>
 
@@ -3100,24 +3220,88 @@
     `);
   }
 
+  function updateChatBadge() {
+    const badge = document.getElementById('chat-badge');
+    if (!badge) return;
+    const u = getActiveUser();
+    const lastRead = (state.chatLastRead && state.chatLastRead[u.id]) || 0;
+    const unread = (state.messages || []).filter(m =>
+      m.sender_id !== u.id &&
+      (m.recipient_id === 'ALL' || m.recipient_id === u.id) &&
+      (m.created_at_ms || 0) > lastRead
+    ).length;
+    badge.textContent = String(unread);
+    badge.classList.toggle('hidden', unread === 0);
+  }
+
+  function buildNotifyLinks(recipients, subject, body) {
+    const emails = recipients.map(r => r.email).filter(Boolean);
+    const mailHref = emails.length
+      ? `mailto:${encodeURIComponent(emails.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+      : `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    return { mailHref, emails, hasContacts: emails.length > 0 };
+  }
+
+  async function sendBackgroundAlert(recipients, subject, text) {
+    if (!sbClient || !sbClient.functions) return false;
+    const uniqueTo = Array.from(new Set((recipients || []).map(r => r.email).filter(Boolean)));
+    if (!uniqueTo.length) return false;
+    try {
+      const { data, error } = await sbClient.functions.invoke('notify-alert', {
+        body: { to: uniqueTo, subject, text }
+      });
+      return !error && data && data.ok !== false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function showChatModal() {
     const u = getActiveUser();
-    openModal('Kitchen Instant Messaging', `
+    if (!state.chatLastRead) state.chatLastRead = {};
+    state.chatLastRead[u.id] = Date.now();
+    updateChatBadge();
+    const target = state._chatTarget || 'ALL';
+    const others = (state.users || []).filter(x => x.active !== false && x.id !== u.id);
+    const visibleMsgs = (state.messages || []).filter(m => {
+      if (target === 'ALL') return m.recipient_id === 'ALL' || !m.recipient_id;
+      return (m.sender_id === u.id && m.recipient_id === target) || (m.sender_id === target && m.recipient_id === u.id);
+    }).slice(-40);
+    const targetUser = target === 'ALL' ? null : others.find(x => x.id === target);
+    const notifyRecips = target === 'ALL' ? others : (targetUser ? [targetUser] : []);
+    const lastMsg = visibleMsgs[visibleMsgs.length - 1];
+    const links = buildNotifyLinks(
+      notifyRecips,
+      `Salvation Army KMS ${target === 'ALL' ? 'Alert' : 'DM from ' + u.name}`,
+      lastMsg ? `${lastMsg.sender_name}: ${lastMsg.body}` : ''
+    );
+
+    openModal('Kitchen Alerts & Private DMs', `
       <div class="space-y-3">
-        <div class="max-h-64 overflow-y-auto space-y-2 p-2 rounded-lg bg-black/5">
-          ${!state.messages.length ? '<p class="text-xs opacity-60 text-center py-6">No messages yet.</p>' : state.messages.slice(-40).map(m => `
-            <div class="p-2 rounded-lg kms-card text-xs">
-              <div class="font-bold">${esc(m.sender_name)} <span class="opacity-60 font-normal">(${esc(m.timestamp_label)})</span> ${m.priority === 'urgent' ? '<span class="tag tag-OUT">URGENT</span>' : ''}</div>
+        <div class="flex flex-wrap items-center gap-1.5 text-xs">
+          <button type="button" data-chat-target="ALL" class="px-2.5 py-1 rounded-lg font-bold border ${target === 'ALL' ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">Alert All (Broadcast)</button>
+          ${others.map(o => `
+            <button type="button" data-chat-target="${o.id}" class="px-2.5 py-1 rounded-lg font-semibold border ${target === o.id ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">DM: ${esc(o.name)} (${esc(o.role)})</button>
+          `).join('')}
+        </div>
+        <div class="max-h-60 overflow-y-auto space-y-2 p-2 rounded-lg bg-black/5">
+          ${!visibleMsgs.length ? `<p class="text-xs opacity-60 text-center py-6">${target === 'ALL' ? 'No broadcast alerts yet.' : 'No private messages with ' + esc(targetUser ? targetUser.name : 'user') + ' yet.'}</p>` : visibleMsgs.map(m => `
+            <div class="p-2 rounded-lg kms-card text-xs ${m.sender_id === u.id ? 'border-l-4 border-l-[#1b365d]' : ''}">
+              <div class="font-bold">${esc(m.sender_name)} ${m.recipient_id && m.recipient_id !== 'ALL' ? `<span class="opacity-65 font-normal">&rarr; ${esc(m.recipient_name)} (Private)</span>` : ''} <span class="opacity-60 font-normal">(${esc(m.timestamp_label)})</span> ${m.priority === 'urgent' ? '<span class="tag tag-OUT">URGENT</span>' : ''}</div>
               <div class="mt-0.5">${esc(m.body)}</div>
             </div>
           `).join('')}
         </div>
         <form id="form-chat" class="space-y-2">
-          <div class="flex gap-2">
-            <input name="body" required placeholder="Type a quick kitchen note..." class="kms-input flex-1 text-sm" />
+          <input type="hidden" name="recipientId" value="${esc(target)}" />
+          <div class="flex flex-wrap gap-2">
+            <input name="body" required placeholder="${target === 'ALL' ? 'Alert everyone in the kitchen...' : 'Private message to ' + esc(targetUser ? targetUser.name : '') + '...'}" class="kms-input flex-1 min-w-[180px] text-sm" />
             <label class="flex items-center gap-1 text-xs font-bold"><input type="checkbox" name="urgent" /> Urgent</label>
           </div>
-          <button type="submit" class="kms-btn-primary w-full py-2 text-sm">Send Message</button>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="kms-btn-primary flex-1 py-2 text-sm">${target === 'ALL' ? 'Send Alert to All' : 'Send Private DM'}</button>
+            <a href="${links.mailHref}" class="kms-btn-alt px-3 py-2 text-xs font-semibold text-center">Email Alert</a>
+          </div>
         </form>
       </div>
     `);
@@ -3172,6 +3356,8 @@
     if (e.target.id === 'modal-close' || e.target.id === 'modal-backdrop') { closeModal(); return; }
     if (e.target.closest('#btn-switch-user')) { showSwitchUserModal(); return; }
     if (e.target.closest('#btn-open-chat')) { showChatModal(); return; }
+    const chatTgtBtn = e.target.closest('[data-chat-target]');
+    if (chatTgtBtn) { state._chatTarget = chatTgtBtn.dataset.chatTarget; showChatModal(); return; }
     if (e.target.closest('#btn-lock-app')) { state.isLocked = true; delete state._sbAuthEmail; setSessionUnlocked(false); if (sbClient && sbClient.auth) { try { sbClient.auth.signOut(); } catch (err) {} } saveState(); render(); return; }
     if (e.target.id === 'btn-undo' || e.target.id === 'btn-stock-undo') { doUndo(); return; }
     if (e.target.id === 'btn-print-qr') { showQrLabelsModal(); return; }
@@ -3844,10 +4030,22 @@
     }
     const daBtn = e.target.closest('[data-dismiss-ann]');
     if (daBtn) {
-      const a = (state.announcements || []).find(x => x.id === daBtn.dataset.dismissAnn);
+      const id = daBtn.dataset.dismissAnn;
+      const uid2 = getActiveUser().id;
+      const todayStr = localDateStr();
+      if (id.startsWith('auto-')) {
+        if (!state.dismissedAutoAnns) state.dismissedAutoAnns = {};
+        if (!state.dismissedAutoAnns[uid2]) state.dismissedAutoAnns[uid2] = {};
+        state.dismissedAutoAnns[uid2][id] = todayStr;
+        saveState();
+        render();
+        showToast('Dismissed for today (will reappear tomorrow while active)');
+        return;
+      }
+      const a = (state.announcements || []).find(x => x.id === id);
       if (a) {
         a.dismissed_by = a.dismissed_by || {};
-        a.dismissed_by[getActiveUser().id] = localDateStr();
+        a.dismissed_by[uid2] = todayStr;
         logActivity('ANNOUNCEMENT DISMISSED', `Dismissed "${a.title}" for today`);
         saveState();
         render();
@@ -3889,6 +4087,7 @@
             <div><label class="block font-semibold mb-1">Initials</label><input name="initials" type="text" maxlength="4" required value="${esc(u.initials)}" class="kms-input w-full text-sm uppercase" /></div>
             <div><label class="block font-semibold mb-1">Role</label><select name="role" class="kms-input w-full text-sm">${roleOpts.map(r => `<option value="${r}" ${normalizeRole(u.role) === r ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
           </div>
+          <div><label class="block font-semibold mb-1">Email (for Alerts &amp; PO Notifications)</label><input name="email" type="email" value="${esc(u.email || '')}" class="kms-input w-full text-xs" /></div>
           <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-semibold">Save Account Changes</button>
         </form>
       `);
@@ -4255,7 +4454,31 @@
       logActivity('PO REQUESTED', `${po.po_number} (${lines.length} items)`);
       saveState();
       render();
-      showToast(`Requested ${po.po_number} with ${lines.length} selected item(s)!`);
+      const poSummary = `${po.po_number} (${po.vendor}): ` + lines.map(l => `${l.qty} ${l.unit} ${l.name}`).join(', ');
+      const u = getActiveUser();
+      const mgrs = (state.users || []).filter(x => x.active !== false && isMgmtOrHigher(x));
+      state.messages.push({
+        id: uid('msg'), sender_id: u.id, sender_name: u.name, sender_role: u.role,
+        recipient_id: 'ALL', recipient_name: 'Everyone', priority: 'urgent',
+        body: `PO Submitted for Approval — ${poSummary}`,
+        created_at_ms: Date.now(), timestamp_label: nowStamp()
+      });
+      saveState();
+      render();
+      sendBackgroundAlert(mgrs, `PO Approval Needed: ${po.po_number}`, `Please review and approve ${poSummary}`).then(sent => {
+        if (sent) showToast('Auto-sent background Email alert to Management!');
+      });
+      const poLinks = buildNotifyLinks(mgrs, `PO Approval Needed: ${po.po_number}`, `Please review and approve ${poSummary}`);
+      openModal(`PO Submitted — Notify Management`, `
+        <div class="space-y-3 text-xs">
+          <p><strong>${esc(po.po_number)}</strong> has been submitted for approval and posted to Kitchen Alerts.</p>
+          <div class="p-2.5 rounded bg-black/5">${esc(poSummary)}</div>
+          <div class="flex flex-wrap gap-2">
+            <a href="${poLinks.mailHref}" class="kms-btn-navy flex-1 py-2 text-center font-semibold">Email Management</a>
+            <button type="button" onclick="closeModal()" class="kms-btn-alt px-4 py-2 font-semibold">Done</button>
+          </div>
+        </div>
+      `);
       return;
     }
 
@@ -4561,6 +4784,7 @@
       u.name = String(fd.get('name') || '').trim() || u.name;
       u.initials = String(fd.get('initials') || '').trim().toUpperCase() || u.initials;
       u.role = newRole;
+      u.email = String(fd.get('email') || '').trim();
       logActivity('USER UPDATED', `${u.name} (${u.role})`);
       closeModal();
       saveState();
@@ -4577,6 +4801,7 @@
         return;
       }
       const u = makeUser(uid('usr'), fd.get('name').trim(), reqRole, fd.get('initials').trim().toUpperCase(), fd.get('pin'), true);
+      u.email = String(fd.get('email') || '').trim();
       state.users.push(u);
       logActivity('ADD USER', `${u.name} (${u.role})`);
       saveState();
@@ -4587,11 +4812,24 @@
 
     if (e.target.id === 'form-chat') {
       const u = getActiveUser();
+      const recId = String(fd.get('recipientId') || 'ALL');
+      const recUser = recId === 'ALL' ? null : state.users.find(x => x.id === recId);
       state.messages.push({
         id: uid('msg'), sender_id: u.id, sender_name: u.name, sender_role: u.role,
-        recipient_id: 'ALL', recipient_name: 'Everyone', priority: fd.get('urgent') ? 'urgent' : 'normal',
+        recipient_id: recId, recipient_name: recUser ? recUser.name : 'Everyone',
+        priority: fd.get('urgent') ? 'urgent' : 'normal',
         body: fd.get('body').trim(), created_at_ms: Date.now(), timestamp_label: nowStamp()
       });
+      if (fd.get('urgent') || recId !== 'ALL') {
+        const chatRecips = recId === 'ALL'
+          ? (state.users || []).filter(x => x.active !== false && x.id !== u.id)
+          : (recUser ? [recUser] : []);
+        sendBackgroundAlert(
+          chatRecips,
+          `Salvation Army KMS ${recId === 'ALL' ? 'Urgent Alert' : 'Private DM'} from ${u.name}`,
+          `${u.name}: ${fd.get('body').trim()}`
+        ).then(sent => { if (sent) showToast('Auto-sent background Email notification!'); });
+      }
       saveState();
       showChatModal();
       return;

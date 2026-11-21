@@ -16,6 +16,7 @@ create table if not exists public.kms_users (
   active boolean not null default true,
   onboarding_completed boolean not null default false,
   completed_training_ids jsonb not null default '[]'::jsonb,
+  email text not null default '',
   updated_at timestamptz not null default now()
 );
 
