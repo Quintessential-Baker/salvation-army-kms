@@ -659,7 +659,7 @@
       x.usage_log.forEach(e => { if (now - e[0] <= weeks * WK_MS) total += e[1]; });
       if (total <= 0) return;
       const cycleWeeks = x.cadence === 'W' ? 1 : 4.33;
-      x.par = Math.ceil((total / weeks) * cycleWeeks * 1.25 * 2) / 2;
+      x.par = Math.round(((total / weeks) * cycleWeeks * 1.25) * 100) / 100;
       x.par_learned = true;
     });
   }
@@ -674,10 +674,10 @@
   // Stock Status & Forecasting Helpers
   function itemStatus(x) {
     if (x.on_hand <= 0) return 'OUT';
-    if (x.par > 0 && x.on_hand < x.par) return 'LOW';
+    if (x.par > 0 && itemNeed(x) >= 1) return 'LOW';
     return 'OK';
   }
-  function itemNeed(x) { return Math.max(0, (Number(x.par) || 0) - (Number(x.on_hand) || 0)); }
+  function itemNeed(x) { return Math.max(0, Math.round(((Number(x.par) || 0) - (Number(x.on_hand) || 0)) * 100) / 100); }
 
   function serviceDaysBetween(startStr, endStr) {
     const res = [];
@@ -836,8 +836,11 @@
 
   function suggestedOrderAmount(x, d7, d30) {
     const dem = (x.cadence === 'W' ? d7 : d30)[x.id] || 0;
-    const target = Math.max(x.par, Math.ceil(dem * 1.1));
-    return Math.max(0, Math.ceil(target - x.on_hand - onOrderQty(x.id)));
+    const demTarget = Math.round(dem * 1.1 * 100) / 100;
+    const target = Math.max(Number(x.par) || 0, demTarget);
+    const gap = Math.round((target - (Number(x.on_hand) || 0) - onOrderQty(x.id)) * 100) / 100;
+    if ((Number(x.on_hand) || 0) <= 0 && target > 0) return Math.max(1, Math.floor(target));
+    return gap >= 1 ? Math.floor(gap) : 0;
   }
 
   // UI Utilities: Toast & Modal
@@ -1335,7 +1338,7 @@
   function renderDashboard(main) {
     const today = localDateStr();
     const u = getActiveUser();
-    const lowItems = state.items.filter(x => !x.discontinued && itemNeed(x) > 0);
+    const lowItems = state.items.filter(x => !x.discontinued && itemStatus(x) !== 'OK');
     const outItems = lowItems.filter(x => x.on_hand <= 0);
     const expTags = state.storageTags.filter(t => t.status === 'STORED' && t.use_by_date <= today);
     const carryTasks = state.checklists.filter(c => c.priority_carryover && !c.done);
@@ -2619,8 +2622,8 @@
     // 2. Inventory Valuation & Restock Gap
     const activeItems = state.items.filter(x => !x.discontinued);
     const stockValue = activeItems.reduce((s, x) => s + (x.on_hand || 0) * (x.unit_price || 0), 0);
-    const lowItems = activeItems.filter(x => itemNeed(x) > 0).map(x => {
-      const needCases = Math.max(1, Math.ceil(itemNeed(x)));
+    const lowItems = activeItems.filter(x => itemStatus(x) !== 'OK').map(x => {
+      const needCases = x.on_hand <= 0 ? Math.max(1, Math.floor(x.par || 1)) : Math.floor(itemNeed(x));
       const estCost = needCases * (x.unit_price || 0);
       return { item: x, needCases, estCost };
     }).sort((a, b) => b.needCases - a.needCases);
@@ -3043,7 +3046,7 @@
     if (e.target.id === 'modal-close' || e.target.id === 'modal-backdrop') { closeModal(); return; }
     if (e.target.closest('#btn-switch-user')) { showSwitchUserModal(); return; }
     if (e.target.closest('#btn-open-chat')) { showChatModal(); return; }
-    if (e.target.closest('#btn-lock-app')) { state.isLocked = true; saveState(); render(); return; }
+    if (e.target.closest('#btn-lock-app')) { state.isLocked = true; setSessionUnlocked(false); saveState(); render(); return; }
     if (e.target.id === 'btn-undo' || e.target.id === 'btn-stock-undo') { doUndo(); return; }
     if (e.target.id === 'btn-print-qr') { showQrLabelsModal(); return; }
     if (e.target.id === 'btn-print-page') { window.print(); return; }
@@ -3979,6 +3982,7 @@
       }
       state.activeUserId = u.id;
       state.isLocked = false;
+      setSessionUnlocked(true);
       trainingStep = 0;
       logActivity('LOGIN', `${u.name} signed in`);
       saveState();
@@ -4353,6 +4357,7 @@
     if (!state.autoLockMinutes || state.isLocked) return;
     inactivityTimer = setTimeout(() => {
       state.isLocked = true;
+      setSessionUnlocked(false);
       saveState();
       render();
     }, state.autoLockMinutes * 60 * 1000);
@@ -4406,7 +4411,25 @@
     }
   });
 
+  function setSessionUnlocked(unlocked) {
+    try {
+      if (unlocked) sessionStorage.setItem('sa_kms_session_unlocked', '1');
+      else sessionStorage.removeItem('sa_kms_session_unlocked');
+    } catch (e) {}
+  }
+  function isSessionUnlocked() {
+    try { return sessionStorage.getItem('sa_kms_session_unlocked') === '1'; } catch (e) { return false; }
+  }
+  function lockOnExit() {
+    state.isLocked = true;
+    setSessionUnlocked(false);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  window.addEventListener('pagehide', lockOnExit);
+  window.addEventListener('beforeunload', lockOnExit);
+
   // Boot
+  if (!isSessionUnlocked()) state.isLocked = true;
   if (state.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   document.documentElement.style.fontSize = ['100%', '112.5%', '125%'][state.textZoom || 0];
   pruneExpiredAlerts();
