@@ -984,7 +984,8 @@
     const demTarget = Math.round(dem * 1.1 * 100) / 100;
     const target = Math.max(Number(x.par) || 0, demTarget);
     const gap = Math.round((target - (Number(x.on_hand) || 0) - onOrderQty(x.id)) * 100) / 100;
-    if ((Number(x.on_hand) || 0) <= 0 && target > 0) return Math.max(1, Math.floor(target));
+    if (gap <= 0) return 0;
+    if ((Number(x.on_hand) || 0) <= 0 && target > 0) return Math.max(1, Math.floor(gap));
     return gap >= 1 ? Math.floor(gap) : 0;
   }
 
@@ -1812,12 +1813,12 @@
                 <div>
                   <span class="font-mono font-bold text-xs">${esc(po.po_number)}</span> · <strong class="text-sm">${esc(po.vendor)}</strong>
                   <span class="tag ${po.status === 'rejected' ? 'tag-OUT' : po.status === 'approved' || po.status === 'ordered' ? 'tag-OK' : 'tag-LOW'} ml-1">${po.status.toUpperCase()}</span>
-                  <div class="text-xs opacity-70">Requested ${esc(po.requested_date)} by ${esc(po.requested_by)}${po.approved_by ? ` · Approved by ${esc(po.approved_by)}` : ''}${po.vendor_conf ? ` · Conf #${esc(po.vendor_conf)}` : ''}</div>
+                  <div class="text-xs opacity-70">Requested ${esc(po.requested_date)} by ${esc(po.requested_by)}${po.approved_by ? ` · Approved by ${esc(po.approved_by)}` : ''}${po.expected_arrival ? ` · Expected ${esc(po.expected_arrival)}` : ''}${po.vendor_conf ? ` · Conf #${esc(po.vendor_conf)}` : ''}</div>
                 </div>
-                <div class="flex flex-wrap gap-1.5 no-print">
+                <div class="flex flex-wrap items-center gap-1.5 no-print">
                   ${(isMgr || po.status === 'requested') && ['requested', 'approved', 'ordered'].includes(po.status) ? `<button type="button" data-po-edit="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit PO / Invoice #</button>` : ''}
                   ${po.status === 'requested' && isMgr ? `<button type="button" data-po-decide="${po.id}:approved" class="kms-btn-ok px-2.5 py-1 text-xs">Approve</button><button type="button" data-po-decide="${po.id}:rejected" class="kms-btn-alt px-2.5 py-1 text-xs">Reject</button>` : ''}
-                  ${po.status === 'approved' && isMgr ? `<input id="conf-${po.id}" placeholder="Vendor conf #" class="kms-input text-xs w-28" /><button type="button" data-po-order="${po.id}" class="kms-btn-navy px-2.5 py-1 text-xs">Mark Ordered</button>` : ''}
+                  ${po.status === 'approved' && isMgr ? `<input id="conf-${po.id}" value="${esc(po.vendor_conf || '')}" placeholder="Vendor conf #" class="kms-input text-xs w-28" /><input id="eta-${po.id}" type="date" value="${esc(po.expected_arrival || '')}" title="Expected Delivery Date" class="kms-input text-xs" /><label class="flex items-center gap-1 text-[11px] opacity-80 cursor-pointer" title="Create system reminder for delivery date"><input type="checkbox" id="rem-${po.id}" checked class="accent-[#b3122b]" /><span>Remind</span></label><button type="button" data-po-order="${po.id}" class="kms-btn-navy px-2.5 py-1 text-xs">Mark Ordered</button>` : ''}
                   ${po.status === 'ordered' ? `<button type="button" data-po-reconcile="${po.id}" class="kms-btn-ok px-2.5 py-1 text-xs">Reconcile &amp; Receive</button>` : ''}
                   ${(isMgr || po.status === 'requested') ? `<button type="button" data-po-del="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Delete</button>` : ''}
                 </div>
@@ -3360,6 +3361,7 @@
     if (tabBtn) { state.activeTab = tabBtn.dataset.tab; state.selectedSheetDate = null; saveState(); render(); return; }
 
     if (e.target.id === 'modal-close' || e.target.id === 'modal-backdrop') { closeModal(); return; }
+    if (e.target.closest('[data-close-modal]')) { closeModal(); if (!e.target.closest('[data-tab]')) return; }
     if (e.target.closest('#btn-switch-user')) { showSwitchUserModal(); return; }
     if (e.target.closest('#btn-open-chat')) { showChatModal(); return; }
     const chatTgtBtn = e.target.closest('[data-chat-target]');
@@ -3481,9 +3483,10 @@
         openModal(`Edit Purchase Order — ${po.po_number}`, `
           <form id="form-edit-po" class="space-y-3 text-xs">
             <input type="hidden" name="poId" value="${esc(po.id)}" />
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div><label class="block font-semibold mb-1">PO #</label><input name="poNumber" type="text" required value="${esc(po.po_number)}" class="kms-input w-full text-xs font-mono" /></div>
               <div><label class="block font-semibold mb-1">Vendor Invoice / Conf #</label><input name="vendorConf" type="text" value="${esc(po.vendor_conf || '')}" placeholder="e.g. INV-4821" class="kms-input w-full text-xs font-mono" /></div>
+              <div><label class="block font-semibold mb-1">Expected Delivery</label><input name="expectedArrival" type="date" value="${esc(po.expected_arrival || '')}" class="kms-input w-full text-xs" /></div>
             </div>
             <p class="opacity-75">Update requested whole-case quantities below (set to 0 to remove an item).</p>
             <div class="max-h-60 overflow-y-auto divide-y divide-[var(--line)] border border-[var(--line)] rounded-lg">
@@ -3498,8 +3501,20 @@
               `).join('')}
             </div>
             <div class="flex items-center gap-1.5 pt-1">
-              <select name="extraItemId" class="kms-input flex-1 text-xs"><option value="">+ Add another item (optional)...</option>${allItems}</select>
+              <select name="extraItemId" id="po-edit-extra-sel" class="kms-input flex-1 text-xs"><option value="">+ Add another item (optional)...</option><option value="__NEW__">+ Add NEW item (not in inventory yet)...</option>${allItems}</select>
               <input name="extraQty" type="number" step="1" min="1" placeholder="Cases" class="kms-input w-20 text-xs text-center" />
+            </div>
+            <div id="po-edit-new-wrap" class="hidden p-2.5 rounded-lg border border-[var(--line)] bg-black/5 space-y-2">
+              <div class="font-semibold">New Item Details</div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input name="newItemName" type="text" placeholder="Item name (e.g. Applesauce cups)" class="kms-input text-xs" />
+                <input name="newItemUnit" type="text" value="cases" placeholder="Unit (cases, bags, cans...)" class="kms-input text-xs" />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <select name="newItemLoc" class="kms-input text-xs">${LOCATIONS.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>
+                <input name="newItemPar" type="number" step="0.01" min="0" value="1" placeholder="Par level" class="kms-input text-xs" title="Par level" />
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="addToCatalog" checked class="accent-[#b3122b]" /><span>Also add to Inventory Catalog (so receiving updates stock)</span></label>
             </div>
             <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-semibold">Save PO Updates</button>
           </form>
@@ -3533,6 +3548,23 @@
       showToast(`Created ${po.po_number}`);
       return;
     }
+    function upsertPoDeliveryReminder(po, deliveryDate) {
+      if (!po || !deliveryDate) return;
+      if (!Array.isArray(state.announcements)) state.announcements = [];
+      const annId = 'ann-po-' + po.id;
+      const title = `Delivery Expected: ${po.po_number} (${po.vendor})`;
+      const body = `Expected delivery for ${po.po_number} (${(po.lines || []).length} item(s)). Reconcile & check in under Receive & Scan when it arrives.`;
+      const idx = state.announcements.findIndex(a => a.id === annId);
+      const rec = {
+        id: annId, priority: 'reminder', title, body,
+        alert_at: deliveryDate + 'T08:00', repeat_rule: 'none', repeat_days: [],
+        expires_at: deliveryDate, author: getActiveUser().name,
+        created_at: localDateStr(), dismissed_by: {}
+      };
+      if (idx >= 0) state.announcements[idx] = { ...state.announcements[idx], ...rec };
+      else state.announcements.unshift(rec);
+    }
+
     const decBtn = e.target.closest('[data-po-decide]');
     if (decBtn) {
       if (!isMgmtOrHigher()) { showToast('Only Management can approve or reject POs', 'warn'); return; }
@@ -3554,10 +3586,15 @@
       const po = state.purchaseOrders.find(p => p.id === ordBtn.dataset.poOrder);
       if (po) {
         po.status = 'ordered';
-        po.vendor_conf = document.getElementById('conf-' + po.id)?.value || '';
-        logActivity('PO ORDERED', po.po_number);
+        po.vendor_conf = document.getElementById('conf-' + po.id)?.value || po.vendor_conf || '';
+        const etaVal = document.getElementById('eta-' + po.id)?.value || '';
+        if (etaVal) po.expected_arrival = etaVal;
+        const makeRem = document.getElementById('rem-' + po.id)?.checked;
+        if (makeRem && po.expected_arrival) upsertPoDeliveryReminder(po, po.expected_arrival);
+        logActivity('PO ORDERED', po.po_number + (po.expected_arrival ? ' (ETA ' + po.expected_arrival + ')' : ''));
         saveState();
         render();
+        showToast(makeRem && po.expected_arrival ? `Marked ${po.po_number} ordered & set delivery reminder` : `Marked ${po.po_number} ordered`);
       }
       return;
     }
@@ -3880,8 +3917,8 @@
             </div>
           `).join('')}
           <div class="flex gap-2 pt-1">
-            <button type="button" data-tab="orders" onclick="closeModal()" class="kms-btn-navy flex-1 py-2 text-xs">Go to Orders &amp; POs</button>
-            <button type="button" data-tab="receive" onclick="closeModal()" class="kms-btn-ok flex-1 py-2 text-xs">Go to Receive / Check-In</button>
+            <button type="button" data-tab="orders" data-close-modal="1" class="kms-btn-navy flex-1 py-2 text-xs">Go to Orders &amp; POs</button>
+            <button type="button" data-tab="receive" data-close-modal="1" class="kms-btn-ok flex-1 py-2 text-xs">Go to Receive / Check-In</button>
           </div>
         </div>
       `);
@@ -4249,6 +4286,11 @@
   });
 
   document.addEventListener('change', (e) => {
+    if (e.target.id === 'po-edit-extra-sel') {
+      const wrap = document.getElementById('po-edit-new-wrap');
+      if (wrap) wrap.classList.toggle('hidden', e.target.value !== '__NEW__');
+      return;
+    }
     if (e.target.id === 'stock-loc') { state._stockLoc = e.target.value; render(); return; }
     if (e.target.id === 'order-hz') { state._orderHorizon = e.target.value; render(); return; }
     if (e.target.id === 'fc-whatif-meal') { state._fcMealFilter = e.target.value; render(); return; }
@@ -4482,7 +4524,7 @@
           <div class="p-2.5 rounded bg-black/5">${esc(poSummary)}</div>
           <div class="flex flex-wrap gap-2">
             <a href="${poLinks.mailHref}" class="kms-btn-navy flex-1 py-2 text-center font-semibold">Email Management</a>
-            <button type="button" onclick="closeModal()" class="kms-btn-alt px-4 py-2 font-semibold">Done</button>
+            <button type="button" data-close-modal="1" class="kms-btn-alt px-4 py-2 font-semibold">Done</button>
           </div>
         </div>
       `);
@@ -4503,7 +4545,30 @@
         });
         const exId = fd.get('extraItemId');
         const exQ = Math.ceil(parseFloat(fd.get('extraQty')) || 0);
-        if (exId && exQ > 0) {
+        if (exId === '__NEW__') {
+          const newName = String(fd.get('newItemName') || '').trim();
+          const newUnit = String(fd.get('newItemUnit') || 'cases').trim() || 'cases';
+          const newLoc = String(fd.get('newItemLoc') || LOCATIONS[0]);
+          const newPar = Math.round((parseFloat(fd.get('newItemPar')) || 1) * 100) / 100;
+          if (!newName) { showToast('Enter a name for the new item', 'warn'); return; }
+          if (exQ <= 0) { showToast('Enter at least 1 case for the new item', 'warn'); return; }
+          if (fd.get('addToCatalog')) {
+            const prefix = newLoc.includes('freezer') ? 'FRZ' : newLoc.includes('cooler') ? 'CLR' : 'STK';
+            const sku = prefix + '-' + (100 + state.items.length + 1);
+            const newItem = {
+              id: uid('itm'), sku, name: newName, location: newLoc, category: 'General',
+              unit: newUnit, pack_label: newUnit, units_per_pack: 1,
+              on_hand: 0, par: newPar, par_manual: true, par_learned: false,
+              cadence: po.cadence || 'M', vendor: po.vendor || '', unit_price: null,
+              usage_log: [], discontinued: false
+            };
+            state.items.push(newItem);
+            logActivity('ADD ITEM', `Added ${newItem.name} (${newItem.sku}) via PO ${po.po_number}`);
+            nextLines.push({ item_id: newItem.id, name: newItem.name, unit: newItem.unit, qty: exQ, received: 0, price: 0 });
+          } else {
+            nextLines.push({ item_id: uid('custom'), name: newName, unit: newUnit, qty: exQ, received: 0, price: 0 });
+          }
+        } else if (exId && exQ > 0) {
           const item = state.items.find(i => i.id === exId);
           if (item) {
             const exist = nextLines.find(l => l.item_id === exId);
@@ -4514,8 +4579,10 @@
         if (!nextLines.length) { showToast('PO must have at least 1 item', 'warn'); return; }
         const newPoNum = String(fd.get('poNumber') || '').trim();
         const newConf = String(fd.get('vendorConf') || '').trim();
+        const newEta = String(fd.get('expectedArrival') || '').trim();
         if (newPoNum) po.po_number = newPoNum;
         po.vendor_conf = newConf;
+        po.expected_arrival = newEta;
         po.lines = nextLines;
         logActivity('PO UPDATED', `${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${nextLines.length} items)`);
         saveState();
