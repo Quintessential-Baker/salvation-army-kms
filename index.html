@@ -770,8 +770,8 @@
 
   function suggestedOrderAmount(x, d7, d30) {
     const dem = (x.cadence === 'W' ? d7 : d30)[x.id] || 0;
-    const target = Math.max(x.par, Math.ceil(dem * 1.1 * 2) / 2);
-    return Math.max(0, Math.ceil((target - x.on_hand - onOrderQty(x.id)) * 2) / 2);
+    const target = Math.max(x.par, Math.ceil(dem * 1.1));
+    return Math.max(0, Math.ceil(target - x.on_hand - onOrderQty(x.id)));
   }
 
   // UI Utilities: Toast & Modal
@@ -1497,28 +1497,48 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           ${['W', 'M'].map(cad => {
-            const list = state.items.filter(x => !x.discontinued && x.cadence === cad).map(x => ({ item: x, qty: suggestedOrderAmount(x, d7, d30) })).filter(o => o.qty > 0);
+            const manual = (state.manualPoExtra && state.manualPoExtra[cad]) || {};
+            const list = state.items.filter(x => !x.discontinued && x.cadence === cad).map(x => {
+              const sug = suggestedOrderAmount(x, d7, d30);
+              const manQ = Number(manual[x.id] || 0);
+              const qty = manQ > 0 ? manQ : sug;
+              return { item: x, qty, isManual: manQ > 0 };
+            }).filter(o => o.qty > 0);
             const est = list.reduce((s, o) => s + o.qty * (o.item.unit_price || 0), 0);
+            const addOpts = state.items.filter(x => !x.discontinued && x.cadence === cad).map(x => `<option value="${x.id}">${esc(x.name)} (${esc(x.unit)})</option>`).join('');
             return `
-              <div class="kms-card p-4 space-y-2.5">
-                <div class="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
+              <form class="form-create-po kms-card p-4 space-y-2.5" data-cad="${cad}">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
                   <div>
                     <h3 class="text-sm font-bold">${VENDORS[cad]}</h3>
-                    <span class="text-xs opacity-70">${list.length} item(s) to order${est ? ` · est. $${est.toFixed(2)}` : ''}</span>
+                    <span class="text-xs opacity-70">${list.length} item(s) · Whole cases only${est ? ` · est. $${est.toFixed(2)}` : ''}</span>
                   </div>
-                  ${list.length ? `<button type="button" data-create-po="${cad}" class="kms-btn-primary px-3 py-1.5 text-xs">Request PO</button>` : ''}
+                  <div class="flex items-center gap-1.5">
+                    ${list.length ? `<button type="button" data-po-sel-all="${cad}" class="kms-btn-alt px-2 py-1 text-xs">Toggle All</button><button type="submit" class="kms-btn-primary px-3 py-1.5 text-xs">Request Selected PO</button>` : ''}
+                  </div>
                 </div>
-                ${!list.length ? '<p class="text-xs opacity-70 py-2">Nothing to order for this vendor.</p>' : `
-                  <div class="max-h-64 overflow-y-auto space-y-1.5">
+                ${!list.length ? '<p class="text-xs opacity-70 py-2">Nothing below par. Add an item below to start a custom PO.</p>' : `
+                  <div class="max-h-72 overflow-y-auto space-y-1.5">
                     ${list.map(o => `
-                      <div class="p-2 rounded border border-[var(--line)] text-xs flex justify-between">
-                        <span><strong>${esc(o.item.name)}</strong> (Have ${o.item.on_hand}, Par ${o.item.par})</span>
-                        <span class="font-bold text-[#b3122b]">Order ${o.qty} ${esc(o.item.unit)}</span>
+                      <div class="p-2 rounded border border-[var(--line)] text-xs flex flex-wrap items-center justify-between gap-2">
+                        <label class="flex items-center gap-2 cursor-pointer flex-1 min-w-[160px]">
+                          <input type="checkbox" name="inc_${o.item.id}" checked class="po-chk-${cad} accent-[#b3122b]" />
+                          <span><strong>${esc(o.item.name)}</strong> <span class="opacity-65">(Have ${o.item.on_hand}, Par ${o.item.par})</span></span>
+                        </label>
+                        <div class="flex items-center gap-1 shrink-0">
+                          <input type="number" step="1" min="1" name="qty_${o.item.id}" value="${Math.max(1, Math.ceil(o.qty))}" class="kms-input w-16 text-xs text-center font-bold text-[#b3122b]" />
+                          <span class="opacity-75">${esc(o.item.unit)}</span>
+                        </div>
                       </div>
                     `).join('')}
                   </div>
                 `}
-              </div>
+                <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[var(--line)] text-xs">
+                  <select id="po-add-sel-${cad}" class="kms-input flex-1 min-w-[140px] text-xs">${addOpts}</select>
+                  <input id="po-add-qty-${cad}" type="number" step="1" min="1" value="1" class="kms-input w-16 text-xs text-center font-bold" />
+                  <button type="button" data-po-add-extra="${cad}" class="kms-btn-alt px-2.5 py-1 text-xs">+ Add Item</button>
+                </div>
+              </form>
             `;
           }).join('')}
         </div>
@@ -1534,6 +1554,8 @@
                   <div class="text-xs opacity-70">Requested ${esc(po.requested_date)} by ${esc(po.requested_by)}${po.approved_by ? ` · Approved by ${esc(po.approved_by)}` : ''}${po.vendor_conf ? ` · Conf #${esc(po.vendor_conf)}` : ''}</div>
                 </div>
                 <div class="flex flex-wrap gap-1.5 no-print">
+                  <button type="button" data-po-orderform="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Order Form (Cases)</button>
+                  ${(po.status === 'requested' || po.status === 'approved') ? `<button type="button" data-po-edit="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit Items / Qty</button>` : ''}
                   ${po.status === 'requested' && isMgr ? `<button type="button" data-po-decide="${po.id}:approved" class="kms-btn-ok px-2.5 py-1 text-xs">Approve</button><button type="button" data-po-decide="${po.id}:rejected" class="kms-btn-alt px-2.5 py-1 text-xs">Reject</button>` : ''}
                   ${po.status === 'approved' ? `<input id="conf-${po.id}" placeholder="Vendor conf #" class="kms-input text-xs w-28" /><button type="button" data-po-order="${po.id}" class="kms-btn-navy px-2.5 py-1 text-xs">Mark Ordered</button>` : ''}
                   ${po.status === 'ordered' ? `<button type="button" data-po-reconcile="${po.id}" class="kms-btn-ok px-2.5 py-1 text-xs">Reconcile &amp; Receive</button>` : ''}
@@ -2758,6 +2780,113 @@
     }
 
     // PO Actions
+    const poSelAll = e.target.closest('[data-po-sel-all]');
+    if (poSelAll) {
+      const cad = poSelAll.dataset.poSelAll;
+      const chks = Array.from(document.querySelectorAll('.po-chk-' + cad));
+      const allOn = chks.length && chks.every(c => c.checked);
+      chks.forEach(c => { c.checked = !allOn; });
+      return;
+    }
+    const poAddExtra = e.target.closest('[data-po-add-extra]');
+    if (poAddExtra) {
+      const cad = poAddExtra.dataset.poAddExtra;
+      const sel = document.getElementById('po-add-sel-' + cad);
+      const qInp = document.getElementById('po-add-qty-' + cad);
+      if (sel && sel.value) {
+        if (!state.manualPoExtra) state.manualPoExtra = {};
+        if (!state.manualPoExtra[cad]) state.manualPoExtra[cad] = {};
+        state.manualPoExtra[cad][sel.value] = Math.max(1, Math.ceil(parseFloat(qInp ? qInp.value : 1) || 1));
+        render();
+        showToast('Added item to PO suggestions');
+      }
+      return;
+    }
+    const poFormBtn = e.target.closest('[data-po-orderform]');
+    if (poFormBtn) {
+      const po = (state.purchaseOrders || []).find(p => p.id === poFormBtn.dataset.poOrderform);
+      if (po) {
+        openModal(`Case Order Form — ${po.vendor} (${po.po_number})`, `
+          <div class="space-y-3 text-xs">
+            <div class="flex flex-wrap justify-between gap-2 border-b border-[var(--line)] pb-2">
+              <div><strong>Vendor:</strong> ${esc(po.vendor)} &bull; <strong>PO #:</strong> ${esc(po.po_number)}</div>
+              <div><strong>Date:</strong> ${esc(po.requested_date)} &bull; <strong>Whole Cases Only</strong></div>
+            </div>
+            <table class="w-full text-left border-collapse text-xs border border-[var(--line)]">
+              <thead>
+                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                  <th class="p-2">#</th>
+                  <th class="p-2">Product / Catalog Item</th>
+                  <th class="p-2">Case Pack / Unit</th>
+                  <th class="p-2 text-center">Cases Ordered</th>
+                  <th class="p-2 text-center">Rec'd Check</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--line)]">
+                ${(po.lines || []).map((l, idx) => {
+                  const inv = state.items.find(i => i.id === l.item_id);
+                  return `
+                    <tr>
+                      <td class="p-2 opacity-60">${idx + 1}</td>
+                      <td class="p-2 font-bold">${esc(l.name)}${inv && inv.sku ? ` <span class="font-mono opacity-60">(${esc(inv.sku)})</span>` : ''}</td>
+                      <td class="p-2">${esc(l.unit || (inv ? inv.unit : 'Case'))}</td>
+                      <td class="p-2 text-center font-bold text-[#b3122b] text-sm">${Math.max(1, Math.ceil(l.qty))} CASE(S)</td>
+                      <td class="p-2 text-center">[ &nbsp; ]</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+            <div class="flex gap-2 no-print">
+              <button type="button" id="btn-print-orderform-now" class="kms-btn-navy flex-1 py-2 text-xs">Print Order Form</button>
+              <button type="button" id="btn-copy-orderform-now" data-copy-po-id="${esc(po.id)}" class="kms-btn-alt flex-1 py-2 text-xs">Copy for Portal</button>
+            </div>
+          </div>
+        `);
+      }
+      return;
+    }
+    if (e.target.id === 'btn-print-orderform-now') { window.print(); return; }
+    if (e.target.id === 'btn-copy-orderform-now') {
+      const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.copyPoId);
+      if (po) {
+        const txt = `${po.vendor} Order Form (${po.po_number}) — Whole Cases Only\n` +
+          (po.lines || []).map((l, i) => `${i + 1}. ${l.name} — ${Math.max(1, Math.ceil(l.qty))} CASE (${l.unit})`).join('\n');
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).catch(() => {});
+        showToast('Copied case order form to clipboard');
+      }
+      return;
+    }
+    const poEditBtn = e.target.closest('[data-po-edit]');
+    if (poEditBtn) {
+      const po = (state.purchaseOrders || []).find(p => p.id === poEditBtn.dataset.poEdit);
+      if (po) {
+        const allItems = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
+        openModal(`Edit Purchase Order — ${po.po_number}`, `
+          <form id="form-edit-po" class="space-y-3 text-xs">
+            <input type="hidden" name="poId" value="${esc(po.id)}" />
+            <p class="opacity-75">Update requested quantities below (set to 0 to remove an item).</p>
+            <div class="max-h-60 overflow-y-auto divide-y divide-[var(--line)] border border-[var(--line)] rounded-lg">
+              ${(po.lines || []).map(l => `
+                <div class="p-2 flex items-center justify-between gap-2">
+                  <span class="font-semibold">${esc(l.name)}</span>
+                  <div class="flex items-center gap-1">
+                    <input type="number" step="1" min="0" name="line_${esc(l.item_id)}" value="${Math.ceil(l.qty)}" class="kms-input w-20 text-xs text-center font-bold" />
+                    <span class="opacity-70">${esc(l.unit)}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <div class="flex items-center gap-1.5 pt-1">
+              <select name="extraItemId" class="kms-input flex-1 text-xs"><option value="">+ Add another item (optional)...</option>${allItems}</select>
+              <input name="extraQty" type="number" step="1" min="1" placeholder="Cases" class="kms-input w-20 text-xs text-center" />
+            </div>
+            <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-semibold">Save PO Updates</button>
+          </form>
+        `);
+      }
+      return;
+    }
     const cpo = e.target.closest('[data-create-po]');
     if (cpo) {
       const cad = cpo.dataset.createPo;
@@ -3489,6 +3618,64 @@
       closeModal();
       render();
       showToast(`Added ${item.name}`);
+      return;
+    }
+
+    if (e.target.classList && e.target.classList.contains('form-create-po')) {
+      const cad = e.target.dataset.cad;
+      const lines = [];
+      state.items.filter(x => !x.discontinued && x.cadence === cad).forEach(x => {
+        if (!fd.get('inc_' + x.id)) return;
+        const q = Math.ceil(parseFloat(fd.get('qty_' + x.id)) || 0);
+        if (q <= 0) return;
+        lines.push({ item_id: x.id, name: x.name, unit: x.unit, qty: q, received: 0, price: x.unit_price || 0 });
+      });
+      if (!lines.length) { showToast('Check at least one item with qty > 0 to request a PO', 'warn'); return; }
+      const po = {
+        id: uid('po'),
+        po_number: (cad === 'W' ? 'MAR-' : 'JB-') + localDateStr().replace(/-/g, '') + '-' + ((state.purchaseOrders || []).length + 1),
+        vendor: cad === 'W' ? 'Marberger / Produce' : 'Jordan Banana',
+        cadence: cad,
+        status: 'requested',
+        requested_by: getActiveUser().name,
+        requested_date: localDateStr(),
+        lines
+      };
+      state.purchaseOrders.unshift(po);
+      if (state.manualPoExtra) delete state.manualPoExtra[cad];
+      logActivity('PO REQUESTED', `${po.po_number} (${lines.length} items)`);
+      saveState();
+      render();
+      showToast(`Requested ${po.po_number} with ${lines.length} selected item(s)!`);
+      return;
+    }
+
+    if (e.target.id === 'form-edit-po') {
+      const po = (state.purchaseOrders || []).find(p => p.id === fd.get('poId'));
+      if (po) {
+        const nextLines = [];
+        (po.lines || []).forEach(l => {
+          const q = Math.ceil(parseFloat(fd.get('line_' + l.item_id)));
+          if (!isNaN(q) && q > 0) nextLines.push({ ...l, qty: q });
+        });
+        const exId = fd.get('extraItemId');
+        const exQ = Math.ceil(parseFloat(fd.get('extraQty')) || 0);
+        if (exId && exQ > 0) {
+          const item = state.items.find(i => i.id === exId);
+          if (item) {
+            const exist = nextLines.find(l => l.item_id === exId);
+            if (exist) exist.qty += exQ;
+            else nextLines.push({ item_id: item.id, name: item.name, unit: item.unit, qty: exQ, received: 0, price: item.unit_price || 0 });
+          }
+        }
+        if (!nextLines.length) { showToast('PO must have at least 1 item', 'warn'); return; }
+        po.lines = nextLines;
+        logActivity('PO UPDATED', `${po.po_number} (${nextLines.length} items)`);
+        saveState();
+        closeModal();
+        render();
+        showToast(`Updated ${po.po_number}`);
+      }
       return;
     }
 
