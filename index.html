@@ -107,6 +107,7 @@
         <div class="relative">
           <button id="btn-tools" type="button" class="px-2.5 py-1.5 rounded-lg bg-white text-[#1b365d] text-xs font-bold">Tools &#9662;</button>
           <div id="tools-menu" class="hidden absolute right-0 mt-1.5 w-48 kms-card shadow-xl py-1.5 z-40 text-xs">
+            <button id="btn-start-tour" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-bold text-[#b3122b]">Interactive Guided Tour</button>
             <button id="btn-undo" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Undo Last Stock Change</button>
             <button id="btn-text-size" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Bigger Text</button>
             <button id="btn-theme-toggle" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Toggle Dark Mode</button>
@@ -302,6 +303,77 @@
   function dLabel(dateStr) {
     return new Date(dateStr + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }
+  function formatRepeatLabel(a) {
+    if (!a || !a.repeat_rule || a.repeat_rule === 'none') return '';
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const days = Array.isArray(a.repeat_days) && a.repeat_days.length
+      ? a.repeat_days.map(d => dayNames[Number(d)] || '').filter(Boolean).join(', ')
+      : '';
+    if (a.repeat_rule === 'daily') return 'Repeats Daily';
+    if (a.repeat_rule === 'weekly') return `Repeats Weekly${days ? ' (' + days + ')' : ''}`;
+    if (a.repeat_rule === 'biweekly') return `Repeats Every 2 Wks${days ? ' (' + days + ')' : ''}`;
+    if (a.repeat_rule === 'monthly') return 'Repeats Monthly';
+    return '';
+  }
+  function isAnnouncementActiveToday(a, nowObj) {
+    const now = nowObj || new Date();
+    const todayStr = localDateStr(now);
+    if (a.expires_at && a.expires_at < todayStr) return false;
+    const rep = a.repeat_rule || 'none';
+    if (rep === 'none') {
+      if (!a.alert_at) return true;
+      const goLiveMs = new Date(a.alert_at).getTime();
+      return isNaN(goLiveMs) || goLiveMs <= now.getTime();
+    }
+    const startStr = (a.alert_at && a.alert_at.slice(0, 10)) || a.created_at || todayStr;
+    if (todayStr < startStr) return false;
+    if (a.alert_at && a.alert_at.includes('T')) {
+      const targetTime = a.alert_at.slice(11, 16);
+      const curTime = now.toTimeString().slice(0, 5);
+      if (targetTime && curTime < targetTime) return false;
+    }
+    if (rep === 'daily') return true;
+    const dow = now.getDay();
+    const startParts = startStr.split('-').map(Number);
+    const startDate = new Date(startParts[0], (startParts[1] || 1) - 1, startParts[2] || 1);
+    const days = Array.isArray(a.repeat_days) && a.repeat_days.length ? a.repeat_days.map(Number) : [startDate.getDay()];
+    if (rep === 'weekly') return days.includes(dow);
+    if (rep === 'biweekly') {
+      if (!days.includes(dow)) return false;
+      const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffWeeks = Math.floor((todayMid.getTime() - startDate.getTime()) / (7 * 86400000));
+      return diffWeeks >= 0 && diffWeeks % 2 === 0;
+    }
+    if (rep === 'monthly') return now.getDate() === startDate.getDate();
+    return true;
+  }
+  function pruneExpiredAlerts() {
+    const todayStr = localDateStr();
+    if (!Array.isArray(state.announcements)) return;
+    const before = state.announcements.length;
+    state.announcements = state.announcements.filter(a => !a.expires_at || a.expires_at >= todayStr);
+    if (state.announcements.length !== before) saveState();
+  }
+  const firedAlertIds = new Set();
+  function checkScheduledAlerts() {
+    const now = new Date();
+    const todayStr = localDateStr(now);
+    const u = getActiveUser();
+    let triggered = false;
+    (state.announcements || []).forEach(a => {
+      if (!a.alert_at || firedAlertIds.has(a.id + ':' + todayStr)) return;
+      if (a.dismissed_by && a.dismissed_by[u.id] === todayStr) return;
+      if (isAnnouncementActiveToday(a, now)) {
+        const goLiveMs = new Date(a.alert_at).getTime();
+        if (!isNaN(goLiveMs) && now.getTime() - goLiveMs >= 0 && now.getTime() - goLiveMs < 120000) {
+          firedAlertIds.add(a.id + ':' + todayStr);
+          showToast(`Alert: ${a.title}`, a.priority === 'urgent' ? 'error' : 'warn');
+          triggered = true;
+        }
+      }
+    });
+    if (triggered && state.activeTab === 'dashboard') render();
+  }
   function nowStamp() {
     const d = new Date();
     return localDateStr(d) + ' ' + d.toTimeString().slice(0, 5);
@@ -453,7 +525,16 @@
       items: buildSeedInventory(),
       recipes: buildSeedRecipes(),
       menuPlan: [
-        { id: 'mp-1', service_date: today, recipe_id: 'rec-spaghetti', custom_title: 'Spaghetti & Meatballs with Marinara', menu_type: 'RECIPE', planned_portions: 65, served_portions: null, status: 'PLANNED', circumstance: 'Normal Day', note: '', logged_by: '' }
+        { id: 'mp-nov-16', service_date: '2026-11-16', recipe_id: '', custom_title: 'Chicken Sandwich, Chips, Potato Salad', menu_type: 'RECIPE', planned_portions: 65, served_portions: 65, status: 'SERVED', circumstance: 'Normal Day', note: 'Imported from schedule', logged_by: 'William Clark' },
+        { id: 'mp-nov-17', service_date: '2026-11-17', recipe_id: '', custom_title: 'Goulash, Bread Sticks (2)', menu_type: 'RECIPE', planned_portions: 65, served_portions: 65, status: 'SERVED', circumstance: 'Normal Day', note: 'Imported from schedule', logged_by: 'William Clark' },
+        { id: 'mp-nov-18', service_date: '2026-11-18', recipe_id: '', custom_title: 'Hot Dogs (2), Baked Beans', menu_type: 'RECIPE', planned_portions: 65, served_portions: 65, status: 'SERVED', circumstance: 'Normal Day', note: 'Imported from schedule', logged_by: 'William Clark' },
+        { id: 'mp-nov-20', service_date: '2026-11-20', recipe_id: '', custom_title: 'Leftovers or Beef Stew over noodles', menu_type: 'RECIPE', planned_portions: 65, served_portions: null, status: 'PLANNED', circumstance: 'Normal Day', note: '', logged_by: '' },
+        { id: 'mp-nov-23', service_date: '2026-11-23', recipe_id: '', custom_title: 'Tuna Salad Sandwich & chips, Mac Salad', menu_type: 'RECIPE', planned_portions: 65, served_portions: null, status: 'PLANNED', circumstance: 'Normal Day', note: '', logged_by: '' },
+        { id: 'mp-nov-24', service_date: '2026-11-24', recipe_id: '', custom_title: 'Traditional Thanksgiving Dinner (Turkey, Mash, Stuffing, Green Beans, Cranberry, Rolls & Pie)', menu_type: 'RECIPE', planned_portions: 75, served_portions: null, status: 'PLANNED', circumstance: 'Holiday Week', note: '', logged_by: '' },
+        { id: 'mp-nov-25', service_date: '2026-11-25', recipe_id: '', custom_title: 'Leftovers Service', menu_type: 'LEFTOVERS', planned_portions: 60, served_portions: null, status: 'PLANNED', circumstance: 'Holiday Week', note: '', logged_by: '' },
+        { id: 'mp-nov-26', service_date: '2026-11-26', recipe_id: '', custom_title: 'Office Closed (Thanksgiving)', menu_type: 'CLOSED', planned_portions: 0, served_portions: 0, status: 'CLOSED', circumstance: 'Closed / Federal Holiday', note: '', logged_by: '' },
+        { id: 'mp-nov-27', service_date: '2026-11-27', recipe_id: '', custom_title: 'Office Closed', menu_type: 'CLOSED', planned_portions: 0, served_portions: 0, status: 'CLOSED', circumstance: 'Closed / Federal Holiday', note: '', logged_by: '' },
+        { id: 'mp-nov-30', service_date: '2026-11-30', recipe_id: 'rec-spaghetti', custom_title: 'Spaghetti', menu_type: 'RECIPE', planned_portions: 65, served_portions: null, status: 'PLANNED', circumstance: 'Normal Day', note: '', logged_by: '' }
       ],
       purchaseOrders: [],
       transactions: [],
@@ -469,7 +550,8 @@
       blindAudits: [],
       blindDraft: { zone: 'ALL', revealed: false, counts: {} },
       announcements: [
-        { id: 'ann-1', priority: 'reminder', title: 'Weekly & Monthly Order Schedule', body: 'Marberger (dairy) & produce are ordered weekly. Jordan Banana (dry goods & frozen) is ordered monthly on the 3rd Friday.', author: 'William Clark', created_at: today, repeat_rule: 'weekly', repeat_days: [5], expires_at: '', dismissed_by: {} }
+        { id: 'ann-1', priority: 'urgent', title: 'Thanksgiving Holiday Closing (Nov 26–27)', body: 'Kitchen & office closed Thu Nov 26 & Fri Nov 27. Thanksgiving Dinner is Tue Nov 24 (75 portions).', author: 'William Clark', created_at: '2026-11-16', alert_at: '', repeat_rule: 'none', repeat_days: [], expires_at: '2026-11-27', dismissed_by: {} },
+        { id: 'ann-2', priority: 'reminder', title: 'Weekly & Monthly Order Schedule', body: 'Marberger (dairy) and Produce can be ordered weekly. Dry Goods & Frozen items (Jordan Banana) are ordered monthly on the 3rd Friday.', author: 'William Clark', created_at: '2026-11-16', alert_at: '', repeat_rule: 'weekly', repeat_days: [5], expires_at: '', dismissed_by: {} }
       ],
       messages: [],
       activityLogs: [],
@@ -519,10 +601,10 @@
 
   // Role Access Control
   const ROLE_TABS = {
-    Management: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'report', 'users'],
-    Staff: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records'],
-    Volunteer: ['dashboard', 'stock', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'records'],
-    Other: ['dashboard', 'menu', 'prep', 'checklists']
+    Management: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'report', 'users', 'help'],
+    Staff: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'help'],
+    Volunteer: ['dashboard', 'stock', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'records', 'help'],
+    Other: ['dashboard', 'menu', 'prep', 'checklists', 'help']
   };
 
   function getActiveUser() {
@@ -608,17 +690,53 @@
     return res;
   }
 
+  function getOpenServedHistory() {
+    return (state.menuPlan || [])
+      .filter(m => m.status === 'SERVED' && Number(m.served_portions) > 0 && m.circumstance !== 'Closed / Federal Holiday')
+      .sort((a, b) => a.service_date.localeCompare(b.service_date));
+  }
+
+  function getForecastMetrics() {
+    const open = getOpenServedHistory().slice(-210);
+    const recent = open.slice(-24);
+    const avgAll = open.length ? open.reduce((s, m) => s + Number(m.served_portions), 0) / open.length : 60;
+    const avgRecent = recent.length ? recent.reduce((s, m) => s + Number(m.served_portions), 0) / recent.length : avgAll;
+    const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dowFactor = {};
+    [1, 2, 3, 5].forEach(d => {
+      const arr = recent.filter(m => new Date(m.service_date + 'T12:00:00').getDay() === d);
+      const dAvg = arr.length ? arr.reduce((s, m) => s + Number(m.served_portions), 0) / arr.length : avgRecent;
+      dowFactor[dowNames[d]] = avgRecent > 0 ? Math.min(1.4, Math.max(0.65, dAvg / avgRecent)) : 1;
+    });
+    const buckets = { start: [], mid: [], end: [] };
+    recent.forEach(m => {
+      const day = parseInt(String(m.service_date).slice(8, 10), 10) || 15;
+      buckets[day <= 10 ? 'start' : day <= 20 ? 'mid' : 'end'].push(Number(m.served_portions));
+    });
+    const bucketFactor = {};
+    ['start', 'mid', 'end'].forEach(k => {
+      const arr = buckets[k];
+      const bAvg = arr.length >= 2 ? arr.reduce((a, b) => a + b, 0) / arr.length : avgRecent;
+      bucketFactor[k] = avgRecent > 0 ? Math.min(1.25, Math.max(0.8, bAvg / avgRecent)) : 1;
+    });
+    return { openCount: open.length, avgAll, avgRecent, dowFactor, bucketFactor };
+  }
+
   function suggestPortionsOverall() {
-    const served = state.menuPlan.filter(m => m.status === 'SERVED' && m.served_portions > 0).sort((a, b) => b.service_date.localeCompare(a.service_date)).slice(0, 6);
-    return served.length ? Math.round((served.reduce((s, m) => s + m.served_portions, 0) / served.length) * 1.1) : 65;
+    const m = getForecastMetrics();
+    return m.openCount ? Math.round(m.avgRecent * 1.1) : 65;
   }
 
   function forecastWeekday(dateStr) {
     if (getFederalHoliday(dateStr)) return 0;
-    const dow = new Date(dateStr + 'T12:00:00').getDay();
-    const sameDow = state.menuPlan.filter(m => m.status === 'SERVED' && m.served_portions > 0 && new Date(m.service_date + 'T12:00:00').getDay() === dow).slice(-4);
-    if (!sameDow.length) return suggestPortionsOverall();
-    return Math.round((sameDow.reduce((s, m) => s + m.served_portions, 0) / sameDow.length) * 1.1);
+    const m = getForecastMetrics();
+    if (!m.openCount) return 65;
+    const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dn = dowNames[new Date(dateStr + 'T12:00:00').getDay()];
+    const day = parseInt(String(dateStr).slice(8, 10), 10) || 15;
+    const bKey = day <= 10 ? 'start' : day <= 20 ? 'mid' : 'end';
+    const raw = m.avgRecent * (m.dowFactor[dn] || 1) * ((1 + (m.bucketFactor[bKey] || 1)) / 2);
+    return Math.max(10, Math.round(raw));
   }
 
   function onOrderQty(itemId) {
@@ -764,7 +882,7 @@
           onboarding_completed: !!u.onboarding_completed, completed_training_ids: u.completed_training_ids || []
         })), { onConflict: 'id' }),
         sbClient.from('kms_announcements').upsert(state.announcements.map(a => ({
-          id: a.id, priority: a.priority, title: a.title, body: a.body, repeat_rule: a.repeat_rule || 'none',
+          id: a.id, priority: a.priority, title: a.title, body: a.body, alert_at: a.alert_at || '', repeat_rule: a.repeat_rule || 'none',
           repeat_days: a.repeat_days || [], expires_at: a.expires_at || '', author: a.author || '',
           dismissed_by: a.dismissed_by || {}, created_at: a.created_at
         })), { onConflict: 'id' })
@@ -868,7 +986,7 @@
     ]},
     { id: 'admin', label: 'Admin & Reports', tabs: [
       { id: 'report', label: 'Monthly Report' },
-      { id: 'users', label: 'Users & Activity' }
+      { id: 'users', label: 'Users & Activity' }, { id: 'help', label: 'Help & Training' }
     ]}
   ];
 
@@ -991,9 +1109,160 @@
       case 'records': renderRecords(main); break;
       case 'report': renderReport(main); break;
       case 'users': renderUsers(main); break;
+      case 'help': renderHelp(main); break;
       default: renderDashboard(main);
     }
+    if (tourState.active) {
+      const steps = getRoleTourSteps();
+      const idx = Math.min(tourState.stepIndex, Math.max(0, steps.length - 1));
+      const step = steps[idx];
+      if (step) {
+        tourState.completedTabs[step.tab] = true;
+        const banner = document.createElement('div');
+        banner.id = 'tour-banner';
+        banner.className = 'mb-4 bg-[#1b365d] text-white rounded-xl p-4 shadow-lg border border-white/20 no-print';
+        banner.innerHTML = `
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="space-y-1.5 flex-1 min-w-[240px]">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 rounded bg-[#b3122b] text-[11px] font-bold uppercase tracking-wide">Interactive Tutorial &bull; Step ${idx + 1} of ${steps.length}</span>
+                <span class="text-xs text-white/85 font-semibold">${esc(step.title)}</span>
+              </div>
+              <p class="text-xs sm:text-sm text-white leading-relaxed">${esc(step.desc)}</p>
+              <p class="text-xs text-amber-300 font-medium"><strong>Try it now:</strong> ${esc(step.tryIt)}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button type="button" id="btn-tour-prev" ${idx === 0 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg border border-white/30 text-xs font-semibold ${idx === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-white/10'}">&larr; Back</button>
+              ${idx < steps.length - 1
+                ? `<button type="button" id="btn-tour-next" class="px-3.5 py-1.5 rounded-lg bg-[#b3122b] hover:bg-[#910d22] text-white text-xs font-semibold">Next Step &rarr;</button>`
+                : `<button type="button" id="btn-tour-finish" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Finish Tour</button>`
+              }
+              <button type="button" id="btn-tour-exit" class="px-2.5 py-1.5 rounded-lg text-white/75 hover:text-white text-xs font-medium">Exit</button>
+            </div>
+          </div>
+        `;
+        main.prepend(banner);
+      }
+    }
     checkMandatoryModals();
+  }
+
+  const tourState = { active: false, stepIndex: 0, completedTabs: {} };
+  const TOUR_STEPS = [
+    { tab: 'dashboard', title: '1. Home Dashboard & Announcements', desc: 'Your daily command center: see Quick Shift Actions, color-coded Announcements & Reminders, Use-By alerts, Priority Carryover tasks, today\'s meal, and next-service forecast.', tryIt: 'Review any red or amber notices first, or tap a Quick Shift Action button.' },
+    { tab: 'stock', title: '2. Living Stock & Par Levels', desc: 'Tracks real-time quantities across Dry Storage, Walk-In Cooler, and Walk-In Freezer against auto-learning 8-week Par Levels, with QR labels and quick adjustments.', tryIt: 'Search or filter by zone, or tap + / - to adjust on-hand stock.' },
+    { tab: 'orders', title: '3. Orders & Purchase Orders', desc: 'Separates Weekly orders (Marberger Dairy & Produce) from Monthly orders (3rd Friday Jordan Banana). Create Draft POs, approve quantities, and track deliveries.', tryIt: 'Review items below par and create a Draft PO for approval.' },
+    { tab: 'receive', title: '4. Receive & Scan Deliveries', desc: 'Scan barcodes/QR labels with your camera or USB/Bluetooth scanner to check in deliveries or reconcile expected Purchase Orders into Living Stock.', tryIt: 'Scan or select an item and enter packs received.' },
+    { tab: 'menu', title: '5. Menu Planner', desc: 'Schedule meals for Mon/Tue/Wed/Fri service days, mark closed holidays, and commit/deduct ingredients directly from Living Stock.', tryIt: 'Select a service date to assign a recipe or mark Leftovers Service.' },
+    { tab: 'prep', title: '6. Next-Day Prep List', desc: 'Automatically pulls tomorrow\'s ingredient requirements grouped by storage zone (Cooler, Freezer, Dry Storage) plus FIFO leftovers.', tryIt: 'Check off each ingredient pull as you stage it for service.' },
+    { tab: 'recipes', title: '7. Recipes (40–80) & QR Scan', desc: 'Paste new recipes, search or scan recipe QR cards, drag the 40–80 portion slider, or open the 40–80 Quick-Scan Table to see 40/50/60/70/80 amounts side-by-side.', tryIt: 'Drag the 40–80 slider or click "40–80 Quick-Scan Table".' },
+    { tab: 'safety', title: '8. Daily Temps & Cleaning (HACCP)', desc: 'Log the 6 required serving-day temperature checks (Coolers <=41°F, Freezers <=0°F, Entree >=165°F, Steam Table >=135°F) and 7-point cleaning checks.', tryIt: 'Enter a temperature reading to verify PASS vs. FLAGGED auto-check.' },
+    { tab: 'storage', title: '9. Storage & Date Labels (FIFO)', desc: 'Use 1-Tap Presets for Cut Salad Greens/Fruit (3d), Dairy/Deli Salads (4d), Cooked Entrees (7d), and Freezer (90d) so Use-By alerts fire automatically.', tryIt: 'Tap a 1-Tap Preset or mark a stored container as Served/Used.' },
+    { tab: 'checklists', title: '10. Daily, Weekly & Monthly Checklists', desc: 'Stamp your name and time on cleaning, ordering, and food safety tasks. Unfinished tasks automatically carry over as red Priority Carryover items.', tryIt: 'Switch between Daily, Weekly, and Monthly tabs and check off a task.' },
+    { tab: 'forecasting', title: '11. Patrons Served & Forecasting', desc: 'Log actual patrons served, bulk-enter up to 1 year of past dates, or paste CSV/Spreadsheet rows to drive weekday & monthly attendance forecasts.', tryIt: 'Log a test count or open "+ Bulk Enter Past Dates".' },
+    { tab: 'records', title: '12. Records, Blind Audit & Backups', desc: 'Run Blind Audits (system stock stays hidden while volunteers count), log waste, inspect history, and export/import full JSON backups.', tryIt: 'Enter a physical count in Blind Audit and click Reveal Variances.' },
+    { tab: 'report', title: '13. Monthly Operations Report', desc: 'View monthly meals served, top items used, waste summary, and print-ready compliance reports.', tryIt: 'Pick a month and click Print Report.' },
+    { tab: 'users', title: '14. Users, Announcements & Activity', desc: 'Manage Management, Staff, Volunteer, and Other profiles, post/schedule Announcements, and watch the Real-Time Accountability Feed.', tryIt: 'Click "+ Post / Schedule Announcement" or review the Accountability Feed.' }
+  ];
+  function getRoleTourSteps() {
+    const allowed = getAllowedTabs(getActiveUser());
+    return TOUR_STEPS.filter(s => allowed.includes(s.tab));
+  }
+
+  function renderHelp(main) {
+    const u = getActiveUser();
+    const allowed = getAllowedTabs(u);
+    const steps = getRoleTourSteps();
+    const goBtn = (tab, label) => allowed.includes(tab)
+      ? `<button type="button" data-tab="${tab}" class="mt-2 inline-block text-xs font-bold text-[#b3122b] hover:underline">Open ${label} &rarr;</button>`
+      : '';
+    main.innerHTML = `
+      <div class="space-y-4">
+        <div class="kms-card p-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold">Training Center, Guided Tour &amp; Kitchen Reference</h2>
+            <p class="text-xs opacity-75">Learn every part of the Community Meals KMS step-by-step, tailored to your role (${esc(u.role)}).</p>
+          </div>
+          <div class="flex flex-wrap gap-2 no-print">
+            <button type="button" id="btn-start-tour" class="kms-btn-primary px-3.5 py-2 text-xs font-semibold">Start Interactive Guided Tour</button>
+            <button type="button" id="btn-retrain-self" class="kms-btn-alt px-3 py-2 text-xs font-semibold">Replay First-Login Training</button>
+            <button type="button" onclick="window.print()" class="kms-btn-navy px-3 py-2 text-xs font-semibold">Print Guide</button>
+          </div>
+        </div>
+
+        <div class="kms-card p-4 space-y-3">
+          <h3 class="text-sm font-bold uppercase tracking-wide">Daily Kitchen Workflow (Mon / Tue / Wed / Fri Service)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+            <div class="p-3.5 rounded-lg border border-[var(--line)]">
+              <div class="font-bold text-[#b3122b] uppercase">Step 1 &bull; Morning Opening</div>
+              <div class="font-bold text-sm mt-1">Log Temps &amp; Receive Deliveries</div>
+              <p class="opacity-80 mt-1 leading-relaxed">Log Walk-In &amp; Kitchen Cooler (&le;41&deg;F) and Freezer (&le;0&deg;F) temps in <strong>Safety</strong>. Scan or check in vendor deliveries in <strong>Receive</strong>.</p>
+              ${goBtn('safety', 'Safety')}
+            </div>
+            <div class="p-3.5 rounded-lg border border-[var(--line)]">
+              <div class="font-bold text-[#b3122b] uppercase">Step 2 &bull; Recipes &amp; Menu</div>
+              <div class="font-bold text-sm mt-1">Scale 40–80 &amp; Plan Menu</div>
+              <p class="opacity-80 mt-1 leading-relaxed">Scale any recipe from <strong>40 to 80 portions</strong> (or scan its QR card) in <strong>Recipes</strong>. Schedule meals in <strong>Menu</strong> and deduct stock when cooked.</p>
+              ${goBtn('recipes', 'Recipes')}
+            </div>
+            <div class="p-3.5 rounded-lg border border-[var(--line)]">
+              <div class="font-bold text-[#b3122b] uppercase">Step 3 &bull; Prep &amp; Service</div>
+              <div class="font-bold text-sm mt-1">Pull Prep &amp; Hot Hold</div>
+              <p class="opacity-80 mt-1 leading-relaxed">Follow <strong>Prep</strong> pulls grouped by Cooler, Freezer, and Dry Storage. Verify cooking (&ge;165&deg;F) and steam table (&ge;135&deg;F) temps before 11:30 AM.</p>
+              ${goBtn('prep', 'Prep')}
+            </div>
+            <div class="p-3.5 rounded-lg border border-[var(--line)]">
+              <div class="font-bold text-[#b3122b] uppercase">Step 4 &bull; After Service</div>
+              <div class="font-bold text-sm mt-1">Date-Label &amp; Log Patrons</div>
+              <p class="opacity-80 mt-1 leading-relaxed">Tag leftovers &amp; salad bar items in <strong>Storage</strong> (3d greens/fruit, 4d dairy, 7d cooked, 90d frozen). Log actual patrons served in <strong>Forecasting</strong>.</p>
+              ${goBtn('forecasting', 'Forecasting')}
+            </div>
+            <div class="p-3.5 rounded-lg border border-[var(--line)]">
+              <div class="font-bold text-[#b3122b] uppercase">Step 5 &bull; Weekly / Monthly</div>
+              <div class="font-bold text-sm mt-1">Blind Audits &amp; Ordering</div>
+              <p class="opacity-80 mt-1 leading-relaxed">Run unbiased physical counts in <strong>Records &rarr; Blind Audit</strong>. Submit Weekly (Marberger/Produce) and Monthly 3rd-Friday (Jordan Banana) POs in <strong>Orders</strong>.</p>
+              ${goBtn('orders', 'Orders')}
+            </div>
+            <div class="p-3.5 rounded-lg border border-[var(--line)]">
+              <div class="font-bold text-[#b3122b] uppercase">Step 6 &bull; Security &amp; Sync</div>
+              <div class="font-bold text-sm mt-1">PINs, Auto-Lock &amp; Cloud Sync</div>
+              <p class="opacity-80 mt-1 leading-relaxed">Shared tablets auto-lock after 5 minutes. Every change stamps your name and syncs live to Supabase across all kitchen devices.</p>
+              ${goBtn('users', 'Users & Activity')}
+            </div>
+          </div>
+        </div>
+
+        <div class="kms-card p-4 space-y-3 no-print">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold uppercase tracking-wide">Interactive Walkthrough by Feature (Click Any Card)</h3>
+            <span class="text-xs opacity-70">${Object.keys(tourState.completedTabs).length} / ${steps.length} explored</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            ${steps.map((s, idx) => `
+              <button type="button" data-launch-tour-step="${idx}" class="text-left p-3 rounded-lg border transition ${tourState.completedTabs[s.tab] ? 'border-emerald-400 bg-emerald-50/40' : 'border-[var(--line)] hover:bg-black/5'}">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-bold">${esc(s.title)}</span>
+                  <span class="tag ${tourState.completedTabs[s.tab] ? 'tag-OK' : 'tag-LOW'}">${tourState.completedTabs[s.tab] ? 'Visited' : 'Start →'}</span>
+                </div>
+                <p class="text-[11px] opacity-75 mt-1 line-clamp-2">${esc(s.desc)}</p>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="kms-card p-4 space-y-2.5 text-xs">
+          <h3 class="text-sm font-bold uppercase tracking-wide">Kitchen &amp; App Glossary</h3>
+          <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+            <div><dt class="font-bold">Living Stock &amp; Par Level</dt><dd class="opacity-75">Real-time food on hand vs. the target amount needed (auto-learned from 8-week usage).</dd></div>
+            <div><dt class="font-bold">PO (Purchase Order)</dt><dd class="opacity-75">Draft order list for Marberger (weekly dairy/produce) or Jordan Banana (monthly 3rd Friday dry/frozen).</dd></div>
+            <div><dt class="font-bold">Blind Audit</dt><dd class="opacity-75">Counting shelves without seeing expected system stock first, keeping counts honest.</dd></div>
+            <div><dt class="font-bold">HACCP / Time &amp; Temp</dt><dd class="opacity-75">Daily serving-day temperature checks: Cold &le;41&deg;F, Frozen &le;0&deg;F, Cook &ge;165&deg;F, Hot Hold &ge;135&deg;F.</dd></div>
+            <div><dt class="font-bold">FIFO &amp; Use-By Date</dt><dd class="opacity-75">First In, First Out — use oldest dated containers first and discard anything past its Use-By date.</dd></div>
+            <div><dt class="font-bold">Priority Carryover</dt><dd class="opacity-75">Unfinished checklist tasks from yesterday that stay highlighted in red until completed.</dd></div>
+          </dl>
+        </div>
+      </div>
+    `;
   }
 
   // 1. DASHBOARD
@@ -1009,10 +1278,10 @@
     const todayMeal = state.menuPlan.find(m => m.service_date === today);
     const nextPred = forecastWeekday(today);
 
+    const nowObj = new Date();
     const anns = (state.announcements || []).filter(a => {
-      if (a.expires_at && a.expires_at < today) return false;
       if (a.dismissed_by && a.dismissed_by[u.id] === today) return false;
-      return true;
+      return isAnnouncementActiveToday(a, nowObj);
     });
 
     main.innerHTML = `
@@ -1025,6 +1294,8 @@
             <button type="button" data-tab="safety" class="kms-btn-primary px-3.5 py-2 text-xs sm:text-sm">Log Temps (${tempsDone}/${TEMP_CHECKS.length})</button>
             <button type="button" data-tab="prep" class="kms-btn-alt px-3.5 py-2 text-xs sm:text-sm">Next-Day Prep</button>
             <button type="button" data-tab="storage" class="kms-btn-alt px-3.5 py-2 text-xs sm:text-sm">Date-Label Leftovers</button>
+            <button type="button" id="btn-start-tour" class="kms-btn-alt px-3.5 py-2 text-xs sm:text-sm">Guided Tour</button>
+            <button type="button" data-tab="help" class="kms-btn-alt px-3.5 py-2 text-xs sm:text-sm">Training Guide</button>
           </div>
         </div>
 
@@ -1042,15 +1313,40 @@
           </div>
         ` : ''}
 
-        ${anns.map(a => `
-          <div class="kms-card p-3.5 border-l-4 ${a.priority === 'urgent' ? 'border-l-red-600' : 'border-l-amber-500'} flex items-start justify-between gap-2 text-xs">
+        <div class="kms-card p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div class="font-bold text-sm">${esc(a.title)}</div>
-              <p class="opacity-80 mt-0.5">${esc(a.body)}</p>
+              <h2 class="text-sm font-bold">Announcements &amp; Reminders</h2>
+              <p class="text-xs opacity-70">Active kitchen notices, holiday closings, and recurring order reminders.</p>
             </div>
-            <button type="button" data-dismiss-ann="${a.id}" class="kms-btn-alt px-2.5 py-1 text-xs shrink-0">Dismiss</button>
+            ${u.role === 'Management' ? `
+              <div class="flex flex-wrap gap-2">
+                <button type="button" id="btn-new-announcement" class="kms-btn-primary px-3 py-1.5 text-xs">+ Post / Schedule</button>
+                <button type="button" id="btn-manage-announcements" class="kms-btn-alt px-3 py-1.5 text-xs">Manage All (${(state.announcements || []).length})</button>
+              </div>
+            ` : ''}
           </div>
-        `).join('')}
+          ${!anns.length ? '<p class="text-xs opacity-65">No active announcements or reminders for today.</p>' : anns.map(a => {
+            const borderCls = a.priority === 'urgent' ? 'border-l-red-600 bg-red-50/40' : a.priority === 'reminder' ? 'border-l-amber-500 bg-amber-50/40' : 'border-l-sky-600 bg-sky-50/40';
+            const badgeCls = a.priority === 'urgent' ? 'tag-OUT' : a.priority === 'reminder' ? 'tag-LOW' : 'tag-OK';
+            const tagLabel = a.priority === 'urgent' ? 'CRITICAL / ALERT' : a.priority === 'reminder' ? 'REMINDER' : 'INFO';
+            return `
+              <div class="p-3 rounded-lg border border-[var(--line)] border-l-4 ${borderCls} flex items-start justify-between gap-2 text-xs">
+                <div>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="tag ${badgeCls}">${tagLabel}</span>
+                    <strong class="text-sm">${esc(a.title)}</strong>
+                    ${formatRepeatLabel(a) ? `<span class="tag tag-OK">${esc(formatRepeatLabel(a))}</span>` : ''}
+                    ${a.expires_at ? `<span class="opacity-65 text-[11px]">Ends ${esc(a.expires_at)}</span>` : ''}
+                  </div>
+                  <p class="opacity-85 mt-1 leading-relaxed">${esc(a.body)}</p>
+                  <div class="text-[11px] opacity-60 mt-1">Posted by ${esc(a.author || 'Management')} &bull; ${esc(a.created_at || today)}</div>
+                </div>
+                <button type="button" data-dismiss-ann="${a.id}" class="kms-btn-alt px-2.5 py-1 text-xs shrink-0">Dismiss</button>
+              </div>
+            `;
+          }).join('')}
+        </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <button type="button" data-tab="stock" class="kms-card p-4 text-left hover:border-[#b3122b] transition">
@@ -1550,21 +1846,32 @@
     const rec = state.recipes.find(r => r.id === state.selectedRecipeId) || state.recipes[0];
     const scale = Number(state.recipeScale || (rec ? rec.base_servings : 65));
     const factor = rec ? scale / (rec.base_servings || 65) : 1;
-    const invOpts = state.items.map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
+    const predToday = Math.min(80, Math.max(40, forecastWeekday(localDateStr()) || 65));
+    const recQ = (state._recSearch || '').toLowerCase();
+    const filteredRecs = state.recipes.filter(r => !recQ || (r.name || '').toLowerCase().includes(recQ) || (r.category || '').toLowerCase().includes(recQ));
+    const showMatrix = !!state._showRecMatrix;
 
     main.innerHTML = `
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="space-y-3">
+        <div class="space-y-3 no-print">
           <form id="form-paste-recipe" class="kms-card p-4 space-y-2.5">
             <h2 class="text-sm font-bold">Add / Paste a Recipe</h2>
             <textarea name="raw" rows="4" required placeholder="Title on line 1&#10;Servings: 50&#10;4 boxes Spaghetti&#10;1 cases Spaghetti sauce&#10;Directions:&#10;1. Boil pasta..." class="kms-input w-full text-xs"></textarea>
             <button type="submit" class="kms-btn-ok w-full py-2 text-xs">Read &amp; Save Recipe</button>
           </form>
 
-          <div class="kms-card p-4 space-y-2">
-            <h3 class="text-sm font-bold">Saved Recipes (${state.recipes.length})</h3>
+          <div class="kms-card p-4 space-y-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-sm font-bold">Saved Recipes (${state.recipes.length})</h3>
+              <button type="button" id="btn-scan-recipe-qr" class="kms-btn-navy px-2.5 py-1 text-xs">Scan Recipe QR</button>
+            </div>
+            <input id="rec-search-inp" type="text" value="${esc(state._recSearch || '')}" placeholder="Search or scan recipe code..." class="kms-input w-full text-xs" />
+            <div id="rec-qr-wrap" class="hidden border border-[var(--line)] rounded-lg p-2 bg-black/5">
+              <div id="rec-qr-reader" class="w-full"></div>
+              <button type="button" id="btn-stop-recipe-qr" class="kms-btn-alt w-full py-1 text-xs mt-1.5">Stop Camera</button>
+            </div>
             <div class="space-y-1.5 max-h-96 overflow-y-auto">
-              ${state.recipes.map(r => `
+              ${!filteredRecs.length ? '<p class="text-xs opacity-65 py-2 text-center">No matching recipes.</p>' : filteredRecs.map(r => `
                 <button type="button" data-sel-rec="${r.id}" class="w-full text-left p-2.5 rounded-lg border text-xs ${rec && r.id === rec.id ? 'border-[#b3122b] bg-[#b3122b]/10 font-bold' : 'border-[var(--line)] hover:bg-black/5'}">
                   <div>${esc(r.name)}</div>
                   <div class="opacity-65 font-normal">${esc(r.category)} · Base ${r.base_servings} servings</div>
@@ -1578,31 +1885,84 @@
           ${!rec ? '<p class="text-sm opacity-70">Select or add a recipe.</p>' : `
             <div class="flex flex-wrap justify-between items-start gap-2 border-b border-[var(--line)] pb-3">
               <div>
+                <div class="text-[11px] font-bold uppercase opacity-60">${esc(rec.category || 'Main')} &bull; ID: ${esc(rec.id)}</div>
                 <h2 class="text-lg font-bold">${esc(rec.name)}</h2>
                 ${(rec.allergens || []).length ? `<p class="text-xs font-bold text-[#b3122b]">Contains: ${esc(rec.allergens.join(', '))}</p>` : ''}
               </div>
-              <button type="button" data-del-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Delete</button>
+              <div class="flex flex-wrap gap-1.5 no-print">
+                <button type="button" id="btn-toggle-rec-matrix" class="kms-btn-alt px-3 py-1 text-xs">${showMatrix ? 'Single Scale View' : '40–80 Quick-Scan Table'}</button>
+                <button type="button" id="btn-print-recipe-sheet" class="kms-btn-navy px-3 py-1 text-xs">Print Recipe + QR</button>
+                <button type="button" data-del-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Delete</button>
+              </div>
             </div>
-            <div class="flex flex-wrap items-center gap-3 bg-black/5 p-3 rounded-lg text-xs">
-              <label class="font-bold">Servings Needed: <input id="rec-scale-inp" type="number" min="1" value="${scale}" class="kms-input w-20 text-center font-bold ml-1" /></label>
-              <label class="font-bold">Recipe Makes: <input id="rec-base-inp" type="number" min="1" value="${rec.base_servings}" data-rec-base="${rec.id}" class="kms-input w-20 text-center font-bold ml-1" /></label>
-            </div>
-            <div class="space-y-2">
-              ${(rec.ingredients || []).map((g, i) => `
-                <div class="p-2.5 rounded-lg border border-[var(--line)] text-xs space-y-1">
-                  <div class="flex justify-between font-bold"><span>${esc(g.name)}</span><span>${fmtNum((g.qty || 0) * factor)} ${esc(g.unit)}</span></div>
-                  <div class="flex flex-wrap items-center gap-2 opacity-80">
-                    <span>Takes out of stock:</span>
-                    <select data-rec-ing="${rec.id}:${i}:inv_id" class="kms-input text-xs">
-                      <option value="">(not tracked)</option>
-                      ${state.items.map(x => `<option value="${x.id}" ${g.inv_id === x.id ? 'selected' : ''}>${esc(x.name)} (${esc(x.unit)})</option>`).join('')}
-                    </select>
-                    <input type="number" step="0.1" min="0" value="${g.per100 || 0}" data-rec-ing="${rec.id}:${i}:per100" class="kms-input w-16 text-xs text-center" />
-                    <span>per 100 servings</span>
-                  </div>
+
+            <!-- 40 to 80 Portion Slider + Presets -->
+            <div class="bg-black/5 p-3.5 rounded-xl space-y-2.5 text-xs">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center gap-3">
+                  <label class="font-bold">Portions (40–80): <input id="rec-scale-inp" type="number" min="1" max="250" value="${scale}" class="kms-input w-20 text-center font-bold ml-1" /></label>
+                  <label class="font-bold opacity-80">Recipe Base: <input id="rec-base-inp" type="number" min="1" value="${rec.base_servings}" data-rec-base="${rec.id}" class="kms-input w-16 text-center font-bold ml-1" /></label>
                 </div>
-              `).join('')}
+                <div class="flex flex-wrap gap-1">
+                  <button type="button" data-rec-preset="${predToday}" class="px-2.5 py-1 rounded-md font-bold ${scale === predToday ? 'bg-emerald-700 text-white' : 'bg-emerald-50 border border-emerald-300 text-emerald-800'}">Predicted (${predToday})</button>
+                  ${[40, 45, 50, 55, 60, 65, 70, 75, 80].map(p => `
+                    <button type="button" data-rec-preset="${p}" class="px-2 py-1 rounded-md font-semibold border ${scale === p ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}">${p}</button>
+                  `).join('')}
+                </div>
+              </div>
+              <input id="rec-scale-slider" type="range" min="40" max="80" step="1" value="${Math.min(80, Math.max(40, scale))}" class="w-full accent-[#b3122b]" />
+              <div class="flex justify-between text-[10px] opacity-60 font-semibold">
+                <span>40 portions</span><span>50</span><span>60</span><span>70</span><span>80 portions</span>
+              </div>
             </div>
+
+            ${showMatrix ? `
+              <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                      <th class="p-2">Ingredient</th>
+                      ${[40, 50, 60, 70, 80].map(p => `<th class="p-2 text-center ${scale === p ? 'text-[#b3122b] font-bold' : ''}">${p} Port.</th>`).join('')}
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-[var(--line)]">
+                    ${(rec.ingredients || []).map(g => `
+                      <tr>
+                        <td class="p-2 font-bold">${esc(g.name)}</td>
+                        ${[40, 50, 60, 70, 80].map(p => {
+                          const f = p / (rec.base_servings || 65);
+                          return `<td class="p-2 text-center font-semibold ${scale === p ? 'bg-[#b3122b]/10 text-[#b3122b]' : ''}">${fmtNum((g.qty || 0) * f)} ${esc(g.unit)}</td>`;
+                        }).join('')}
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : `
+              <div class="space-y-2">
+                ${(rec.ingredients || []).map((g, i) => `
+                  <div class="p-2.5 rounded-lg border border-[var(--line)] text-xs space-y-1">
+                    <div class="flex justify-between font-bold"><span>${esc(g.name)}</span><span class="text-sm text-[#b3122b]">${fmtNum((g.qty || 0) * factor)} ${esc(g.unit)}</span></div>
+                    <div class="flex flex-wrap items-center gap-2 opacity-80 no-print">
+                      <span>Takes out of stock:</span>
+                      <select data-rec-ing="${rec.id}:${i}:inv_id" class="kms-input text-xs">
+                        <option value="">(not tracked)</option>
+                        ${state.items.map(x => `<option value="${x.id}" ${g.inv_id === x.id ? 'selected' : ''}>${esc(x.name)} (${esc(x.unit)})</option>`).join('')}
+                      </select>
+                      <input type="number" step="0.1" min="0" value="${g.per100 || 0}" data-rec-ing="${rec.id}:${i}:per100" class="kms-input w-16 text-xs text-center" />
+                      <span>per 100 servings</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+
+            ${rec.directions ? `
+              <div class="p-3 rounded-lg bg-black/5 text-xs space-y-1">
+                <div class="font-bold uppercase opacity-65">Directions</div>
+                <p class="whitespace-pre-line leading-relaxed">${esc(rec.directions)}</p>
+              </div>
+            ` : ''}
           `}
         </div>
       </div>
@@ -1751,49 +2111,120 @@
     `;
   }
 
-  // 11. FORECASTING & SERVED (Chart.js Multi-Horizon)
+  // 11. FORECASTING & SERVED (Add / Edit / Bulk Past Patrons + Multi-Horizon Chart)
   function renderForecasting(main) {
     const today = localDateStr();
+    const fc = getForecastMetrics();
     const avg = suggestPortionsOverall();
     const hz = state.horizon || 'days';
-    let labels = [], predicted = [];
+    let rows = [];
 
     if (hz === 'days') {
       const days = serviceDaysBetween(today, addDays(today, 14)).slice(0, 7);
-      labels = days.map(d => dLabel(d));
-      predicted = days.map(d => forecastWeekday(d));
+      rows = days.map(d => {
+        const pred = forecastWeekday(d);
+        return { label: dLabel(d), predicted: pred, prep: pred > 0 ? Math.max(10, Math.ceil(pred / 5) * 5) : 0 };
+      });
     } else if (hz === 'weeks') {
-      for (let i = 1; i <= 8; i++) { labels.push('Week +' + i); predicted.push(avg * 4); }
+      for (let i = 1; i <= 8; i++) {
+        const p = Math.round(fc.avgRecent * 4);
+        rows.push({ label: 'Week +' + i, predicted: p, prep: Math.round(p * 1.05) });
+      }
     } else if (hz === 'months') {
       const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const curM = new Date().getMonth();
-      for (let i = 1; i <= 12; i++) { labels.push(mNames[(curM + i) % 12]); predicted.push(avg * 17); }
+      for (let i = 1; i <= 12; i++) {
+        const p = Math.round(fc.avgRecent * 17);
+        rows.push({ label: mNames[(curM + i) % 12], predicted: p, prep: Math.round(p * 1.05) });
+      }
     } else {
       const curY = new Date().getFullYear();
-      for (let i = 0; i < 3; i++) { labels.push(String(curY + i)); predicted.push(Math.round(avg * 200 * (1 + 0.03 * i))); }
+      for (let i = 0; i < 3; i++) {
+        const p = Math.round(fc.avgRecent * 200 * (1 + 0.03 * i));
+        rows.push({ label: String(curY + i), predicted: p, prep: Math.round(p * 1.05) });
+      }
     }
+
+    const history = (state.menuPlan || [])
+      .filter(m => m.status === 'SERVED' || m.served_portions !== null && m.served_portions !== undefined)
+      .sort((a, b) => b.service_date.localeCompare(a.service_date));
 
     main.innerHTML = `
       <div class="space-y-4">
         <form id="form-log-served" class="kms-card p-4 space-y-3">
-          <h2 class="text-base font-bold">Log Patrons Served</h2>
-          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold">Add or Update Patrons Served</h2>
+              <p class="text-xs opacity-75">Enter any past or today's date to add or update attendance and refine weekday &amp; monthly trends.</p>
+            </div>
+            <button type="button" id="btn-bulk-served" class="kms-btn-alt px-3 py-1.5 text-xs">+ Bulk Enter Past Dates</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
             <input name="date" type="date" value="${today}" required class="kms-input text-sm" />
             <input name="planned" type="number" min="0" value="65" required placeholder="Planned" class="kms-input text-sm" />
             <input name="served" type="number" min="0" required placeholder="Actual served" class="kms-input text-sm" />
-            <input name="note" placeholder="Weather / event note" class="kms-input text-sm" />
+            <select name="circumstance" class="kms-input text-sm">
+              <option>Normal Day</option>
+              <option>Closed / Federal Holiday</option>
+              <option>Snow / Cold Snap</option>
+              <option>Heavy Rain / Storm</option>
+              <option>Local Event / Drive</option>
+              <option>Holiday Week</option>
+            </select>
+            <input name="note" placeholder="Notes (for next year)" class="kms-input text-sm" />
           </div>
           <button type="submit" class="kms-btn-primary px-4 py-2 text-sm">Save &amp; Update Forecast</button>
         </form>
 
         <div class="kms-card p-4 space-y-3">
           <div class="flex flex-wrap justify-between items-center gap-2">
-            <h3 class="text-sm font-bold">Attendance Forecast</h3>
+            <div>
+              <h3 class="text-sm font-bold">Attendance Forecast &amp; Trend Breakdown</h3>
+              <p class="text-xs opacity-75">${fc.openCount ? `Based on ${fc.openCount} open service(s) · Overall avg: <strong>${fc.avgAll.toFixed(1)}</strong>/day · Recent avg: <strong>${fc.avgRecent.toFixed(1)}</strong>/day` : 'No past attendance logged yet — using 65 baseline.'}</p>
+              <div class="flex flex-wrap gap-1.5 mt-1.5">
+                ${['Mon','Tue','Wed','Fri'].map(d => {
+                  const pct = Math.round(((fc.dowFactor[d] || 1) - 1) * 100);
+                  return `<span class="tag ${pct >= 5 ? 'tag-OUT' : pct <= -5 ? 'tag-LOW' : 'tag-OK'}">${d}: ${pct >= 0 ? '+' : ''}${pct}%</span>`;
+                }).join('')}
+              </div>
+            </div>
             <div class="flex gap-1">
               ${[['days','Days (7)'],['weeks','Weeks (8)'],['months','Months (12)'],['years','Years (3)']].map(([k, l]) => `<button type="button" data-hz="${k}" class="px-2.5 py-1 rounded text-xs font-bold ${hz === k ? 'bg-[#b3122b] text-white' : 'kms-btn-alt'}">${l}</button>`).join('')}
             </div>
           </div>
           <div class="relative h-72"><canvas id="fc-canvas"></canvas></div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1.5">Period</th><th class="py-1.5">Predicted Served</th><th class="py-1.5">Recommended Prep</th></tr></thead>
+              <tbody>${rows.map(r => `<tr class="border-b border-[var(--line)]"><td class="py-1.5 font-semibold">${esc(r.label)}</td><td class="py-1.5 font-bold text-[#b3122b]">${r.predicted}</td><td class="py-1.5">${r.prep} portions</td></tr>`).join('')}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="kms-card p-4 space-y-2">
+          <h3 class="text-sm font-bold">Past Patrons Served History (${history.length})</h3>
+          ${!history.length ? '<p class="text-xs opacity-70">No past service records yet. Add one above or use Bulk Enter Past Dates.</p>' : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1.5">Date</th><th class="py-1.5">Planned</th><th class="py-1.5">Served</th><th class="py-1.5">Circumstance</th><th class="py-1.5">Notes</th><th class="py-1.5 text-right">Actions</th></tr></thead>
+                <tbody>
+                  ${history.map(m => `
+                    <tr class="border-b border-[var(--line)]">
+                      <td class="py-2 font-mono">${esc(m.service_date)}</td>
+                      <td class="py-2">${m.planned_portions || 0}</td>
+                      <td class="py-2 font-bold">${m.served_portions ?? 0}</td>
+                      <td class="py-2">${esc(m.circumstance || 'Normal Day')}</td>
+                      <td class="py-2 opacity-80">${esc(m.note || '—')}</td>
+                      <td class="py-2 text-right space-x-1 whitespace-nowrap">
+                        <button type="button" data-edit-srv="${m.id}" class="kms-btn-alt px-2 py-1 text-xs">Edit</button>
+                        <button type="button" data-del-srv="${m.id}" class="kms-btn-alt px-2 py-1 text-xs">Delete</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
         </div>
       </div>
     `;
@@ -1802,7 +2233,13 @@
     if (ctx && window.Chart) {
       forecastChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets: [{ label: 'Predicted Patrons', data: predicted, backgroundColor: '#b3122b', borderRadius: 6 }] },
+        data: {
+          labels: rows.map(r => r.label),
+          datasets: [
+            { label: 'Predicted Served', data: rows.map(r => r.predicted), backgroundColor: '#b3122b', borderRadius: 6 },
+            { label: 'Recommended Prep', data: rows.map(r => r.prep), backgroundColor: '#1b365d', borderRadius: 6 }
+          ]
+        },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
       });
     }
@@ -1900,8 +2337,45 @@
 
   // 14. USERS & ACTIVITY FEED
   function renderUsers(main) {
+    const todayAdm = localDateStr();
     main.innerHTML = `
       <div class="space-y-4">
+        <div id="announcements-admin-section" class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-bold">Announcements, Reminders &amp; Alerts Manager</h2>
+              <p class="text-xs opacity-70">Create, schedule, repeat, edit, or globally delete announcements. Dismissing on Home only hides an alert for that user for today.</p>
+            </div>
+            <button type="button" id="btn-new-announcement" class="kms-btn-primary px-3 py-1.5 text-xs">+ Post / Schedule Announcement</button>
+          </div>
+          ${!(state.announcements || []).length ? '<p class="text-xs opacity-70">No announcements configured.</p>' : `
+            <div class="divide-y divide-[var(--line)] border border-[var(--line)] rounded-lg overflow-hidden">
+              ${(state.announcements || []).map(a => {
+                const disCount = a.dismissed_by ? Object.values(a.dismissed_by).filter(v => v === todayAdm).length : 0;
+                const badgeCls = a.priority === 'urgent' ? 'tag-OUT' : a.priority === 'reminder' ? 'tag-LOW' : 'tag-OK';
+                return `
+                  <div class="p-3 flex flex-wrap items-start justify-between gap-2 text-xs">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="tag ${badgeCls}">${esc((a.priority || 'info').toUpperCase())}</span>
+                        <strong class="text-sm">${esc(a.title)}</strong>
+                        ${formatRepeatLabel(a) ? `<span class="tag tag-OK">${esc(formatRepeatLabel(a))}</span>` : ''}
+                        ${a.alert_at ? `<span class="opacity-70 text-[11px]">${a.repeat_rule && a.repeat_rule !== 'none' ? 'Starts / Time:' : 'Go-Live:'} ${esc(a.alert_at.replace('T', ' '))}</span>` : ''}
+                        ${a.expires_at ? `<span class="opacity-70 text-[11px]">Ends: ${esc(a.expires_at)}</span>` : ''}
+                      </div>
+                      <p class="opacity-85 mt-1">${esc(a.body)}</p>
+                      <div class="text-[11px] opacity-60 mt-0.5">By ${esc(a.author || 'Management')} &bull; Dismissed today by ${disCount} account(s)</div>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <button type="button" data-edit-announcement="${a.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit</button>
+                      <button type="button" data-del-announcement="${a.id}" class="kms-btn-primary px-2.5 py-1 text-xs">Delete Globally</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        </div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <form id="form-add-user" class="kms-card p-4 space-y-2.5">
             <h2 class="text-sm font-bold">Add Staff / Volunteer</h2>
@@ -1952,6 +2426,77 @@
         <input name="pin" type="password" required placeholder="Enter PIN" class="kms-input w-full text-sm" />
         <div id="sw-err" class="text-xs font-bold text-red-600 hidden">Incorrect PIN.</div>
         <button type="submit" class="kms-btn-primary w-full py-2 text-sm">Verify &amp; Switch</button>
+      </form>
+    `);
+  }
+
+  function showAnnouncementEditorModal(annId) {
+    const a = annId ? (state.announcements || []).find(x => x.id === annId) : null;
+    const isEdit = !!a;
+    const rep = (isEdit && a.repeat_rule) ? a.repeat_rule : 'none';
+    const repDays = isEdit && Array.isArray(a.repeat_days) ? a.repeat_days.map(Number) : [];
+    const dayOpts = [[0,'Sun'],[1,'Mon'],[2,'Tue'],[3,'Wed'],[4,'Thu'],[5,'Fri'],[6,'Sat']];
+    openModal(isEdit ? 'Edit Announcement / Reminder' : 'Post Kitchen Announcement or Reminder', `
+      <form id="form-save-announcement" class="space-y-3">
+        <input type="hidden" name="annId" value="${isEdit ? esc(a.id) : ''}" />
+        ${!isEdit ? `
+          <div class="flex flex-wrap items-center gap-1.5 pb-1">
+            <span class="text-[11px] font-semibold opacity-70">Quick Preset:</span>
+            <button type="button" id="btn-preset-weekly-order" class="kms-btn-alt px-2.5 py-1 text-[11px]">Weekly Order Reminder (Fridays)</button>
+          </div>
+        ` : ''}
+        <div>
+          <label class="block text-xs font-semibold mb-1">Title</label>
+          <input name="title" type="text" required value="${isEdit ? esc(a.title) : ''}" placeholder="e.g. Weekly Marberger &amp; Produce Order" class="kms-input w-full text-sm" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Color-Coded Urgency</label>
+            <select name="priority" class="kms-input w-full text-sm">
+              <option value="urgent" ${isEdit && a.priority === 'urgent' ? 'selected' : ''}>Red — Critical / Holiday Alert</option>
+              <option value="reminder" ${!isEdit || a.priority === 'reminder' ? 'selected' : ''}>Amber — Important Reminder</option>
+              <option value="info" ${isEdit && a.priority === 'info' ? 'selected' : ''}>Blue — General Info</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Start / Alert Time (Optional)</label>
+            <input name="alertAt" type="datetime-local" value="${isEdit && a.alert_at ? esc(a.alert_at) : ''}" class="kms-input w-full text-sm" />
+          </div>
+        </div>
+        <div class="p-3 rounded-lg border border-[var(--line)] space-y-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Repeat Schedule</label>
+              <select id="ann-repeat-select" name="repeat" class="kms-input w-full text-xs font-medium">
+                <option value="none" ${rep === 'none' ? 'selected' : ''}>No Repeat (One-Time)</option>
+                <option value="daily" ${rep === 'daily' ? 'selected' : ''}>Daily (Every Day)</option>
+                <option value="weekly" ${rep === 'weekly' ? 'selected' : ''}>Weekly (Pick Day(s))</option>
+                <option value="biweekly" ${rep === 'biweekly' ? 'selected' : ''}>Every 2 Weeks (Pick Day(s))</option>
+                <option value="monthly" ${rep === 'monthly' ? 'selected' : ''}>Monthly (Same Day of Month)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Auto-Delete After Date (Optional)</label>
+              <input name="expiresAt" type="date" value="${isEdit && a.expires_at ? esc(a.expires_at) : ''}" class="kms-input w-full text-xs" />
+            </div>
+          </div>
+          <div id="ann-repeat-days-wrap" class="${rep === 'weekly' || rep === 'biweekly' ? '' : 'hidden'} pt-1">
+            <label class="block text-[11px] font-semibold opacity-75 mb-1">Repeat on Day(s) of Week</label>
+            <div class="flex flex-wrap gap-1.5">
+              ${dayOpts.map(([dVal, dLbl]) => `
+                <label class="inline-flex items-center gap-1 px-2 py-1 rounded border border-[var(--line)] text-xs cursor-pointer">
+                  <input type="checkbox" name="repeatDays" value="${dVal}" ${repDays.includes(dVal) ? 'checked' : ''} class="accent-[#b3122b]" />
+                  <span>${dLbl}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Message</label>
+          <textarea name="body" rows="3" required placeholder="Details for staff and volunteers..." class="kms-input w-full text-sm">${isEdit ? esc(a.body) : ''}</textarea>
+        </div>
+        <button type="submit" class="kms-btn-primary w-full py-2 text-sm">${isEdit ? 'Save Announcement' : 'Post / Schedule Announcement'}</button>
       </form>
     `);
   }
@@ -2244,6 +2789,79 @@
     }
 
     // Recipe Selection & Delete
+    const recPresetBtn = e.target.closest('[data-rec-preset]');
+    if (recPresetBtn) {
+      state.recipeScale = Number(recPresetBtn.dataset.recPreset) || 65;
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-toggle-rec-matrix') {
+      state._showRecMatrix = !state._showRecMatrix;
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-print-recipe-sheet') {
+      const rec = state.recipes.find(r => r.id === state.selectedRecipeId) || state.recipes[0];
+      if (!rec) return;
+      const scale = Number(state.recipeScale || rec.base_servings || 65);
+      const factor = scale / (rec.base_servings || 65);
+      let qrSvg = '';
+      try {
+        if (window.qrcode) {
+          const qr = window.qrcode(0, 'M');
+          qr.addData(rec.id);
+          qr.make();
+          qrSvg = qr.createSvgTag({ cellSize: 3, margin: 1 });
+        }
+      } catch (err) {}
+      openModal(`Print Recipe Sheet — ${rec.name}`, `
+        <div class="space-y-3 text-xs">
+          <div class="flex items-start justify-between gap-3 border-b border-[var(--line)] pb-3">
+            <div>
+              <div class="font-bold text-base">${esc(rec.name)}</div>
+              <div class="opacity-70">${esc(rec.category || 'Main')} &bull; Scaled for <strong>${scale} portions</strong> (40–80 range)</div>
+            </div>
+            ${qrSvg ? `<div class="shrink-0 text-center">${qrSvg}<div class="text-[10px] font-mono opacity-70">${esc(rec.id)}</div></div>` : ''}
+          </div>
+          <table class="w-full text-left border-collapse text-xs">
+            <thead><tr class="border-b border-[var(--line)] uppercase opacity-65"><th class="py-1.5">Ingredient</th><th class="py-1.5">40 Port.</th><th class="py-1.5 font-bold text-[#b3122b]">${scale} Port.</th><th class="py-1.5">80 Port.</th></tr></thead>
+            <tbody class="divide-y divide-[var(--line)]">
+              ${(rec.ingredients || []).map(g => `<tr><td class="py-1.5 font-semibold">${esc(g.name)}</td><td class="py-1.5">${fmtNum((g.qty || 0) * (40 / (rec.base_servings || 65)))} ${esc(g.unit)}</td><td class="py-1.5 font-bold text-[#b3122b]">${fmtNum((g.qty || 0) * factor)} ${esc(g.unit)}</td><td class="py-1.5">${fmtNum((g.qty || 0) * (80 / (rec.base_servings || 65)))} ${esc(g.unit)}</td></tr>`).join('')}
+            </tbody>
+          </table>
+          ${rec.directions ? `<div class="p-2.5 rounded bg-black/5 whitespace-pre-line">${esc(rec.directions)}</div>` : ''}
+          <button type="button" id="btn-print-rec-modal-now" class="kms-btn-navy w-full py-2 text-xs no-print">Print Recipe Sheet</button>
+        </div>
+      `);
+      return;
+    }
+    if (e.target.id === 'btn-print-rec-modal-now') {
+      window.print();
+      return;
+    }
+    if (e.target.id === 'btn-scan-recipe-qr') {
+      const wrap = document.getElementById('rec-qr-wrap');
+      if (!window.Html5Qrcode) { showToast('Camera scanner unavailable — type recipe name or ID in search box', 'warn'); return; }
+      if (wrap) wrap.classList.remove('hidden');
+      try {
+        window._recQrInst = new window.Html5Qrcode('rec-qr-reader');
+        window._recQrInst.start({ facingMode: 'environment' }, { fps: 10, qrbox: 200 }, (txt) => {
+          const clean = String(txt || '').trim().toLowerCase();
+          const match = state.recipes.find(r => r.id.toLowerCase() === clean || r.name.toLowerCase().includes(clean));
+          if (window._recQrInst) { window._recQrInst.stop().catch(() => {}); window._recQrInst = null; }
+          if (wrap) wrap.classList.add('hidden');
+          if (match) { state.selectedRecipeId = match.id; render(); showToast('Loaded recipe: ' + match.name); }
+          else showToast('No recipe matched QR: ' + txt, 'warn');
+        }, () => {}).catch(() => { if (wrap) wrap.classList.add('hidden'); showToast('Camera unavailable in this window — use Search box', 'warn'); });
+      } catch (err) { if (wrap) wrap.classList.add('hidden'); }
+      return;
+    }
+    if (e.target.id === 'btn-stop-recipe-qr') {
+      const wrap = document.getElementById('rec-qr-wrap');
+      if (window._recQrInst) { window._recQrInst.stop().catch(() => {}); window._recQrInst = null; }
+      if (wrap) wrap.classList.add('hidden');
+      return;
+    }
     const selRec = e.target.closest('[data-sel-rec]');
     if (selRec) { state.selectedRecipeId = selRec.dataset.selRec; render(); return; }
     const delRec = e.target.closest('[data-del-rec]');
@@ -2329,14 +2947,118 @@
       return;
     }
 
+    if (e.target.id === 'btn-start-tour') {
+      const steps = getRoleTourSteps();
+      if (steps.length) {
+        tourState.active = true;
+        tourState.stepIndex = 0;
+        state.activeTab = steps[0].tab;
+        saveState();
+        render();
+      }
+      return;
+    }
+    const launchStepBtn = e.target.closest('[data-launch-tour-step]');
+    if (launchStepBtn) {
+      const steps = getRoleTourSteps();
+      const idx = Number(launchStepBtn.dataset.launchTourStep);
+      if (steps[idx]) {
+        tourState.active = true;
+        tourState.stepIndex = idx;
+        state.activeTab = steps[idx].tab;
+        saveState();
+        render();
+      }
+      return;
+    }
+    if (e.target.id === 'btn-tour-next') {
+      const steps = getRoleTourSteps();
+      if (tourState.stepIndex < steps.length - 1) {
+        tourState.stepIndex++;
+        state.activeTab = steps[tourState.stepIndex].tab;
+        saveState();
+        render();
+      }
+      return;
+    }
+    if (e.target.id === 'btn-tour-prev') {
+      const steps = getRoleTourSteps();
+      if (tourState.stepIndex > 0) {
+        tourState.stepIndex--;
+        state.activeTab = steps[tourState.stepIndex].tab;
+        saveState();
+        render();
+      }
+      return;
+    }
+    if (e.target.id === 'btn-tour-finish' || e.target.id === 'btn-tour-exit') {
+      tourState.active = false;
+      render();
+      if (e.target.id === 'btn-tour-finish') showToast('Interactive tutorial complete!');
+      return;
+    }
+    if (e.target.id === 'btn-retrain-self') {
+      const u = getActiveUser();
+      u.completed_training_ids = [];
+      u.onboarding_completed = false;
+      trainingStep = 0;
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-new-announcement') {
+      showAnnouncementEditorModal(null);
+      return;
+    }
+    if (e.target.id === 'btn-manage-announcements') {
+      state.activeTab = 'users';
+      render();
+      const el = document.getElementById('announcements-admin-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    if (e.target.id === 'btn-preset-weekly-order') {
+      const f = document.getElementById('form-save-announcement');
+      if (f) {
+        f.querySelector('[name="title"]').value = 'Weekly Order Reminder (Marberger & Produce)';
+        f.querySelector('[name="priority"]').value = 'reminder';
+        f.querySelector('[name="repeat"]').value = 'weekly';
+        f.querySelector('[name="body"]').value = 'Review Order Suggestions and submit weekly Draft POs for Marberger (Dairy) and Produce today.';
+        const wrap = document.getElementById('ann-repeat-days-wrap');
+        if (wrap) wrap.classList.remove('hidden');
+        f.querySelectorAll('input[name="repeatDays"]').forEach(cb => { cb.checked = (cb.value === '5'); });
+      }
+      return;
+    }
+    const editAnnBtn = e.target.closest('[data-edit-announcement]');
+    if (editAnnBtn) {
+      showAnnouncementEditorModal(editAnnBtn.dataset.editAnnouncement);
+      return;
+    }
+    const delAnnBtn = e.target.closest('[data-del-announcement]');
+    if (delAnnBtn) {
+      const targetId = delAnnBtn.dataset.delAnnouncement;
+      const targetAnn = (state.announcements || []).find(a => a.id === targetId);
+      askConfirm(`Globally delete "${targetAnn ? targetAnn.title : 'this announcement'}"?`, () => {
+        state.announcements = (state.announcements || []).filter(a => a.id !== targetId);
+        if (targetAnn) logActivity('ANNOUNCEMENT DELETED', `Deleted "${targetAnn.title}"`);
+        if (sbClient) sbClient.from('kms_announcements').delete().eq('id', targetId).then(() => {});
+        saveState();
+        render();
+        showToast('Announcement deleted globally');
+      });
+      return;
+    }
     const daBtn = e.target.closest('[data-dismiss-ann]');
     if (daBtn) {
-      const a = state.announcements.find(x => x.id === daBtn.dataset.dismissAnn);
+      const a = (state.announcements || []).find(x => x.id === daBtn.dataset.dismissAnn);
       if (a) {
         a.dismissed_by = a.dismissed_by || {};
         a.dismissed_by[getActiveUser().id] = localDateStr();
+        logActivity('ANNOUNCEMENT DISMISSED', `Dismissed "${a.title}" for today`);
         saveState();
         render();
+        showToast('Dismissed for today (will reappear tomorrow until expired)');
       }
       return;
     }
@@ -2378,6 +3100,74 @@
       return;
     }
 
+    if (e.target.id === 'btn-bulk-served' || e.target.id === 'btn-bulk-reload') {
+      const end = document.getElementById('bulk-end')?.value || localDateStr();
+      const presetDays = e.target.id === 'btn-bulk-reload' ? null : -365;
+      const start = document.getElementById('bulk-start')?.value || addDays(end, presetDays || -365);
+      const dates = serviceDaysBetween(start, end).reverse();
+      openModal('Bulk Enter Past Patrons Served (Up to 1 Year)', `
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-end gap-2 p-2.5 rounded-lg bg-black/5 text-xs">
+            <label class="font-bold">From<input id="bulk-start" type="date" value="${esc(start)}" class="kms-input block mt-1 text-xs" /></label>
+            <label class="font-bold">To<input id="bulk-end" type="date" value="${esc(end)}" class="kms-input block mt-1 text-xs" /></label>
+            <button type="button" id="btn-bulk-reload" class="kms-btn-navy px-3 py-1.5 text-xs">Load Dates (${dates.length})</button>
+          </div>
+          <details class="p-2.5 rounded-lg border border-[var(--line)] text-xs">
+            <summary class="font-bold cursor-pointer">Or Paste CSV / Spreadsheet Rows (Date, Served, Note)</summary>
+            <form id="form-bulk-paste" class="space-y-2 mt-2">
+              <textarea name="csv" rows="4" required placeholder="2026-11-18, 64, Cold snap&#10;2026-11-16, 58&#10;11/13/2026, 71, Coat drive" class="kms-input w-full text-xs font-mono"></textarea>
+              <button type="submit" class="kms-btn-ok px-3 py-1.5 text-xs">Import Pasted Rows</button>
+            </form>
+          </details>
+          <form id="form-bulk-served" class="space-y-3">
+            <div class="max-h-64 overflow-y-auto space-y-1.5">
+              ${dates.map(ds => {
+                const mp = state.menuPlan.find(m => m.service_date === ds);
+                return `<div class="flex items-center gap-2 text-xs p-1.5 border-b border-[var(--line)]">
+                  <span class="w-36 font-mono">${esc(ds)} (${dLabel(ds).split(',')[0]})</span>
+                  <input type="number" min="0" name="sv_${ds}" value="${mp && mp.served_portions != null ? mp.served_portions : ''}" placeholder="Served" class="kms-input w-20 text-center font-bold" />
+                  <input type="text" name="nt_${ds}" value="${mp ? esc(mp.note || '') : ''}" placeholder="Note (optional)" class="kms-input flex-1" />
+                </div>`;
+              }).join('')}
+            </div>
+            <button type="submit" class="kms-btn-primary w-full py-2 text-sm">Save All Entered Counts</button>
+          </form>
+        </div>
+      `);
+      return;
+    }
+    const editSrvBtn = e.target.closest('[data-edit-srv]');
+    if (editSrvBtn) {
+      const mp = state.menuPlan.find(m => m.id === editSrvBtn.dataset.editSrv);
+      if (mp) {
+        openModal('Edit Past Patrons Served — ' + mp.service_date, `
+          <form id="form-edit-srv" class="space-y-3">
+            <input type="hidden" name="id" value="${esc(mp.id)}" />
+            <div class="grid grid-cols-3 gap-2">
+              <label class="text-xs font-bold">Date<input name="date" type="date" value="${esc(mp.service_date)}" required class="kms-input w-full mt-1" /></label>
+              <label class="text-xs font-bold">Planned<input name="planned" type="number" min="0" value="${mp.planned_portions || 0}" required class="kms-input w-full mt-1" /></label>
+              <label class="text-xs font-bold">Served<input name="served" type="number" min="0" value="${mp.served_portions ?? 0}" required class="kms-input w-full mt-1" /></label>
+            </div>
+            <select name="circumstance" class="kms-input w-full text-sm">
+              ${['Normal Day','Closed / Federal Holiday','Snow / Cold Snap','Heavy Rain / Storm','Local Event / Drive','Holiday Week'].map(c => `<option ${(mp.circumstance || 'Normal Day') === c ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+            <input name="note" value="${esc(mp.note || '')}" placeholder="Notes" class="kms-input w-full text-sm" />
+            <button type="submit" class="kms-btn-primary w-full py-2 text-sm">Save Changes</button>
+          </form>
+        `);
+      }
+      return;
+    }
+    const delSrvBtn = e.target.closest('[data-del-srv]');
+    if (delSrvBtn) {
+      askConfirm('Delete Service Record', 'Remove this past attendance record?', () => {
+        state.menuPlan = state.menuPlan.filter(m => m.id !== delSrvBtn.dataset.delSrv);
+        saveState();
+        render();
+        showToast('Deleted attendance record');
+      });
+      return;
+    }
     if (e.target.id === 'btn-start-cam' && window.Html5Qrcode) {
       document.getElementById('cam-wrap').classList.remove('hidden');
       document.getElementById('btn-start-cam').classList.add('hidden');
@@ -2400,7 +3190,17 @@
 
   document.addEventListener('input', (e) => {
     if (e.target.id === 'stock-search') { state._stockSearch = e.target.value; render(); const el = document.getElementById('stock-search'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
-    if (e.target.id === 'rec-scale-inp') { state.recipeScale = Math.max(1, parseFloat(e.target.value) || 1); render(); return; }
+    if (e.target.id === 'rec-scale-inp' || e.target.id === 'rec-scale-slider') { state.recipeScale = Math.max(1, parseFloat(e.target.value) || 1); render(); return; }
+    if (e.target.id === 'rec-search-inp') {
+      state._recSearch = e.target.value;
+      const q = state._recSearch.trim().toLowerCase();
+      const exact = state.recipes.find(r => r.id.toLowerCase() === q);
+      if (exact) { state.selectedRecipeId = exact.id; state._recSearch = ''; }
+      render();
+      const el = document.getElementById('rec-search-inp');
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      return;
+    }
     if (e.target.matches('[data-blind-id]')) { state.blindDraft.counts[e.target.dataset.blindId] = e.target.value; saveState(); return; }
   });
 
@@ -2628,12 +3428,77 @@
       if (!mp) { mp = { id: uid('mp'), service_date: ds, custom_title: 'Community Meal', status: 'SERVED' }; state.menuPlan.push(mp); }
       mp.planned_portions = pl;
       mp.served_portions = sv;
+      mp.circumstance = fd.get('circumstance') || 'Normal Day';
       mp.status = 'SERVED';
       mp.note = fd.get('note') || '';
       logActivity('PATRONS SERVED', `${ds}: ${sv} served`);
       saveState();
       render();
       showToast(`Saved ${sv} patrons served`);
+      return;
+    }
+    if (e.target.id === 'form-edit-srv') {
+      const mp = state.menuPlan.find(m => m.id === fd.get('id'));
+      if (mp) {
+        mp.service_date = fd.get('date');
+        mp.planned_portions = parseInt(fd.get('planned'), 10) || 0;
+        mp.served_portions = parseInt(fd.get('served'), 10) || 0;
+        mp.circumstance = fd.get('circumstance') || 'Normal Day';
+        mp.note = fd.get('note') || '';
+        mp.status = 'SERVED';
+        logActivity('EDIT SERVED', `${mp.service_date}: ${mp.served_portions} served`);
+        saveState();
+        closeModal();
+        render();
+        showToast('Updated past service record');
+      }
+      return;
+    }
+    if (e.target.id === 'form-bulk-paste') {
+      const lines = String(fd.get('csv') || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      let count = 0;
+      lines.forEach(ln => {
+        const parts = ln.split(/,|\t/).map(s => s.trim());
+        if (parts.length < 2) return;
+        const dObj = new Date(parts[0].includes('-') ? parts[0] + 'T12:00:00' : parts[0]);
+        if (isNaN(dObj.getTime())) return;
+        const ds = localDateStr(dObj);
+        const sv = parseInt(parts[1], 10);
+        if (isNaN(sv) || sv < 0) return;
+        const note = parts.slice(2).join(', ');
+        let mp = state.menuPlan.find(m => m.service_date === ds);
+        if (!mp) { mp = { id: uid('mp'), service_date: ds, custom_title: 'Community Meal', planned_portions: sv, status: 'SERVED' }; state.menuPlan.push(mp); }
+        mp.served_portions = sv;
+        mp.status = 'SERVED';
+        if (note) mp.note = note;
+        count++;
+      });
+      logActivity('BULK PASTE SERVED', `Imported ${count} past attendance record(s)`);
+      saveState();
+      closeModal();
+      render();
+      showToast(`Imported ${count} past attendance record(s)`);
+      return;
+    }
+    if (e.target.id === 'form-bulk-served') {
+      let count = 0;
+      for (const [k, v] of fd.entries()) {
+        if (!k.startsWith('sv_') || v === '') continue;
+        const ds = k.slice(3);
+        const sv = parseInt(v, 10);
+        if (isNaN(sv) || sv < 0) continue;
+        let mp = state.menuPlan.find(m => m.service_date === ds);
+        if (!mp) { mp = { id: uid('mp'), service_date: ds, custom_title: 'Community Meal', planned_portions: sv, status: 'SERVED' }; state.menuPlan.push(mp); }
+        mp.served_portions = sv;
+        mp.status = 'SERVED';
+        mp.note = fd.get('nt_' + ds) || mp.note || '';
+        count++;
+      }
+      logActivity('BULK SERVED', `Saved ${count} past service count(s)`);
+      saveState();
+      closeModal();
+      render();
+      showToast(`Saved ${count} past attendance record(s)`);
       return;
     }
 
@@ -2697,11 +3562,60 @@
   }
   ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, resetInactivity, { passive: true }));
 
+  document.addEventListener('change', (e) => {
+    if (e.target && e.target.id === 'ann-repeat-select') {
+      const wrap = document.getElementById('ann-repeat-days-wrap');
+      if (wrap) wrap.classList.toggle('hidden', !['weekly', 'biweekly'].includes(e.target.value));
+    }
+  });
+
+  document.addEventListener('submit', (e) => {
+    if (e.target && e.target.id === 'form-save-announcement') {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const annId = String(fd.get('annId') || '').trim();
+      const title = String(fd.get('title') || '').trim();
+      const body = String(fd.get('body') || '').trim();
+      const priority = String(fd.get('priority') || 'reminder');
+      const alertAt = String(fd.get('alertAt') || '').trim();
+      const repeatRule = String(fd.get('repeat') || 'none');
+      const expiresAt = String(fd.get('expiresAt') || '').trim();
+      const repeatDays = fd.getAll('repeatDays').map(Number).filter(n => !isNaN(n));
+      if (!title || !body) return;
+      state.announcements = state.announcements || [];
+      if (annId) {
+        const idx = state.announcements.findIndex(x => x.id === annId);
+        if (idx >= 0) {
+          state.announcements[idx] = {
+            ...state.announcements[idx],
+            title, body, priority, alert_at: alertAt, repeat_rule: repeatRule,
+            repeat_days: repeatDays, expires_at: expiresAt
+          };
+          logActivity('ANNOUNCEMENT UPDATED', title);
+          showToast('Announcement updated');
+        }
+      } else {
+        state.announcements.unshift({
+          id: uid('ann'), priority, title, body, alert_at: alertAt, repeat_rule: repeatRule,
+          repeat_days: repeatDays, expires_at: expiresAt, author: getActiveUser().name,
+          created_at: localDateStr(), dismissed_by: {}
+        });
+        logActivity('ANNOUNCEMENT POSTED', title);
+        showToast('Announcement posted');
+      }
+      closeModal();
+      saveState();
+      render();
+    }
+  });
+
   // Boot
   if (state.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   document.documentElement.style.fontSize = ['100%', '112.5%', '125%'][state.textZoom || 0];
+  pruneExpiredAlerts();
   render();
   initSupabase();
+  setInterval(checkScheduledAlerts, 15000);
 })();
 </script>
 </body>
