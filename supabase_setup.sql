@@ -239,3 +239,24 @@ begin
     end if;
   end loop;
 end $$;
+
+-- Idempotent Upgrades for Existing Databases
+alter table public.kms_users add column if not exists email text not null default '';
+alter table public.kms_users drop constraint if exists kms_users_role_check;
+update public.kms_users set role = case
+  when upper(role) = 'ADMIN' then 'ADMIN'
+  when upper(role) in ('MANAGER', 'MANAGEMENT') then 'MANAGER'
+  when upper(role) = 'STAFF' then 'STAFF'
+  else 'VOLUNTEER'
+end
+where role is distinct from case
+  when upper(role) = 'ADMIN' then 'ADMIN'
+  when upper(role) in ('MANAGER', 'MANAGEMENT') then 'MANAGER'
+  when upper(role) = 'STAFF' then 'STAFF'
+  else 'VOLUNTEER'
+end;
+alter table public.kms_users add constraint kms_users_role_check check (role in ('ADMIN', 'MANAGER', 'STAFF', 'VOLUNTEER'));
+
+alter table public.kms_messages add column if not exists recipient_id text not null default 'ALL';
+alter table public.kms_messages add column if not exists recipient_name text not null default 'Everyone';
+alter table public.kms_messages add column if not exists priority text not null default 'normal';
