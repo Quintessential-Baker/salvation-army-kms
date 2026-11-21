@@ -35,3 +35,9 @@ This unified KMS combines the simplicity, Butler PA stockroom seed, 8-week auto-
 1. **Database Setup**: Open your Supabase Dashboard → **SQL Editor**, paste and run **`supabase_setup.sql`**.
 2. **Hosting**: Upload **`index.html`**, **`README.md`**, and **`supabase_setup.sql`** to your GitHub Pages repository (`main` branch, `/ (root)`).
 3. **First Login**: Sign in as **William Clark (`Management`)** using PIN `1234` (you will be prompted to set a personal 6+ character PIN and complete the brief role training).
+
+
+## Admin / Tech-Support Login (Supabase Auth)
+1. Open your **Supabase Dashboard** → **Authentication** → **Users** → **Add User**.
+2. Create an email and strong password for your Admin / Tech-Support recovery account.
+3. On the app's Lock Screen, expand **Admin / Tech-Support Login (Supabase Auth)** and sign in with that email and password—verified server-side by Supabase with no secrets stored in `index.html`.

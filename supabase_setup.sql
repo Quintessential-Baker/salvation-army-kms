@@ -8,7 +8,7 @@
 create table if not exists public.kms_users (
   id text primary key,
   name text not null,
-  role text not null check (role in ('Management', 'Staff', 'Volunteer', 'Other')),
+  role text not null check (role in ('ADMIN', 'MANAGER', 'STAFF', 'VOLUNTEER')),
   initials text not null,
   pin_hash text not null,
   pin_salt text not null,

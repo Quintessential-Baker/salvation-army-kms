@@ -556,15 +556,18 @@
       messages: [],
       activityLogs: [],
       users: [
-        makeUser('usr-1', 'William Clark', 'Management', 'WC', '1234', true),
-        makeUser('usr-2', 'Sabrina', 'Staff', 'SB', '2222', true),
-        makeUser('usr-3', 'Volunteer Team', 'Volunteer', 'VT', '0000', true),
-        makeUser('usr-4', 'Guest Observer', 'Other', 'GO', '9999', true)
+        makeUser('usr-1', 'William Clark', 'ADMIN', 'WC', '1234', true),
+        makeUser('usr-2', 'Kitchen Manager', 'MANAGER', 'KM', '1111', true),
+        makeUser('usr-3', 'Sabrina', 'STAFF', 'SB', '2222', true),
+        makeUser('usr-4', 'Volunteer Team', 'VOLUNTEER', 'VT', '0000', true)
       ],
       trainingModules: [
         { id: 'trn-1', role: 'ALL', title: 'Welcome, Role Boundaries & Auto-Lock', content: 'Welcome to The Salvation Army Community Meals KMS (Butler, PA).\n\nEvery stock change, temp log, and checklist tick is stamped with your name. Shared tablets auto-lock after 5 minutes of inactivity.' },
         { id: 'trn-2', role: 'ALL', title: 'Daily Temps, Salad Bar & Variable Shelf Lives', content: 'On service days (Mon/Tue/Wed/Fri), log all 6 temperature checks in Safety.\n\nUse 1-Tap Date Labels for storage: Cut Salad Greens & Fruit = 3 days; Dairy/Deli Salads = 4 days; Cooked Entrees = 7 days; Freezer = 90 days.' },
-        { id: 'trn-3', role: 'Volunteer', title: 'Volunteer Guide: Stock −/+, Prep & Blind Count', content: 'Tap − or + on Stock as you use items (this trains auto-learning par levels!). Check Next-Day Prep by zone, and use Blind Count on Records without seeing system numbers.' }
+        { id: 'trn-3', role: 'VOLUNTEER', title: 'Volunteer Guide: Prep, Blind Counts & Temps', content: '1. View Recipes (scale 40-80) & Menu Planner (read-only).\n2. Check off Next-Day Prep pulls and Daily Checklists.\n3. Log 6-point Temps, tag Leftovers/Salad Bar, and submit Blind Counts (Managers reconcile variances).' },
+        { id: 'trn-4', role: 'STAFF', title: 'Staff Operations: Delivery Slips, PO Requests & Service', content: '1. Enter full Delivery Slips in Receive and log today\'s Patrons Served.\n2. Create PO Requests (editable until approved/ordered by Management).\n3. Schedule meals and mark Served to deduct Living Stock.' },
+        { id: 'trn-5', role: 'MANAGER', title: 'Manager Guide: PO Approvals, Pars & Funding Reports', content: '1. Approve, edit, and place POs with Marberger & Jordan Banana.\n2. Set Par Levels, reconcile Blind Audits, and edit historical attendance.\n3. Access Executive, Funding & Donation Reports.' },
+        { id: 'trn-6', role: 'ADMIN', title: 'Admin Guide: Users, PINs, Announcements & Backups', content: 'Full system control: manage ADMIN / MANAGER / STAFF / VOLUNTEER logins & PINs, post/schedule Announcements, configure Auto-Lock, and export/restore full JSON backups.' }
       ],
       lastCarryoverDate: today
     };
@@ -599,21 +602,46 @@
     syncToSupabase();
   }
 
-  // Role Access Control
+  // Role Access Control (ADMIN, MANAGER, STAFF, VOLUNTEER)
   const ROLE_TABS = {
-    Management: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'report', 'users', 'help'],
-    Staff: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'help'],
-    Volunteer: ['dashboard', 'stock', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'records', 'help'],
-    Other: ['dashboard', 'menu', 'prep', 'checklists', 'help']
+    ADMIN: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'report', 'users', 'help'],
+    MANAGER: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'report', 'help'],
+    STAFF: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'help'],
+    VOLUNTEER: ['dashboard', 'stock', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'records', 'help']
   };
 
+  function normalizeRole(role) {
+    const r = String(role || '').trim().toUpperCase();
+    if (r === 'ADMIN') return 'ADMIN';
+    if (r === 'MANAGER') return 'MANAGER';
+    if (r === 'STAFF') return 'STAFF';
+    if (r === 'VOLUNTEER') return 'VOLUNTEER';
+    return 'VOLUNTEER';
+  }
+  function isAdminRole(u) { return normalizeRole((u || getActiveUser()).role) === 'ADMIN'; }
+  function isMgmtOrHigher(u) { const r = normalizeRole((u || getActiveUser()).role); return r === 'ADMIN' || r === 'MANAGER'; }
+  function isStaffOrHigher(u) { const r = normalizeRole((u || getActiveUser()).role); return r === 'ADMIN' || r === 'MANAGER' || r === 'STAFF'; }
+
   function getActiveUser() {
-    const u = (state.users || []).find(x => x.id === state.activeUserId && x.active !== false);
-    return u || state.users[0];
+    const u = (state.users || []).find(x => x.id === state.activeUserId && x.active !== false) || state.users[0];
+    if (u) u.role = normalizeRole(u.role);
+    return u;
   }
   function getAllowedTabs(user) {
-    const u = user || getActiveUser();
-    return ROLE_TABS[u.role] || ROLE_TABS.Other;
+    const r = normalizeRole((user || getActiveUser()).role);
+    return ROLE_TABS[r] || ROLE_TABS.VOLUNTEER;
+  }
+
+  function ensureOwnerIntegrity() {
+    if (!Array.isArray(state.users)) state.users = [];
+    let owner = state.users.find(u => u.id === 'usr-1');
+    if (!owner) {
+      owner = makeUser('usr-1', 'William Clark', 'ADMIN', 'WC', '1234', true);
+      state.users.unshift(owner);
+    }
+    owner.role = 'ADMIN';
+    owner.active = true;
+    return owner;
   }
 
   // Logging & Undo
@@ -1009,7 +1037,7 @@
         if (txR.data) state.transactions = txR.data;
         if (tagR.data) state.storageTags = tagR.data;
         if (chkR.data && chkR.data.length) state.checklists = chkR.data;
-        if (usrR.data && usrR.data.length) state.users = usrR.data;
+        if (usrR.data && usrR.data.length) { state.users = usrR.data; ensureOwnerIntegrity(); }
         if (annR.data) state.announcements = annR.data;
         if (msgR.data) state.messages = msgR.data;
         if (safR.data) {
@@ -1115,7 +1143,7 @@
       return;
     }
     pinB.classList.add('hidden'); pinB.classList.remove('flex');
-    const pendingTrn = (state.trainingModules || []).filter(m => (m.role === 'ALL' || m.role === u.role) && !(u.completed_training_ids || []).includes(m.id));
+    const pendingTrn = (state.trainingModules || []).filter(m => (m.role === 'ALL' || normalizeRole(m.role) === normalizeRole(u.role)) && !(u.completed_training_ids || []).includes(m.id));
     if (pendingTrn.length && !u.onboarding_completed) {
       if (trainingStep >= pendingTrn.length) trainingStep = pendingTrn.length - 1;
       const mod = pendingTrn[trainingStep];
@@ -1153,10 +1181,20 @@
             <select name="userId" class="kms-input w-full text-sm">
               ${activeUsers.map(u => `<option value="${u.id}" ${u.id === state.activeUserId ? 'selected' : ''}>${esc(u.name)} — ${esc(u.role)}</option>`).join('')}
             </select>
-            <input name="pin" type="password" required placeholder="Enter PIN (Default Mgmt: 1234)" class="kms-input w-full text-sm" />
+            <input name="pin" type="password" required placeholder="Enter your personal PIN" class="kms-input w-full text-sm" />
             <div id="unlock-err" class="text-xs font-bold text-red-600 hidden">Incorrect PIN.</div>
             <button type="submit" class="kms-btn-primary w-full py-2.5 text-sm">Sign In &amp; Unlock</button>
           </form>
+          <details class="pt-3 border-t border-[var(--line)] text-xs">
+            <summary class="cursor-pointer font-semibold opacity-75 hover:opacity-100">Admin / Tech-Support Login (Supabase Auth)</summary>
+            <form id="form-sb-auth" class="space-y-2.5 mt-3">
+              <p class="opacity-70">Verified server-side by Supabase Auth. Create your admin account in Supabase Dashboard &rarr; Authentication &rarr; Users.</p>
+              <input name="email" type="email" required placeholder="Admin email" class="kms-input w-full text-xs" />
+              <input name="password" type="password" required placeholder="Supabase Auth password" class="kms-input w-full text-xs" />
+              <div id="sb-auth-err" class="text-xs font-bold text-red-600 hidden"></div>
+              <button type="submit" class="kms-btn-navy w-full py-2 text-xs">Verify via Supabase Auth &amp; Unlock ADMIN</button>
+            </form>
+          </details>
         </div>
       `;
       checkMandatoryModals();
@@ -1320,6 +1358,20 @@
         </div>
 
         <div class="kms-card p-4 space-y-2.5 text-xs">
+          <h3 class="text-sm font-bold uppercase tracking-wide">Role Permissions Matrix (ADMIN / MANAGER / STAFF / VOLUNTEER)</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead><tr class="border-b border-[var(--line)] uppercase opacity-70"><th class="py-1.5 pr-2">Role</th><th class="py-1.5 pr-2">Access &amp; Tabs</th><th class="py-1.5">Allowed Actions</th></tr></thead>
+              <tbody class="divide-y divide-[var(--line)]">
+                <tr><td class="py-2 pr-2 font-bold text-[#b3122b]">ADMIN</td><td class="py-2 pr-2">All 15 Tabs (incl. Users &amp; Reports)</td><td class="py-2">Manage logins/PINs/roles, training modules, announcements, backups, PO approvals/placement, and all operations.</td></tr>
+                <tr><td class="py-2 pr-2 font-bold text-[#1b365d]">MANAGER</td><td class="py-2 pr-2">14 Tabs (incl. Executive Reports)</td><td class="py-2">Approve/reject/place/edit any PO, access Funding Reports, edit Pars/Items/Recipes, reconcile Blind Audits, edit attendance.</td></tr>
+                <tr><td class="py-2 pr-2 font-bold text-emerald-700">STAFF</td><td class="py-2 pr-2">13 Operational Tabs</td><td class="py-2">Create &amp; edit PO requests (until approved/ordered), enter Delivery Slips, schedule/serve Menu, scale/add Recipes, log Temps &amp; Patrons.</td></tr>
+                <tr><td class="py-2 pr-2 font-bold opacity-80">VOLUNTEER</td><td class="py-2 pr-2">10 Floor Tabs</td><td class="py-2">View Stock/Menu/Recipes (scale 40–80), check off Prep &amp; Checklists, log Temps &amp; Date Labels, submit Blind Counts.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="kms-card p-4 space-y-2.5 text-xs">
           <h3 class="text-sm font-bold uppercase tracking-wide">Kitchen &amp; App Glossary</h3>
           <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
             <div><dt class="font-bold">Living Stock &amp; Par Level</dt><dd class="opacity-75">Real-time food on hand vs. the target amount needed (auto-learned from 8-week usage).</dd></div>
@@ -1388,7 +1440,7 @@
               <h2 class="text-sm font-bold">Announcements &amp; Reminders</h2>
               <p class="text-xs opacity-70">Active kitchen notices, holiday closings, and recurring order reminders.</p>
             </div>
-            ${u.role === 'Management' ? `
+            ${isMgmtOrHigher(u) ? `
               <div class="flex flex-wrap gap-2">
                 <button type="button" id="btn-new-announcement" class="kms-btn-primary px-3 py-1.5 text-xs">+ Post / Schedule</button>
                 <button type="button" id="btn-manage-announcements" class="kms-btn-alt px-3 py-1.5 text-xs">Manage All (${(state.announcements || []).length})</button>
@@ -1538,7 +1590,7 @@
     const dd = demandForDays(useDays);
     const shortItems = state.items.filter(x => (dd[x.id] || 0) > x.on_hand);
     const u = getActiveUser();
-    const isMgr = u.role === 'Management';
+    const isMgr = isMgmtOrHigher(u);
 
     const openPOs = (state.purchaseOrders || []).filter(p => p.status !== 'closed');
     const closedPOs = (state.purchaseOrders || []).filter(p => p.status === 'closed').slice(0, 3);
@@ -1628,11 +1680,11 @@
                 </div>
                 <div class="flex flex-wrap gap-1.5 no-print">
                   <button type="button" data-po-orderform="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Order Form (Cases)</button>
-                  ${['requested', 'approved', 'ordered'].includes(po.status) ? `<button type="button" data-po-edit="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit PO / Invoice #</button>` : ''}
+                  ${(isMgr || po.status === 'requested') && ['requested', 'approved', 'ordered'].includes(po.status) ? `<button type="button" data-po-edit="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit PO / Invoice #</button>` : ''}
                   ${po.status === 'requested' && isMgr ? `<button type="button" data-po-decide="${po.id}:approved" class="kms-btn-ok px-2.5 py-1 text-xs">Approve</button><button type="button" data-po-decide="${po.id}:rejected" class="kms-btn-alt px-2.5 py-1 text-xs">Reject</button>` : ''}
-                  ${po.status === 'approved' ? `<input id="conf-${po.id}" placeholder="Vendor conf #" class="kms-input text-xs w-28" /><button type="button" data-po-order="${po.id}" class="kms-btn-navy px-2.5 py-1 text-xs">Mark Ordered</button>` : ''}
+                  ${po.status === 'approved' && isMgr ? `<input id="conf-${po.id}" placeholder="Vendor conf #" class="kms-input text-xs w-28" /><button type="button" data-po-order="${po.id}" class="kms-btn-navy px-2.5 py-1 text-xs">Mark Ordered</button>` : ''}
                   ${po.status === 'ordered' ? `<button type="button" data-po-reconcile="${po.id}" class="kms-btn-ok px-2.5 py-1 text-xs">Reconcile &amp; Receive</button>` : ''}
-                  <button type="button" data-po-del="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Delete</button>
+                  ${(isMgr || po.status === 'requested') ? `<button type="button" data-po-del="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Delete</button>` : ''}
                 </div>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
@@ -1867,28 +1919,35 @@
               </div>
             `;
           })()}
-          <form id="form-bulk-menu" class="flex flex-wrap gap-2 items-center pt-1">
-            <select name="recipeId" class="kms-input text-xs flex-1 min-w-[200px]">${recOpts}</select>
-            <select name="days" class="kms-input text-xs"><option value="7">Fill empty next 7 days</option><option value="30">Fill empty next 30 days</option></select>
-            <button type="submit" class="kms-btn-navy px-3 py-1.5 text-xs">Fill Empty Days</button>
-          </form>
+          ${isMgmtOrHigher() ? `
+            <form id="form-bulk-menu" class="flex flex-wrap gap-2 items-center pt-1">
+              <select name="recipeId" class="kms-input text-xs flex-1 min-w-[200px]">${recOpts}</select>
+              <select name="days" class="kms-input text-xs"><option value="7">Fill empty next 7 days</option><option value="30">Fill empty next 30 days</option></select>
+              <button type="submit" class="kms-btn-navy px-3 py-1.5 text-xs">Fill Empty Days</button>
+            </form>
+          ` : `
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+              <span class="opacity-75">Menu schedule changes require <strong>ADMIN</strong> or <strong>MANAGER</strong> approval.</span>
+              ${isStaffOrHigher() ? `<button type="button" id="btn-suggest-menu" class="kms-btn-primary px-3 py-1.5 text-xs">+ Suggest Recipe / Menu Change</button>` : ''}
+            </div>
+          `}
         </div>
 
         <div class="space-y-2">
           ${days.map(ds => {
             const hol = getFederalHoliday(ds);
-            const mp = state.menuPlan.find(m => m.service_date === ds) || { service_date: ds, recipe_id: '', planned_portions: forecastWeekday(ds, rid), status: hol ? 'CLOSED' : 'PLANNED' };
+            const mp = state.menuPlan.find(m => m.service_date === ds) || { service_date: ds, recipe_id: '', planned_portions: forecastWeekday(ds), status: hol ? 'CLOSED' : 'PLANNED' };
             return `
               <div class="kms-card p-3 flex flex-wrap items-center justify-between gap-2">
                 <div class="space-y-1 flex-1 min-w-[220px]">
                   <div class="font-bold text-sm">${dLabel(ds)} ${ds === today ? '<span class="tag tag-OK">TODAY</span>' : ''} ${hol ? `<span class="tag tag-OUT">${esc(hol)}</span>` : ''}</div>
                   <div class="flex flex-wrap items-center gap-2 text-xs">
-                    <select data-menu-rec="${ds}" class="kms-input text-xs">
+                    <select data-menu-rec="${ds}" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input text-xs">
                       <option value="">Choose recipe...</option>
                       ${state.recipes.map(r => `<option value="${r.id}" ${mp.recipe_id === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}
                     </select>
                     <span>Planned:</span>
-                    <input type="number" min="0" value="${mp.planned_portions || 65}" data-menu-plan="${ds}" class="kms-input w-16 text-xs text-center font-bold" />
+                    <input type="number" min="0" value="${mp.planned_portions || 65}" data-menu-plan="${ds}" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input w-16 text-xs text-center font-bold" />
                     ${mp.recipe_id ? `<button type="button" data-open-sheet="${ds}" class="text-[#1b365d] font-bold underline">Daily Sheet</button>` : ''}
                   </div>
                 </div>
@@ -2072,11 +2131,48 @@
     main.innerHTML = `
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="space-y-3 no-print">
-          <form id="form-paste-recipe" class="kms-card p-4 space-y-2.5">
-            <h2 class="text-sm font-bold">Add / Paste a Recipe</h2>
-            <textarea name="raw" rows="4" required placeholder="Title on line 1&#10;Servings: 50&#10;4 boxes Spaghetti&#10;1 cases Spaghetti sauce&#10;Directions:&#10;1. Boil pasta..." class="kms-input w-full text-xs"></textarea>
-            <button type="submit" class="kms-btn-ok w-full py-2 text-xs">Read &amp; Save Recipe</button>
-          </form>
+          ${isMgmtOrHigher() ? `
+            <form id="form-paste-recipe" class="kms-card p-4 space-y-2.5">
+              <h2 class="text-sm font-bold">Add / Paste a Recipe</h2>
+              <textarea name="raw" rows="4" required placeholder="Title on line 1&#10;Servings: 50&#10;4 boxes Spaghetti&#10;1 cases Spaghetti sauce&#10;Directions:&#10;1. Boil pasta..." class="kms-input w-full text-xs"></textarea>
+              <button type="submit" class="kms-btn-ok w-full py-2 text-xs">Read &amp; Save Recipe</button>
+            </form>
+          ` : `
+            <form id="form-suggest-recipe" class="kms-card p-4 space-y-2.5">
+              <h2 class="text-sm font-bold">Suggest a New Recipe</h2>
+              <p class="text-[11px] opacity-75">Submit a recipe idea for ADMIN / MANAGER approval and future menus.</p>
+              <input name="title" type="text" required placeholder="Recipe title (e.g. Baked Ziti)" class="kms-input w-full text-xs" />
+              <div class="grid grid-cols-2 gap-1.5">
+                <input name="servings" type="number" min="40" max="80" value="65" class="kms-input text-xs" title="Base servings" />
+                <input name="targetDate" type="date" class="kms-input text-xs" title="Optional target menu date" />
+              </div>
+              <textarea name="raw" rows="3" required placeholder="Ingredients &amp; directions..." class="kms-input w-full text-xs"></textarea>
+              <button type="submit" class="kms-btn-primary w-full py-2 text-xs">Submit Recipe Suggestion</button>
+            </form>
+          `}
+
+          ${(() => {
+            const pendSug = (state.recipeSuggestions || []).filter(s => s.status === 'PENDING');
+            if (!pendSug.length) return '';
+            return `
+              <div class="kms-card p-4 space-y-2 border-l-4 border-l-amber-500">
+                <h3 class="text-xs font-bold uppercase">Pending Recipe Suggestions (${pendSug.length})</h3>
+                ${pendSug.map(s => `
+                  <div class="p-2.5 rounded border border-[var(--line)] text-xs space-y-1">
+                    <div class="font-bold">${esc(s.title)} <span class="opacity-65 font-normal">(${s.servings || 65} serv.${s.target_date ? ' · ' + esc(s.target_date) : ''})</span></div>
+                    <div class="text-[11px] opacity-75">By ${esc(s.suggested_by)}</div>
+                    <p class="text-[11px] opacity-85 whitespace-pre-line">${esc(s.raw)}</p>
+                    ${isMgmtOrHigher() ? `
+                      <div class="flex gap-1.5 pt-1">
+                        <button type="button" data-approve-recsug="${s.id}" class="kms-btn-ok px-2.5 py-1 text-[11px]">Approve &amp; Add</button>
+                        <button type="button" data-reject-recsug="${s.id}" class="kms-btn-alt px-2.5 py-1 text-[11px]">Reject</button>
+                      </div>
+                    ` : '<span class="tag tag-LOW">Awaiting Approval</span>'}
+                  </div>
+                `).join('')}
+              </div>
+            `;
+          })()}
 
           <div class="kms-card p-4 space-y-2.5">
             <div class="flex items-center justify-between gap-2">
@@ -2111,7 +2207,7 @@
                 <button type="button" id="btn-rec-pending-pos" class="kms-btn-alt px-3 py-1 text-xs">Expected / Pending POs (${(state.purchaseOrders || []).filter(p => ['requested','approved','ordered'].includes(p.status)).length})</button>
                 <button type="button" id="btn-toggle-rec-matrix" class="kms-btn-alt px-3 py-1 text-xs">${showMatrix ? 'Single Scale View' : '40–80 Quick-Scan Table'}</button>
                 <button type="button" id="btn-print-recipe-sheet" class="kms-btn-navy px-3 py-1 text-xs">Print Recipe + QR</button>
-                <button type="button" data-del-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Delete</button>
+                ${isMgmtOrHigher() ? `<button type="button" data-del-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Delete</button>` : ''}
               </div>
             </div>
 
@@ -2120,7 +2216,7 @@
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <div class="flex flex-wrap items-center gap-3">
                   <label class="font-bold">Portions (40–80): <input id="rec-scale-inp" type="number" min="1" max="250" value="${scale}" class="kms-input w-20 text-center font-bold ml-1" /></label>
-                  <label class="font-bold opacity-80">Recipe Base: <input id="rec-base-inp" type="number" min="1" value="${rec.base_servings}" data-rec-base="${rec.id}" class="kms-input w-16 text-center font-bold ml-1" /></label>
+                  <label class="font-bold opacity-80">Recipe Base: <input id="rec-base-inp" type="number" min="1" value="${rec.base_servings}" data-rec-base="${rec.id}" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input w-16 text-center font-bold ml-1" /></label>
                 </div>
                 <div class="flex flex-wrap gap-1">
                   <button type="button" data-rec-preset="${predToday}" class="px-2.5 py-1 rounded-md font-bold ${scale === predToday ? 'bg-emerald-700 text-white' : 'bg-emerald-50 border border-emerald-300 text-emerald-800'}">Predicted (${predToday})</button>
@@ -2164,11 +2260,11 @@
                     <div class="flex justify-between font-bold"><span>${esc(g.name)}${g.inv_id && onOrderQty(g.inv_id) > 0 ? ` <span class="tag tag-LOW ml-1">On PO: ${onOrderQty(g.inv_id)}</span>` : ''}</span><span class="text-sm text-[#b3122b]">${fmtNum((g.qty || 0) * factor)} ${esc(g.unit)}</span></div>
                     <div class="flex flex-wrap items-center gap-2 opacity-80 no-print">
                       <span>Takes out of stock:</span>
-                      <select data-rec-ing="${rec.id}:${i}:inv_id" class="kms-input text-xs">
+                      <select data-rec-ing="${rec.id}:${i}:inv_id" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input text-xs">
                         <option value="">(not tracked)</option>
                         ${state.items.map(x => `<option value="${x.id}" ${g.inv_id === x.id ? 'selected' : ''}>${esc(x.name)} (${esc(x.unit)})</option>`).join('')}
                       </select>
-                      <input type="number" step="0.1" min="0" value="${g.per100 || 0}" data-rec-ing="${rec.id}:${i}:per100" class="kms-input w-16 text-xs text-center" />
+                      <input type="number" step="0.1" min="0" value="${g.per100 || 0}" data-rec-ing="${rec.id}:${i}:per100" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input w-16 text-xs text-center" />
                       <span>per 100 servings</span>
                     </div>
                   </div>
@@ -2560,7 +2656,7 @@
 
   // 13. MONTHLY REPORT (from Community Meals Inventory-2.html)
   function renderReport(main) {
-    if (getActiveUser().role !== 'Management') {
+    if (!isMgmtOrHigher()) {
       main.innerHTML = `
         <div class="kms-card p-6 max-w-lg mx-auto text-center space-y-2">
           <div class="tag tag-OUT inline-block">MANAGEMENT ONLY</div>
@@ -2811,6 +2907,7 @@
 
   // 14. USERS & ACTIVITY FEED
   function renderUsers(main) {
+    if (!isAdminRole()) { main.innerHTML = '<div class="kms-card p-6 text-center text-xs">ADMIN access required.</div>'; return; }
     const todayAdm = localDateStr();
     main.innerHTML = `
       <div class="space-y-4">
@@ -2855,7 +2952,7 @@
             <h2 class="text-sm font-bold">Add Staff / Volunteer</h2>
             <input name="name" required placeholder="Full name" class="kms-input w-full text-sm" />
             <div class="grid grid-cols-2 gap-2">
-              <select name="role" class="kms-input text-sm"><option>Volunteer</option><option>Staff</option><option>Management</option><option>Other</option></select>
+              <select name="role" class="kms-input text-sm"><option value="VOLUNTEER">VOLUNTEER</option><option value="STAFF">STAFF</option><option value="MANAGER">MANAGER</option><option value="ADMIN">ADMIN</option></select>
               <input name="initials" maxlength="4" required placeholder="Initials" class="kms-input text-sm uppercase" />
             </div>
             <input name="pin" required minlength="6" placeholder="Starting PIN (6+ chars)" class="kms-input w-full text-sm" />
@@ -2866,9 +2963,9 @@
             <h3 class="text-sm font-bold">Team Roster</h3>
             ${state.users.map(u => `
               <div class="p-2.5 rounded-lg border border-[var(--line)] flex flex-wrap justify-between items-center gap-2 text-xs">
-                <div><strong>${esc(u.name)}</strong> (${esc(u.initials)}) · ${esc(u.role)}</div>
+                <div><strong>${esc(u.name)}</strong> (${esc(u.initials)}) · ${esc(u.role)}${u.id === 'usr-1' ? ' <span class="tag tag-OK ml-1">PROTECTED OWNER</span>' : ''}</div>
                 <div class="flex gap-1.5">
-                  <button type="button" data-reset-pin="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Reset PIN</button>
+                  ${(u.id !== 'usr-1' || getActiveUser().id === 'usr-1') ? `<button type="button" data-reset-pin="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Reset PIN</button>` : ''}
                   ${u.id !== 'usr-1' ? `<button type="button" data-toggle-usr="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">${u.active !== false ? 'Deactivate' : 'Activate'}</button>` : ''}
                 </div>
               </div>
@@ -3046,7 +3143,7 @@
     if (e.target.id === 'modal-close' || e.target.id === 'modal-backdrop') { closeModal(); return; }
     if (e.target.closest('#btn-switch-user')) { showSwitchUserModal(); return; }
     if (e.target.closest('#btn-open-chat')) { showChatModal(); return; }
-    if (e.target.closest('#btn-lock-app')) { state.isLocked = true; setSessionUnlocked(false); saveState(); render(); return; }
+    if (e.target.closest('#btn-lock-app')) { state.isLocked = true; delete state._sbAuthEmail; setSessionUnlocked(false); if (sbClient && sbClient.auth) { try { sbClient.auth.signOut(); } catch (err) {} } saveState(); render(); return; }
     if (e.target.id === 'btn-undo' || e.target.id === 'btn-stock-undo') { doUndo(); return; }
     if (e.target.id === 'btn-print-qr') { showQrLabelsModal(); return; }
     if (e.target.id === 'btn-print-page') { window.print(); return; }
@@ -3210,6 +3307,10 @@
     if (poEditBtn) {
       const po = (state.purchaseOrders || []).find(p => p.id === poEditBtn.dataset.poEdit);
       if (po) {
+        if (!isMgmtOrHigher() && po.status !== 'requested') {
+          showToast('Only Management can edit approved or ordered POs', 'warn');
+          return;
+        }
         const allItems = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
         openModal(`Edit Purchase Order — ${po.po_number}`, `
           <form id="form-edit-po" class="space-y-3 text-xs">
@@ -3268,6 +3369,7 @@
     }
     const decBtn = e.target.closest('[data-po-decide]');
     if (decBtn) {
+      if (!isMgmtOrHigher()) { showToast('Only Management can approve or reject POs', 'warn'); return; }
       const [id, st] = decBtn.dataset.poDecide.split(':');
       const po = state.purchaseOrders.find(p => p.id === id);
       if (po) {
@@ -3282,6 +3384,7 @@
     }
     const ordBtn = e.target.closest('[data-po-order]');
     if (ordBtn) {
+      if (!isMgmtOrHigher()) { showToast('Only Management can place or mark orders as ordered', 'warn'); return; }
       const po = state.purchaseOrders.find(p => p.id === ordBtn.dataset.poOrder);
       if (po) {
         po.status = 'ordered';
@@ -3318,6 +3421,11 @@
     const delPoBtn = e.target.closest('[data-po-del]');
     if (delPoBtn) {
       const poId = delPoBtn.dataset.poDel;
+      const targetPo = (state.purchaseOrders || []).find(p => p.id === poId);
+      if (targetPo && !isMgmtOrHigher() && targetPo.status !== 'requested') {
+        showToast('Only Management can delete approved or ordered POs', 'warn');
+        return;
+      }
       askConfirm('Delete PO', 'Permanently delete this purchase order?', () => {
         state.purchaseOrders = state.purchaseOrders.filter(p => p.id !== poId);
         if (sbClient) sbClient.from('kms_purchase_orders').delete().eq('id', poId).then(() => {});
@@ -3613,6 +3721,51 @@
       `);
       return;
     }
+    if (e.target.id === 'btn-suggest-menu') {
+      openModal('Suggest Recipe / Menu Change', `
+        <form id="form-suggest-recipe" class="space-y-3 text-xs">
+          <p class="opacity-75">Submit a new recipe or menu change suggestion for ADMIN / MANAGER approval.</p>
+          <input name="title" type="text" required placeholder="Suggested dish or recipe name" class="kms-input w-full text-xs" />
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block font-semibold mb-1">Servings</label><input name="servings" type="number" min="40" max="80" value="65" class="kms-input w-full text-xs" /></div>
+            <div><label class="block font-semibold mb-1">Suggested Date</label><input name="targetDate" type="date" value="${localDateStr()}" class="kms-input w-full text-xs" /></div>
+          </div>
+          <textarea name="raw" rows="4" required placeholder="Ingredients, quantities &amp; notes..." class="kms-input w-full text-xs"></textarea>
+          <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-semibold">Submit Suggestion for Approval</button>
+        </form>
+      `);
+      return;
+    }
+    const appSug = e.target.closest('[data-approve-recsug]');
+    if (appSug) {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can approve recipe suggestions', 'warn'); return; }
+      const s = (state.recipeSuggestions || []).find(x => x.id === appSug.dataset.approveRecsug);
+      if (s) {
+        const parsed = parsePastedRecipe(s.title + '\nServings: ' + (s.servings || 65) + '\n' + s.raw);
+        parsed.name = s.title;
+        parsed.base_servings = Number(s.servings) || 65;
+        state.recipes.push(parsed);
+        state.selectedRecipeId = parsed.id;
+        if (s.target_date) {
+          const ex = state.menuPlan.find(m => m.service_date === s.target_date);
+          if (ex) { ex.recipe_id = parsed.id; ex.custom_title = parsed.name; }
+          else state.menuPlan.push({ id: uid('mp'), service_date: s.target_date, recipe_id: parsed.id, custom_title: parsed.name, planned_portions: forecastWeekday(s.target_date, parsed.id), status: 'PLANNED' });
+        }
+        s.status = 'APPROVED';
+        logActivity('RECIPE APPROVED', `Approved "${parsed.name}" (suggested by ${s.suggested_by})`);
+        saveState();
+        render();
+        showToast(`Approved & added "${parsed.name}" to Recipe Book!`);
+      }
+      return;
+    }
+    const rejSug = e.target.closest('[data-reject-recsug]');
+    if (rejSug) {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can reject suggestions', 'warn'); return; }
+      const s = (state.recipeSuggestions || []).find(x => x.id === rejSug.dataset.rejectRecsug);
+      if (s) { s.status = 'REJECTED'; saveState(); render(); showToast('Suggestion dismissed'); }
+      return;
+    }
     if (e.target.id === 'btn-start-tour') {
       const steps = getRoleTourSteps();
       if (steps.length) {
@@ -3732,7 +3885,7 @@
     if (e.target.id === 'btn-trn-prev' && trainingStep > 0) { trainingStep--; checkMandatoryModals(); return; }
     if (e.target.id === 'btn-trn-next') {
       const u = getActiveUser();
-      const pending = state.trainingModules.filter(m => (m.role === 'ALL' || m.role === u.role) && !(u.completed_training_ids || []).includes(m.id));
+      const pending = state.trainingModules.filter(m => (m.role === 'ALL' || normalizeRole(m.role) === normalizeRole(u.role)) && !(u.completed_training_ids || []).includes(m.id));
       if (trainingStep < pending.length - 1) { trainingStep++; checkMandatoryModals(); }
       else {
         u.completed_training_ids = u.completed_training_ids || [];
@@ -3750,6 +3903,10 @@
     const rpBtn = e.target.closest('[data-reset-pin]');
     if (rpBtn) {
       const u = state.users.find(x => x.id === rpBtn.dataset.resetPin);
+      if (u && u.id === 'usr-1' && getActiveUser().id !== 'usr-1') {
+        showToast('Only the primary owner can reset their own PIN', 'warn');
+        return;
+      }
       if (u) {
         u.pin_salt = newSalt();
         u.pin_hash = hashPin('123456', u.pin_salt);
@@ -3762,7 +3919,12 @@
     const tuBtn = e.target.closest('[data-toggle-usr]');
     if (tuBtn) {
       const u = state.users.find(x => x.id === tuBtn.dataset.toggleUsr);
-      if (u) { u.active = u.active === false ? true : false; saveState(); render(); }
+      if (u) {
+        if (u.id === 'usr-1') { showToast('Primary owner account cannot be deactivated or removed', 'warn'); return; }
+        u.active = u.active === false ? true : false;
+        saveState();
+        render();
+      }
       return;
     }
 
@@ -3897,6 +4059,7 @@
     }
 
     if (e.target.dataset.menuRec) {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can change the menu schedule', 'warn'); render(); return; }
       const ds = e.target.dataset.menuRec;
       let mp = state.menuPlan.find(m => m.service_date === ds);
       const rec = state.recipes.find(r => r.id === e.target.value);
@@ -3908,6 +4071,7 @@
       return;
     }
     if (e.target.dataset.menuPlan) {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can change planned portions', 'warn'); render(); return; }
       const ds = e.target.dataset.menuPlan;
       let mp = state.menuPlan.find(m => m.service_date === ds);
       if (!mp) { mp = { id: uid('mp'), service_date: ds, recipe_id: '', status: 'PLANNED' }; state.menuPlan.push(mp); }
@@ -3973,6 +4137,34 @@
   document.addEventListener('submit', (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
+
+    if (e.target.id === 'form-sb-auth') {
+      const email = String(fd.get('email') || '').trim();
+      const password = String(fd.get('password') || '');
+      const errEl = document.getElementById('sb-auth-err');
+      if (!sbClient || !sbClient.auth) {
+        if (errEl) { errEl.textContent = 'Supabase cloud connection is offline.'; errEl.classList.remove('hidden'); }
+        return;
+      }
+      if (errEl) errEl.classList.add('hidden');
+      sbClient.auth.signInWithPassword({ email, password }).then(({ data, error }) => {
+        if (error || !data || !data.user) {
+          if (errEl) { errEl.textContent = (error && error.message) || 'Invalid Supabase Auth credentials.'; errEl.classList.remove('hidden'); }
+          return;
+        }
+        const owner = ensureOwnerIntegrity();
+        state.activeUserId = owner.id;
+        state.isLocked = false;
+        state._sbAuthEmail = data.user.email;
+        setSessionUnlocked(true);
+        logActivity('ADMIN SUPABASE AUTH', `${owner.name} verified via Supabase Auth (${data.user.email})`);
+        saveState();
+        closeModal();
+        render();
+        showToast(`Verified via Supabase Auth (${data.user.email})`);
+      });
+      return;
+    }
 
     if (e.target.id === 'form-unlock' || e.target.id === 'form-switch-user') {
       const u = state.users.find(x => x.id === fd.get('userId') && x.active !== false);
@@ -4059,6 +4251,10 @@
     if (e.target.id === 'form-edit-po') {
       const po = (state.purchaseOrders || []).find(p => p.id === fd.get('poId'));
       if (po) {
+        if (!isMgmtOrHigher() && po.status !== 'requested') {
+          showToast('Only Management can modify approved or ordered POs', 'warn');
+          return;
+        }
         const nextLines = [];
         (po.lines || []).forEach(l => {
           const q = Math.ceil(parseFloat(fd.get('line_' + l.item_id)));
@@ -4176,6 +4372,7 @@
     }
 
     if (e.target.id === 'form-bulk-menu') {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can bulk-schedule menus', 'warn'); return; }
       const rid = fd.get('recipeId');
       const rec = state.recipes.find(r => r.id === rid);
       const nDays = parseInt(fd.get('days'), 10) || 7;
@@ -4194,7 +4391,30 @@
       return;
     }
 
+    if (e.target.id === 'form-suggest-recipe') {
+      const title = String(fd.get('title') || '').trim();
+      const raw = String(fd.get('raw') || '').trim();
+      if (!title || !raw) return;
+      state.recipeSuggestions = state.recipeSuggestions || [];
+      state.recipeSuggestions.unshift({
+        id: uid('rsug'),
+        title,
+        servings: Number(fd.get('servings')) || 65,
+        target_date: String(fd.get('targetDate') || '').trim(),
+        raw,
+        suggested_by: getActiveUser().name,
+        status: 'PENDING',
+        created_at: localDateStr()
+      });
+      logActivity('RECIPE SUGGESTED', `Suggested "${title}"`);
+      closeModal();
+      saveState();
+      render();
+      showToast(`Submitted "${title}" for ADMIN / MANAGER approval!`);
+      return;
+    }
     if (e.target.id === 'form-paste-recipe') {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can add recipes directly', 'warn'); return; }
       const rec = parsePastedRecipe(fd.get('raw'));
       state.recipes.push(rec);
       state.selectedRecipeId = rec.id;
@@ -4422,13 +4642,16 @@
   }
   function lockOnExit() {
     state.isLocked = true;
+    delete state._sbAuthEmail;
     setSessionUnlocked(false);
+    if (sbClient && sbClient.auth) { try { sbClient.auth.signOut(); } catch (e) {} }
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   }
   window.addEventListener('pagehide', lockOnExit);
   window.addEventListener('beforeunload', lockOnExit);
 
   // Boot
+  ensureOwnerIntegrity();
   if (!isSessionUnlocked()) state.isLocked = true;
   if (state.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   document.documentElement.style.fontSize = ['100%', '112.5%', '125%'][state.textZoom || 0];
