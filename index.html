@@ -1097,6 +1097,18 @@
   ];
 
   function renderNav() {
+    const locked = !!state.isLocked;
+    ['btn-sync-pill', 'btn-open-chat', 'btn-switch-user', 'btn-lock-app', 'btn-tools', 'nav-groups', 'nav-subtabs', 'mobile-dock'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden', locked);
+    });
+    const tmEl = document.getElementById('tools-menu');
+    if (tmEl && locked) tmEl.classList.add('hidden');
+    if (locked) {
+      closeModal();
+      document.getElementById('hdr-user').textContent = 'Locked';
+      return;
+    }
     const u = getActiveUser();
     const allowed = getAllowedTabs(u);
     if (!allowed.includes(state.activeTab)) state.activeTab = allowed[0];
@@ -1688,7 +1700,6 @@
                   <div class="text-xs opacity-70">Requested ${esc(po.requested_date)} by ${esc(po.requested_by)}${po.approved_by ? ` · Approved by ${esc(po.approved_by)}` : ''}${po.vendor_conf ? ` · Conf #${esc(po.vendor_conf)}` : ''}</div>
                 </div>
                 <div class="flex flex-wrap gap-1.5 no-print">
-                  <button type="button" data-po-orderform="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Order Form (Cases)</button>
                   ${(isMgr || po.status === 'requested') && ['requested', 'approved', 'ordered'].includes(po.status) ? `<button type="button" data-po-edit="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit PO / Invoice #</button>` : ''}
                   ${po.status === 'requested' && isMgr ? `<button type="button" data-po-decide="${po.id}:approved" class="kms-btn-ok px-2.5 py-1 text-xs">Approve</button><button type="button" data-po-decide="${po.id}:rejected" class="kms-btn-alt px-2.5 py-1 text-xs">Reject</button>` : ''}
                   ${po.status === 'approved' && isMgr ? `<input id="conf-${po.id}" placeholder="Vendor conf #" class="kms-input text-xs w-28" /><button type="button" data-po-order="${po.id}" class="kms-btn-navy px-2.5 py-1 text-xs">Mark Ordered</button>` : ''}
@@ -3141,6 +3152,7 @@
 
   // Global Event Listeners
   document.addEventListener('click', (e) => {
+    if (state.isLocked) return;
     const toolsBtn = e.target.closest('#btn-tools');
     if (toolsBtn) { document.getElementById('tools-menu').classList.toggle('hidden'); return; }
     const tm = document.getElementById('tools-menu');
@@ -3262,61 +3274,6 @@
         state.manualPoExtra[cad][sel.value] = Math.max(1, Math.ceil(parseFloat(qInp ? qInp.value : 1) || 1));
         render();
         showToast('Added item to PO suggestions');
-      }
-      return;
-    }
-    const poFormBtn = e.target.closest('[data-po-orderform]');
-    if (poFormBtn) {
-      const po = (state.purchaseOrders || []).find(p => p.id === poFormBtn.dataset.poOrderform);
-      if (po) {
-        openModal(`Case Order Form — ${po.vendor} (${po.po_number})`, `
-          <div class="space-y-3 text-xs">
-            <div class="flex flex-wrap justify-between gap-2 border-b border-[var(--line)] pb-2">
-              <div><strong>Vendor:</strong> ${esc(po.vendor)} &bull; <strong>PO #:</strong> ${esc(po.po_number)}</div>
-              <div><strong>Date:</strong> ${esc(po.requested_date)} &bull; <strong>Whole Cases Only</strong></div>
-            </div>
-            <table class="w-full text-left border-collapse text-xs border border-[var(--line)]">
-              <thead>
-                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
-                  <th class="p-2">#</th>
-                  <th class="p-2">Product / Catalog Item</th>
-                  <th class="p-2">Case Pack / Unit</th>
-                  <th class="p-2 text-center">Cases Ordered</th>
-                  <th class="p-2 text-center">Rec'd Check</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-[var(--line)]">
-                ${(po.lines || []).map((l, idx) => {
-                  const inv = state.items.find(i => i.id === l.item_id);
-                  return `
-                    <tr>
-                      <td class="p-2 opacity-60">${idx + 1}</td>
-                      <td class="p-2 font-bold">${esc(l.name)}${inv && inv.sku ? ` <span class="font-mono opacity-60">(${esc(inv.sku)})</span>` : ''}</td>
-                      <td class="p-2">${esc(l.unit || (inv ? inv.unit : 'Case'))}</td>
-                      <td class="p-2 text-center font-bold text-[#b3122b] text-sm">${Math.max(1, Math.ceil(l.qty))} CASE(S)</td>
-                      <td class="p-2 text-center">[ &nbsp; ]</td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-            <div class="flex gap-2 no-print">
-              <button type="button" id="btn-print-orderform-now" class="kms-btn-navy flex-1 py-2 text-xs">Print Order Form</button>
-              <button type="button" id="btn-copy-orderform-now" data-copy-po-id="${esc(po.id)}" class="kms-btn-alt flex-1 py-2 text-xs">Copy for Portal</button>
-            </div>
-          </div>
-        `);
-      }
-      return;
-    }
-    if (e.target.id === 'btn-print-orderform-now') { window.print(); return; }
-    if (e.target.id === 'btn-copy-orderform-now') {
-      const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.copyPoId);
-      if (po) {
-        const txt = `${po.vendor} Order Form (${po.po_number}) — Whole Cases Only\n` +
-          (po.lines || []).map((l, i) => `${i + 1}. ${l.name} — ${Math.max(1, Math.ceil(l.qty))} CASE (${l.unit})`).join('\n');
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).catch(() => {});
-        showToast('Copied case order form to clipboard');
       }
       return;
     }
@@ -4189,6 +4146,7 @@
 
   document.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (state.isLocked && !['form-unlock', 'form-sb-auth'].includes(e.target.id)) return;
     const fd = new FormData(e.target);
 
     if (e.target.id === 'form-sb-auth') {
@@ -4663,6 +4621,7 @@
   ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, resetInactivity, { passive: true }));
 
   document.addEventListener('change', (e) => {
+    if (state.isLocked) return;
     if (e.target && e.target.id === 'ann-repeat-select') {
       const wrap = document.getElementById('ann-repeat-days-wrap');
       if (wrap) wrap.classList.toggle('hidden', !['weekly', 'biweekly'].includes(e.target.value));
@@ -4670,6 +4629,7 @@
   });
 
   document.addEventListener('submit', (e) => {
+    if (state.isLocked && !['form-unlock', 'form-sb-auth'].includes(e.target.id)) return;
     if (e.target && e.target.id === 'form-save-announcement') {
       e.preventDefault();
       const fd = new FormData(e.target);
