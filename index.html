@@ -3314,10 +3314,14 @@
     }
     const delPoBtn = e.target.closest('[data-po-del]');
     if (delPoBtn) {
-      askConfirm('Delete PO', 'Remove this purchase order?', () => {
-        state.purchaseOrders = state.purchaseOrders.filter(p => p.id !== delPoBtn.dataset.poDel);
+      const poId = delPoBtn.dataset.poDel;
+      askConfirm('Delete PO', 'Permanently delete this purchase order?', () => {
+        state.purchaseOrders = state.purchaseOrders.filter(p => p.id !== poId);
+        if (sbClient) sbClient.from('kms_purchase_orders').delete().eq('id', poId).then(() => {});
+        logActivity('PO DELETED', `Deleted PO ${poId}`);
         saveState();
         render();
+        showToast('Purchase order deleted');
       });
       return;
     }
