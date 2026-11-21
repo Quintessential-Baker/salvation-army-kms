@@ -386,6 +386,109 @@
   }
   function fmtNum(n) { return String(Math.round((Number(n) || 0) * 100) / 100); }
 
+  const KITCHEN_UNITS = ['tsp', 'tbsp', 'fl oz', 'cups', 'pints', 'quarts', 'gallons', 'oz', 'lbs', 'pieces', 'cans', 'boxes', 'bags', 'packs', 'cases'];
+  const UNIT_ALIASES = {
+    teaspoon: 'tsp', teaspoons: 'tsp', tsp: 'tsp',
+    tablespoon: 'tbsp', tablespoons: 'tbsp', tbsp: 'tbsp', tbs: 'tbsp',
+    'fl oz': 'fl oz', floz: 'fl oz', 'fluid oz': 'fl oz',
+    cup: 'cups', cups: 'cups', c: 'cups',
+    pint: 'pints', pints: 'pints', pt: 'pints',
+    quart: 'quarts', quarts: 'quarts', qt: 'quarts', qts: 'quarts',
+    gallon: 'gallons', gallons: 'gallons', gal: 'gallons',
+    ounce: 'oz', ounces: 'oz', oz: 'oz',
+    pound: 'lbs', pounds: 'lbs', lb: 'lbs', lbs: 'lbs',
+    gram: 'g', grams: 'g', g: 'g', kg: 'kg', ml: 'ml', l: 'l',
+    piece: 'pieces', pieces: 'pieces', pc: 'pieces', pcs: 'pieces', each: 'pieces',
+    can: 'cans', cans: 'cans', box: 'boxes', boxes: 'boxes', bag: 'bags', bags: 'bags',
+    bottle: 'bottles', bottles: 'bottles', jug: 'jugs', jugs: 'jugs',
+    pack: 'packs', packs: 'packs', 'case': 'cases', cases: 'cases', crate: 'crates', crates: 'crates'
+  };
+  const VOL_TSP = { tsp: 1, tbsp: 3, 'fl oz': 6, cups: 48, pints: 96, quarts: 192, gallons: 768, ml: 0.202884, l: 202.884 };
+  const WT_OZ = { oz: 1, lbs: 16, g: 0.035274, kg: 35.274 };
+
+  function normUnit(u) {
+    const k = String(u || 'pieces').trim().toLowerCase();
+    return UNIT_ALIASES[k] || k || 'pieces';
+  }
+  function convertCulinaryUnit(qty, fromU, toU) {
+    const f = normUnit(fromU), t = normUnit(toU);
+    if (f === t) return qty;
+    if (VOL_TSP[f] && VOL_TSP[t]) return (qty * VOL_TSP[f]) / VOL_TSP[t];
+    if (WT_OZ[f] && WT_OZ[t]) return (qty * WT_OZ[f]) / WT_OZ[t];
+    return null;
+  }
+  function formatKitchenFraction(val) {
+    const v = Math.max(0, Number(val) || 0);
+    if (v === 0) return '0';
+    const whole = Math.floor(v + 1e-6);
+    const rem = v - whole;
+    const fracs = [
+      [0.125, '⅛'], [0.25, '¼'], [1/3, '⅓'], [0.375, '⅜'],
+      [0.5, '½'], [0.625, '⅝'], [2/3, '⅔'], [0.75, '¾'], [0.875, '⅞']
+    ];
+    for (const [f, sym] of fracs) {
+      if (Math.abs(rem - f) < 0.035) return (whole > 0 ? String(whole) : '') + sym;
+    }
+    if (rem > 0.965) return String(whole + 1);
+    if (rem < 0.035 && whole > 0) return String(whole);
+    return fmtNum(v);
+  }
+  function formatKitchenAmt(qty, unit) {
+    let q = Number(qty) || 0;
+    let u = normUnit(unit);
+    if (u === 'cups' && q > 0 && q < 0.25) { q = q * 16; u = 'tbsp'; }
+    if (u === 'tbsp' && q > 0 && q < 1) { q = q * 3; u = 'tsp'; }
+    else if (u === 'tbsp' && q >= 16) { q = q / 16; u = 'cups'; }
+    if (u === 'lbs' && q > 0 && q < 1) { q = q * 16; u = 'oz'; }
+    if (u === 'quarts' && q > 0 && q < 1) { q = q * 4; u = 'cups'; }
+    if (u === 'gallons' && q > 0 && q < 1) { q = q * 4; u = 'quarts'; }
+    return formatKitchenFraction(q) + ' ' + u;
+  }
+  function recomputeIngredientPer100(ing, baseServings) {
+    const base = Math.max(1, Number(baseServings) || 65);
+    const inv = ing.inv_id ? state.items.find(x => x.id === ing.inv_id) : null;
+    if (!inv) return;
+    if (Number(ing.stock_per_unit) > 0) {
+      ing.per100 = Math.round(((Number(ing.qty) || 0) / Number(ing.stock_per_unit)) * (100 / base) * 1000) / 1000;
+      return;
+    }
+    const conv = convertCulinaryUnit(Number(ing.qty) || 0, ing.unit, inv.unit);
+    if (conv !== null) {
+      ing.per100 = Math.round(conv * (100 / base) * 1000) / 1000;
+    }
+  }
+
+  function parseIngredientLine(rawLine, baseServings) {
+    const uniMap = { '⅛': ' 1/8', '¼': ' 1/4', '⅓': ' 1/3', '⅜': ' 3/8', '½': ' 1/2', '⅝': ' 5/8', '⅔': ' 2/3', '¾': ' 3/4', '⅞': ' 7/8' };
+    let ln = String(rawLine || '').trim();
+    Object.keys(uniMap).forEach(k => { ln = ln.split(k).join(uniMap[k]); });
+    ln = ln.replace(/^[-*•]\s*/, '').replace(/\s+/g, ' ').trim();
+    const m = ln.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)(?:\s*[-–]\s*(\d+(?:\.\d+)?))?\s*(fl\s+oz|[a-zA-Z#]+)?\s+(.+)$/i);
+    if (!m) return { name: ln, qty: 1, unit: 'pieces', inv_id: '', stock_per_unit: 0, per100: 0 };
+    const parseFrac = (tok) => {
+      const parts = String(tok).trim().split(/\s+/);
+      let sum = 0;
+      parts.forEach(p => {
+        if (p.includes('/')) { const [a, b] = p.split('/').map(Number); sum += b ? (a / b) : 0; }
+        else sum += parseFloat(p) || 0;
+      });
+      return sum || 1;
+    };
+    const q = parseFrac(m[1]);
+    const rawU = (m[3] || '').toLowerCase();
+    const knownUnit = rawU && (UNIT_ALIASES[rawU] || KITCHEN_UNITS.includes(rawU));
+    const unit = knownUnit ? normUnit(rawU) : 'pieces';
+    const ingName = (knownUnit ? m[4] : ((m[3] ? m[3] + ' ' : '') + m[4])).trim();
+    const words = ingName.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+    const matchInv = state.items.find(i => {
+      const iname = i.name.toLowerCase();
+      return words.some(w => iname.includes(w));
+    });
+    const ingObj = { name: ingName, qty: Math.round(q * 100) / 100, unit, inv_id: matchInv ? matchInv.id : '', stock_per_unit: 0, per100: 0 };
+    recomputeIngredientPer100(ingObj, baseServings);
+    return ingObj;
+  }
+
   function getFederalHoliday(dateStr) {
     const d = new Date(dateStr + 'T12:00:00');
     if (isNaN(d.getTime())) return '';
@@ -556,10 +659,11 @@
           'Hold on steam table >=135°F and serve with Daily Salad Bar & breadsticks.'
         ],
         ingredients: [
-          { name: 'Spaghetti', qty: 4, unit: 'boxes', inv_id: 'item-26', per100: 6 },
-          { name: 'Spaghetti sauce (large)', qty: 1, unit: 'cases', inv_id: 'item-24', per100: 1.5 },
-          { name: 'Meatballs', qty: 1, unit: 'cases', inv_id: 'item-63', per100: 1.5 },
-          { name: 'Breadsticks', qty: 1, unit: 'cases', inv_id: 'item-59', per100: 1.5 }
+          { name: 'Spaghetti (dry)', qty: 8, unit: 'lbs', inv_id: 'item-26', stock_per_unit: 2, per100: 6.15 },
+          { name: 'Spaghetti sauce', qty: 24, unit: 'cups', inv_id: 'item-24', stock_per_unit: 24, per100: 1.54 },
+          { name: 'Chopped garlic', qty: 6, unit: 'tbsp', inv_id: 'item-69', stock_per_unit: 32, per100: 0.29 },
+          { name: 'Meatballs', qty: 130, unit: 'pieces', inv_id: 'item-63', stock_per_unit: 130, per100: 1.54 },
+          { name: 'Breadsticks', qty: 65, unit: 'pieces', inv_id: 'item-59', stock_per_unit: 65, per100: 1.54 }
         ]
       },
       {
@@ -572,16 +676,17 @@
         allergens: [],
         steps: [
           'Brown ground beef in kettle to >=155°F.',
-          'Add kidney beans, black beans, tomato sauce, and diced onions.',
+          'Add kidney beans, black beans, tomato sauce, and chopped garlic.',
           'Simmer 35 min stirring often until >=165°F; hold >=135°F.',
           'Serve with crackers or biscuits.'
         ],
         ingredients: [
-          { name: 'Ground beef (hamburger)', qty: 3, unit: 'packs', inv_id: 'item-56', per100: 4.5 },
-          { name: 'Kidney beans (small)', qty: 1, unit: 'cases', inv_id: 'item-15', per100: 1.5 },
-          { name: 'Black beans (large)', qty: 2, unit: 'cans', inv_id: 'item-19', per100: 3 },
-          { name: 'Tomato sauce', qty: 3, unit: 'cans', inv_id: 'item-22', per100: 4.5 },
-          { name: 'Biscuits', qty: 1, unit: 'cases', inv_id: 'item-58', per100: 1.5 }
+          { name: 'Ground beef (hamburger)', qty: 15, unit: 'lbs', inv_id: 'item-56', stock_per_unit: 5, per100: 4.62 },
+          { name: 'Kidney beans', qty: 12, unit: 'cups', inv_id: 'item-15', stock_per_unit: 12, per100: 1.54 },
+          { name: 'Black beans', qty: 16, unit: 'cups', inv_id: 'item-19', stock_per_unit: 8, per100: 3.08 },
+          { name: 'Tomato sauce', qty: 24, unit: 'cups', inv_id: 'item-22', stock_per_unit: 8, per100: 4.62 },
+          { name: 'Chopped garlic', qty: 4, unit: 'tbsp', inv_id: 'item-69', stock_per_unit: 32, per100: 0.19 },
+          { name: 'Biscuits', qty: 65, unit: 'pieces', inv_id: 'item-58', stock_per_unit: 65, per100: 1.54 }
         ]
       },
       {
@@ -599,11 +704,12 @@
           'Serve with cranberry sauce & Daily Salad Bar.'
         ],
         ingredients: [
-          { name: 'Turkeys', qty: 2, unit: 'cases', inv_id: 'item-49', per100: 2.5 },
-          { name: 'Mashed potatoes', qty: 1.5, unit: 'cases', inv_id: 'item-30', per100: 2 },
-          { name: 'Chicken gravy', qty: 4, unit: 'cans', inv_id: 'item-36', per100: 5 },
-          { name: 'Green beans (small)', qty: 1.5, unit: 'cases', inv_id: 'item-18', per100: 2 },
-          { name: 'Cranberry sauce', qty: 2, unit: 'cans', inv_id: 'item-39', per100: 2.5 }
+          { name: 'Turkeys', qty: 38, unit: 'lbs', inv_id: 'item-49', stock_per_unit: 20, per100: 2.53 },
+          { name: 'Mashed potatoes (flakes)', qty: 24, unit: 'cups', inv_id: 'item-30', stock_per_unit: 16, per100: 2 },
+          { name: 'Block butter', qty: 16, unit: 'tbsp', inv_id: 'item-65', stock_per_unit: 32, per100: 0.67 },
+          { name: 'Chicken gravy', qty: 16, unit: 'cups', inv_id: 'item-36', stock_per_unit: 4, per100: 5.33 },
+          { name: 'Green beans', qty: 18, unit: 'cups', inv_id: 'item-18', stock_per_unit: 12, per100: 2 },
+          { name: 'Cranberry sauce', qty: 8, unit: 'cups', inv_id: 'item-39', stock_per_unit: 4, per100: 2.67 }
         ]
       }
     ];
@@ -2129,7 +2235,7 @@
         <div>
           <h3 class="text-sm font-bold border-b border-[var(--line)] pb-1 mb-2">Scaled Ingredients</h3>
           <table class="w-full text-xs">
-            ${(rec.ingredients || []).map(g => `<tr class="border-b border-[var(--line)]"><td class="py-1.5">&#9744; ${esc(g.name)}</td><td class="py-1.5 text-right font-bold">${fmtNum((g.qty || 0) * f)} ${esc(g.unit)}</td></tr>`).join('')}
+            ${(rec.ingredients || []).map(g => `<tr class="border-b border-[var(--line)]"><td class="py-1.5">&#9744; ${esc(g.name)}</td><td class="py-1.5 text-right font-bold">${esc(formatKitchenAmt((g.qty || 0) * f, g.unit))}</td></tr>`).join('')}
           </table>
         </div>
         ${(rec.steps || []).length ? `<div><h3 class="text-sm font-bold mb-1">Directions</h3><ol class="list-decimal pl-5 text-xs space-y-1">${rec.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>` : ''}
@@ -2236,20 +2342,7 @@
       if (mode === 'step' || /^\d+[\.\)]\s/.test(ln)) {
         steps.push(ln.replace(/^\d+[\.\)]\s*/, ''));
       } else {
-        const m = ln.match(/^([\d\.\/]+)\s*([a-zA-Z#]+)?\s+(.+)$/);
-        if (m) {
-          let q = 1;
-          if (m[1].includes('/')) {
-            const [a, b] = m[1].split('/').map(Number);
-            q = b ? a / b : 1;
-          } else q = parseFloat(m[1]) || 1;
-          const unit = m[2] || 'each';
-          const ingName = m[3];
-          const matchInv = state.items.find(i => ingName.toLowerCase().includes(i.name.toLowerCase().split(' ')[0]));
-          ingredients.push({ name: ingName, qty: q, unit, inv_id: matchInv ? matchInv.id : '', per100: 0 });
-        } else {
-          ingredients.push({ name: ln, qty: 1, unit: 'each', inv_id: '', per100: 0 });
-        }
+        ingredients.push(parseIngredientLine(ln, servings));
       }
     });
     return { id: uid('rec'), name, category: 'Main Entree', base_servings: servings, prep_min: 20, cook_min: 35, allergens, steps, ingredients };
@@ -2268,6 +2361,14 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="space-y-3 no-print">
           ${isMgmtOrHigher() ? `
+            <form id="form-import-recipe-url" class="kms-card p-4 space-y-2">
+              <h2 class="text-sm font-bold">Import Recipe from URL</h2>
+              <p class="text-[11px] opacity-75">Paste any recipe web link to import ingredients &amp; steps and scale to 40–80 portions.</p>
+              <div class="flex gap-1.5">
+                <input name="url" type="url" required placeholder="https://www.allrecipes.com/recipe/..." class="kms-input flex-1 text-xs" />
+                <button type="submit" id="btn-import-url" class="kms-btn-navy px-3 py-1.5 text-xs shrink-0">Import</button>
+              </div>
+            </form>
             <form id="form-paste-recipe" class="kms-card p-4 space-y-2.5">
               <h2 class="text-sm font-bold">Add / Paste a Recipe</h2>
               <textarea name="raw" rows="4" required placeholder="Title on line 1&#10;Servings: 50&#10;4 boxes Spaghetti&#10;1 cases Spaghetti sauce&#10;Directions:&#10;1. Boil pasta..." class="kms-input w-full text-xs"></textarea>
@@ -2382,7 +2483,7 @@
                         <td class="p-2 font-bold">${esc(g.name)}</td>
                         ${[40, 50, 60, 70, 80].map(p => {
                           const f = p / (rec.base_servings || 65);
-                          return `<td class="p-2 text-center font-semibold ${scale === p ? 'bg-[#b3122b]/10 text-[#b3122b]' : ''}">${fmtNum((g.qty || 0) * f)} ${esc(g.unit)}</td>`;
+                          return `<td class="p-2 text-center font-semibold ${scale === p ? 'bg-[#b3122b]/10 text-[#b3122b]' : ''}">${esc(formatKitchenAmt((g.qty || 0) * f, g.unit))}</td>`;
                         }).join('')}
                       </tr>
                     `).join('')}
@@ -2391,27 +2492,58 @@
               </div>
             ` : `
               <div class="space-y-2">
-                ${(rec.ingredients || []).map((g, i) => `
-                  <div class="p-2.5 rounded-lg border border-[var(--line)] text-xs space-y-1">
-                    <div class="flex justify-between font-bold"><span>${esc(g.name)}${g.inv_id && onOrderQty(g.inv_id) > 0 ? ` <span class="tag tag-LOW ml-1">On PO: ${onOrderQty(g.inv_id)}</span>` : ''}</span><span class="text-sm text-[#b3122b]">${fmtNum((g.qty || 0) * factor)} ${esc(g.unit)}</span></div>
-                    <div class="flex flex-wrap items-center gap-2 opacity-80 no-print">
-                      <span>Takes out of stock:</span>
-                      <select data-rec-ing="${rec.id}:${i}:inv_id" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input text-xs">
-                        <option value="">(not tracked)</option>
-                        ${state.items.map(x => `<option value="${x.id}" ${g.inv_id === x.id ? 'selected' : ''}>${esc(x.name)} (${esc(x.unit)})</option>`).join('')}
-                      </select>
-                      <input type="number" step="0.1" min="0" value="${g.per100 || 0}" data-rec-ing="${rec.id}:${i}:per100" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input w-16 text-xs text-center" />
-                      <span>per 100 servings</span>
+                ${(rec.ingredients || []).map((g, i) => {
+                  const invItem = g.inv_id ? state.items.find(x => x.id === g.inv_id) : null;
+                  const deductAtScale = invItem && g.per100 ? fmtNum((g.per100 * scale) / 100) : null;
+                  const unitOpts = Array.from(new Set([...KITCHEN_UNITS, normUnit(g.unit)]));
+                  return `
+                  <div class="p-2.5 rounded-lg border border-[var(--line)] text-xs space-y-1.5">
+                    <div class="flex justify-between items-center gap-2 font-bold">
+                      <span>${esc(g.name)}${g.inv_id && onOrderQty(g.inv_id) > 0 ? ` <span class="tag tag-LOW ml-1">On PO: ${onOrderQty(g.inv_id)}</span>` : ''}</span>
+                      <span class="text-sm text-[#b3122b]">${esc(formatKitchenAmt((g.qty || 0) * factor, g.unit))}</span>
                     </div>
+                    ${invItem && deductAtScale ? `<div class="text-[11px] opacity-65">Background inventory: deducts ~${deductAtScale} ${esc(invItem.unit)} of ${esc(invItem.name)} at ${scale} portions</div>` : ''}
+                    ${isMgmtOrHigher() ? `
+                      <div class="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[var(--line)]/60 opacity-85 no-print">
+                        <span class="font-semibold">Base (${rec.base_servings}):</span>
+                        <input type="number" step="0.25" min="0" value="${g.qty || 0}" data-rec-ing="${rec.id}:${i}:qty" class="kms-input w-16 text-xs text-center" title="Kitchen amount at base servings" />
+                        <select data-rec-ing="${rec.id}:${i}:unit" class="kms-input text-xs">${unitOpts.map(u => `<option value="${esc(u)}" ${normUnit(g.unit) === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
+                        <span>→ Stock:</span>
+                        <select data-rec-ing="${rec.id}:${i}:inv_id" class="kms-input text-xs max-w-[170px]">
+                          <option value="">(not tracked)</option>
+                          ${state.items.map(x => `<option value="${x.id}" ${g.inv_id === x.id ? 'selected' : ''}>${esc(x.name)} (${esc(x.unit)})</option>`).join('')}
+                        </select>
+                        ${invItem ? `
+                          <span>1 ${esc(invItem.unit)} =</span>
+                          <input type="number" step="0.5" min="0" value="${g.stock_per_unit || ''}" placeholder="auto" data-rec-ing="${rec.id}:${i}:stock_per_unit" class="kms-input w-16 text-xs text-center" title="How many recipe units are in 1 stock unit" />
+                          <span>${esc(normUnit(g.unit))}</span>
+                        ` : ''}
+                      </div>
+                    ` : ''}
                   </div>
-                `).join('')}
+                `; }).join('')}
+                ${isMgmtOrHigher() ? `
+                  <form id="form-add-rec-ing" data-rec-id="${esc(rec.id)}" class="p-2.5 rounded-lg border border-dashed border-[var(--line)] flex flex-wrap items-center gap-1.5 text-xs no-print">
+                    <input name="name" type="text" required placeholder="+ Add ingredient (e.g. Garlic powder)" class="kms-input flex-1 min-w-[150px] text-xs" />
+                    <input name="qty" type="number" step="0.25" min="0.1" required placeholder="Qty" class="kms-input w-16 text-xs text-center" />
+                    <select name="unit" class="kms-input text-xs">${KITCHEN_UNITS.map(u => `<option value="${esc(u)}" ${u === 'cups' ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
+                    <select name="inv_id" class="kms-input text-xs max-w-[160px]">
+                      <option value="">Stock link (opt.)</option>
+                      ${state.items.map(x => `<option value="${x.id}">${esc(x.name)} (${esc(x.unit)})</option>`).join('')}
+                    </select>
+                    <input name="stock_per_unit" type="number" step="0.5" min="0" placeholder="per stock unit" class="kms-input w-24 text-xs text-center" title="Recipe units per 1 stock unit" />
+                    <button type="submit" class="kms-btn-alt px-2.5 py-1 text-xs font-semibold">+ Add</button>
+                  </form>
+                ` : ''}
               </div>
             `}
 
-            ${rec.directions ? `
+            ${(rec.directions || (rec.steps && rec.steps.length)) ? `
               <div class="p-3 rounded-lg bg-black/5 text-xs space-y-1">
                 <div class="font-bold uppercase opacity-65">Directions</div>
-                <p class="whitespace-pre-line leading-relaxed">${esc(rec.directions)}</p>
+                ${rec.steps && rec.steps.length
+                  ? `<ol class="list-decimal list-inside space-y-1 leading-relaxed">${rec.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>`
+                  : `<p class="whitespace-pre-line leading-relaxed">${esc(rec.directions)}</p>`}
               </div>
             ` : ''}
           `}
@@ -4345,14 +4477,22 @@
     }
     if (e.target.dataset.recBase) {
       const r = state.recipes.find(x => x.id === e.target.dataset.recBase);
-      if (r) { r.base_servings = Math.max(1, parseFloat(e.target.value) || 1); saveState(); render(); }
+      if (r) {
+        r.base_servings = Math.max(1, parseFloat(e.target.value) || 1);
+        (r.ingredients || []).forEach(ing => recomputeIngredientPer100(ing, r.base_servings));
+        saveState();
+        render();
+      }
       return;
     }
     if (e.target.dataset.recIng) {
       const [rid, idx, f] = e.target.dataset.recIng.split(':');
       const r = state.recipes.find(x => x.id === rid);
       if (r && r.ingredients[idx]) {
-        r.ingredients[idx][f] = f === 'per100' ? (parseFloat(e.target.value) || 0) : e.target.value;
+        const ing = r.ingredients[idx];
+        if (f === 'qty' || f === 'stock_per_unit' || f === 'per100') ing[f] = parseFloat(e.target.value) || 0;
+        else ing[f] = e.target.value;
+        if (f !== 'per100') recomputeIngredientPer100(ing, r.base_servings);
         saveState();
         render();
       }
@@ -4721,6 +4861,87 @@
       showToast(`Submitted "${title}" for ADMIN / MANAGER approval!`);
       return;
     }
+    if (e.target.id === 'form-import-recipe-url') {
+      if (!isMgmtOrHigher()) { showToast('Only Management can import recipes', 'warn'); return; }
+      const targetUrl = String(fd.get('url') || '').trim();
+      const btn = document.getElementById('btn-import-url');
+      if (btn) { btn.disabled = true; btn.textContent = 'Importing...'; }
+      fetch(SUPABASE_URL + '/functions/v1/scrape-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({ url: targetUrl })
+      }).then(async res => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok || !data.recipe) {
+          throw new Error(data.error || ('Import failed (HTTP ' + res.status + ')'));
+        }
+        const rawRec = data.recipe;
+        const baseServ = Math.max(1, Number(rawRec.base_servings) || 8);
+        const allText = (rawRec.name || '') + ' ' + (rawRec.ingredients || []).join(' ');
+        const allergenKeywords = {
+          milk: /milk|cheese|butter|cream|yogurt|dairy/i,
+          eggs: /egg/i,
+          wheat: /flour|pasta|spaghetti|penne|noodles|macaroni|bread|biscuit|cracker|wheat/i,
+          soy: /\bsoy\b|tofu/i,
+          peanuts: /peanut/i,
+          'tree nuts': /almond|walnut|pecan|cashew/i,
+          fish: /tuna|salmon|fish|cod/i,
+          shellfish: /shrimp|crab|lobster/i,
+          sesame: /sesame|tahini/i
+        };
+        const allergens = Object.keys(allergenKeywords).filter(a => allergenKeywords[a].test(allText));
+        const r = {
+          id: uid('rec'),
+          name: rawRec.name || 'Imported Recipe',
+          category: rawRec.category || 'Main Entree',
+          base_servings: baseServ,
+          prep_min: Number(rawRec.prep_min) || 20,
+          cook_min: Number(rawRec.cook_min) || 35,
+          allergens,
+          steps: Array.isArray(rawRec.steps) ? rawRec.steps : [],
+          ingredients: (rawRec.ingredients || []).map(ln => parseIngredientLine(ln, baseServ))
+        };
+        state.recipes.unshift(r);
+        state.selectedRecipeId = r.id;
+        state.recipeScale = Math.min(80, Math.max(40, forecastWeekday(localDateStr()) || 65));
+        logActivity('RECIPE IMPORTED', `${r.name} (from URL)`);
+        saveState();
+        render();
+        showToast(`Imported ${r.name} (base ${baseServ}, scaled to ${state.recipeScale})`);
+      }).catch(err => {
+        showToast(String(err.message || err) + ' — deploy scrape-recipe Edge Function or paste recipe text below.', 'warn');
+      }).finally(() => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Import'; }
+      });
+      return;
+    }
+
+    if (e.target.id === 'form-add-rec-ing') {
+      if (!isMgmtOrHigher()) { showToast('Only Management can edit recipes', 'warn'); return; }
+      const r = state.recipes.find(x => x.id === e.target.dataset.recId);
+      if (r) {
+        const ingObj = {
+          name: String(fd.get('name') || '').trim(),
+          qty: parseFloat(fd.get('qty')) || 1,
+          unit: normUnit(fd.get('unit') || 'cups'),
+          inv_id: String(fd.get('inv_id') || ''),
+          stock_per_unit: parseFloat(fd.get('stock_per_unit')) || 0,
+          per100: 0
+        };
+        recomputeIngredientPer100(ingObj, r.base_servings);
+        r.ingredients = r.ingredients || [];
+        r.ingredients.push(ingObj);
+        saveState();
+        render();
+        showToast(`Added ${ingObj.name}`);
+      }
+      return;
+    }
+
     if (e.target.id === 'form-paste-recipe') {
       if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can add recipes directly', 'warn'); return; }
       const rec = parsePastedRecipe(fd.get('raw'));
