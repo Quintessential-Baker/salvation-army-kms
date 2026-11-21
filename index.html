@@ -1582,8 +1582,111 @@
           <div id="cam-wrap" class="hidden max-w-sm mx-auto p-2 border border-[var(--line)] rounded-lg"><div id="cam-reader"></div></div>
         </div>
 
+        ${(() => {
+          const expectedPos = (state.purchaseOrders || []).filter(p => p.status === 'APPROVED_ORDERED');
+          if (!expectedPos.length) return '';
+          return `
+            <div class="kms-card p-4 border-l-4 border-l-blue-600 space-y-3">
+              <div>
+                <h3 class="text-sm font-bold">Expected PO Deliveries (Reconcile from Delivery Slip)</h3>
+                <p class="text-xs opacity-75">Verify actual quantities received from your paper delivery slip before updating Living Stock.</p>
+              </div>
+              ${expectedPos.map(po => `
+                <form class="form-reconcile-po p-3 rounded-lg border border-[var(--line)] bg-black/5 space-y-2.5" data-po-id="${esc(po.id)}">
+                  <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div><strong class="font-mono">${esc(po.po_number)}</strong> &middot; <strong>${esc(po.vendor)}</strong> &middot; ETA: ${esc(po.expected_arrival || 'TBD')}</div>
+                    <button type="submit" class="kms-btn-ok px-3 py-1.5 text-xs">Reconcile &amp; Check In PO</button>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                      <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1 pr-2">Item</th><th class="py-1 pr-2">Ordered</th><th class="py-1">Actually Received</th></tr></thead>
+                      <tbody class="divide-y divide-[var(--line)]">
+                        ${(po.lines || []).filter(l => (l.approved_qty || l.qty || 0) > 0).map(ln => `
+                          <tr>
+                            <td class="py-1.5 pr-2 font-semibold">${esc(ln.item_name || ln.name)}</td>
+                            <td class="py-1.5 pr-2">${ln.approved_qty || ln.qty} ${esc(ln.unit || '')}</td>
+                            <td class="py-1.5"><input type="number" step="0.5" min="0" name="rec_${esc(ln.item_id || ln.id)}" value="${ln.approved_qty || ln.qty}" class="kms-input w-20 text-xs font-bold text-center" /></td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </form>
+              `).join('')}
+            </div>
+          `;
+        })()}
+
+        <!-- Full Delivery Slip Batch Check-In -->
+        <form id="form-delivery-slip" class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold">Enter Full Delivery Slip / Invoice (Batch Check-In)</h3>
+              <p class="text-xs opacity-75">After manually checking in a paper delivery slip, enter all received quantities at once to update Living Stock.</p>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" data-slip-preset="Marberger" class="kms-btn-alt px-2.5 py-1 text-xs">Load Marberger</button>
+              <button type="button" data-slip-preset="Jordan Banana" class="kms-btn-alt px-2.5 py-1 text-xs">Load Jordan Banana</button>
+              <button type="button" data-slip-preset="LOW" class="kms-btn-alt px-2.5 py-1 text-xs">Load Low-Stock</button>
+              <button type="button" id="btn-add-slip-row" class="kms-btn-navy px-2.5 py-1 text-xs">+ Add Line</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div>
+              <label class="block font-semibold mb-1">Vendor / Source</label>
+              <select name="slipSource" class="kms-input w-full text-xs">
+                <option>Purchased – Marberger</option>
+                <option>Purchased – Jordan Banana</option>
+                <option>Donation</option>
+                <option>Food bank</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Delivery Date</label>
+              <input name="slipDate" type="date" value="${today}" required class="kms-input w-full text-xs" />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Delivery Slip / Invoice # (Optional)</label>
+              <input name="slipRef" type="text" placeholder="e.g. INV-4821" class="kms-input w-full text-xs" />
+            </div>
+          </div>
+          <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                  <th class="p-2">Item</th>
+                  <th class="p-2 w-28">Qty Received</th>
+                  <th class="p-2 w-36">Exp Date (Opt.)</th>
+                  <th class="p-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody id="slip-rows-body" class="divide-y divide-[var(--line)]">
+                ${(() => {
+                  const rows = state._slipPresetItems && state._slipPresetItems.length
+                    ? state._slipPresetItems
+                    : state.items.filter(i => !i.discontinued).slice(0, 4).map(i => i.id);
+                  return rows.map(rid => `
+                    <tr class="slip-row">
+                      <td class="p-1.5">
+                        <select name="slipItemId" class="kms-input w-full text-xs">
+                          <option value="">-- Select Item --</option>
+                          ${state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}" ${i.id === rid ? 'selected' : ''}>${esc(i.name)} (${esc(i.unit)})</option>`).join('')}
+                        </select>
+                      </td>
+                      <td class="p-1.5"><input name="slipQty" type="number" step="0.5" min="0" placeholder="0" class="kms-input w-full text-xs text-center font-bold" /></td>
+                      <td class="p-1.5"><input name="slipExp" type="date" class="kms-input w-full text-xs" /></td>
+                      <td class="p-1.5 text-center"><button type="button" class="btn-rm-slip-row text-rose-600 font-bold text-sm">&times;</button></td>
+                    </tr>
+                  `).join('');
+                })()}
+              </tbody>
+            </table>
+          </div>
+          <button type="submit" class="kms-btn-ok px-4 py-2 text-sm">Post Delivery Slip &amp; Update Inventory</button>
+        </form>
+
         <form id="form-receive" class="kms-card p-4 space-y-3">
-          <h3 class="text-sm font-bold">Log a Delivery or Donation</h3>
+          <h3 class="text-sm font-bold">Quick Single-Item Check-In</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <select id="recv-item" name="itemId" required class="kms-input text-sm">${opts}</select>
             <input name="qty" type="number" step="0.5" min="0.5" required placeholder="Qty received" class="kms-input text-sm" />
@@ -2947,6 +3050,38 @@
       return;
     }
 
+    const slipPresetBtn = e.target.closest('[data-slip-preset]');
+    if (slipPresetBtn) {
+      const p = slipPresetBtn.dataset.slipPreset;
+      if (p === 'LOW') {
+        state._slipPresetItems = state.items.filter(i => !i.discontinued && itemNeed(i) > 0).map(i => i.id);
+      } else {
+        state._slipPresetItems = state.items.filter(i => !i.discontinued && (i.vendor || '').toLowerCase().includes(p.toLowerCase())).map(i => i.id);
+      }
+      if (!state._slipPresetItems.length) showToast(`No ${p} items found`, 'warn');
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-add-slip-row') {
+      const tbody = document.getElementById('slip-rows-body');
+      if (tbody) {
+        const optsHtml = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr class="slip-row">
+            <td class="p-1.5"><select name="slipItemId" class="kms-input w-full text-xs"><option value="">-- Select Item --</option>${optsHtml}</select></td>
+            <td class="p-1.5"><input name="slipQty" type="number" step="0.5" min="0" placeholder="0" class="kms-input w-full text-xs text-center font-bold" /></td>
+            <td class="p-1.5"><input name="slipExp" type="date" class="kms-input w-full text-xs" /></td>
+            <td class="p-1.5 text-center"><button type="button" class="btn-rm-slip-row text-rose-600 font-bold text-sm">&times;</button></td>
+          </tr>
+        `);
+      }
+      return;
+    }
+    if (e.target.classList && e.target.classList.contains('btn-rm-slip-row')) {
+      const row = e.target.closest('tr');
+      if (row) row.remove();
+      return;
+    }
     if (e.target.id === 'btn-start-tour') {
       const steps = getRoleTourSteps();
       if (steps.length) {
@@ -3354,6 +3489,71 @@
       closeModal();
       render();
       showToast(`Added ${item.name}`);
+      return;
+    }
+
+    if (e.target.id === 'form-delivery-slip') {
+      const slipDate = String(fd.get('slipDate') || localDateStr());
+      const slipSource = String(fd.get('slipSource') || 'Delivery Slip');
+      const slipRef = String(fd.get('slipRef') || '').trim();
+      const ids = fd.getAll('slipItemId');
+      const qtys = fd.getAll('slipQty');
+      const exps = fd.getAll('slipExp');
+      let count = 0;
+      const uName = getActiveUser().name;
+      ids.forEach((itemId, idx) => {
+        const q = parseFloat(qtys[idx]) || 0;
+        if (!itemId || q <= 0) return;
+        const x = state.items.find(i => i.id === itemId);
+        if (!x) return;
+        x.on_hand = Math.round((x.on_hand + q) * 100) / 100;
+        state.transactions.unshift({
+          id: uid('tx'), tx_date: slipDate, tx_type: 'RECEIVE', item_id: x.id, item_name: x.name,
+          unit: x.unit, qty: q, source: slipSource + (slipRef ? ` (${slipRef})` : ''),
+          exp_date: exps[idx] || '', cleared: false, staff_name: uName
+        });
+        logActivity('DELIVERY SLIP', `+${q} ${x.unit} ${x.name}${slipRef ? ' [' + slipRef + ']' : ''}`);
+        count++;
+      });
+      if (!count) { showToast('Enter a quantity greater than 0 for at least one item', 'warn'); return; }
+      state._slipPresetItems = [];
+      saveState();
+      render();
+      showToast(`Posted delivery slip: updated ${count} inventory item(s)!`);
+      return;
+    }
+
+    if (e.target.classList && e.target.classList.contains('form-reconcile-po')) {
+      const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.poId);
+      if (po && po.status === 'APPROVED_ORDERED') {
+        const uName = getActiveUser().name;
+        const todayStr = localDateStr();
+        let added = 0;
+        (po.lines || []).forEach(ln => {
+          const iid = ln.item_id || ln.id;
+          const ord = Number(ln.approved_qty || ln.qty || 0);
+          if (ord <= 0) return;
+          const recVal = parseFloat(fd.get('rec_' + iid));
+          const actual = isNaN(recVal) ? ord : Math.max(0, recVal);
+          ln.received_qty = actual;
+          if (actual <= 0) return;
+          const x = state.items.find(i => i.id === iid);
+          if (!x) return;
+          x.on_hand = Math.round((x.on_hand + actual) * 100) / 100;
+          state.transactions.unshift({
+            id: uid('tx'), tx_date: todayStr, tx_type: 'RECEIVE', item_id: x.id, item_name: x.name,
+            unit: x.unit, qty: actual, source: `PO ${po.po_number} (${po.vendor})`,
+            exp_date: '', cleared: false, staff_name: uName
+          });
+          added++;
+        });
+        po.status = 'RECEIVED';
+        po.received_by = uName;
+        logActivity('PO RECEIVED', `${po.po_number} (${added} items checked in)`);
+        saveState();
+        render();
+        showToast(`Reconciled ${po.po_number}: updated ${added} item(s) in stock!`);
+      }
       return;
     }
 
