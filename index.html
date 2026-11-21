@@ -1599,6 +1599,10 @@
                     `).join('')}
                   </div>
                 `}
+                <div class="grid grid-cols-2 gap-1.5 pt-1 text-xs">
+                  <input type="text" name="customPoNum" value="${(cad === 'W' ? 'MAR-' : 'JB-') + localDateStr().replace(/-/g, '') + '-' + ((state.purchaseOrders || []).length + 1)}" placeholder="PO #" class="kms-input text-xs font-mono" title="PO Number" />
+                  <input type="text" name="customInvNum" placeholder="Vendor Invoice / Ref # (opt.)" class="kms-input text-xs font-mono" title="Vendor Invoice or Ref #" />
+                </div>
                 <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[var(--line)] text-xs">
                   <select id="po-add-sel-${cad}" class="kms-input flex-1 min-w-[140px] text-xs">${addOpts}</select>
                   <input id="po-add-qty-${cad}" type="number" step="1" min="1" value="1" class="kms-input w-16 text-xs text-center font-bold" />
@@ -1621,7 +1625,7 @@
                 </div>
                 <div class="flex flex-wrap gap-1.5 no-print">
                   <button type="button" data-po-orderform="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Order Form (Cases)</button>
-                  ${(po.status === 'requested' || po.status === 'approved') ? `<button type="button" data-po-edit="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit Items / Qty</button>` : ''}
+                  ${['requested', 'approved', 'ordered'].includes(po.status) ? `<button type="button" data-po-edit="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit PO / Invoice #</button>` : ''}
                   ${po.status === 'requested' && isMgr ? `<button type="button" data-po-decide="${po.id}:approved" class="kms-btn-ok px-2.5 py-1 text-xs">Approve</button><button type="button" data-po-decide="${po.id}:rejected" class="kms-btn-alt px-2.5 py-1 text-xs">Reject</button>` : ''}
                   ${po.status === 'approved' ? `<input id="conf-${po.id}" placeholder="Vendor conf #" class="kms-input text-xs w-28" /><button type="button" data-po-order="${po.id}" class="kms-btn-navy px-2.5 py-1 text-xs">Mark Ordered</button>` : ''}
                   ${po.status === 'ordered' ? `<button type="button" data-po-reconcile="${po.id}" class="kms-btn-ok px-2.5 py-1 text-xs">Reconcile &amp; Receive</button>` : ''}
@@ -1671,29 +1675,34 @@
         </div>
 
         ${(() => {
-          const expectedPos = (state.purchaseOrders || []).filter(p => p.status === 'APPROVED_ORDERED');
+          const expectedPos = (state.purchaseOrders || []).filter(p => ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(p.status));
           if (!expectedPos.length) return '';
           return `
             <div class="kms-card p-4 border-l-4 border-l-blue-600 space-y-3">
               <div>
                 <h3 class="text-sm font-bold">Expected PO Deliveries (Reconcile from Delivery Slip)</h3>
-                <p class="text-xs opacity-75">Verify actual quantities received from your paper delivery slip before updating Living Stock.</p>
+                <p class="text-xs opacity-75">Verify actual quantities received and match the vendor Invoice / PO # before updating Living Stock.</p>
               </div>
               ${expectedPos.map(po => `
                 <form class="form-reconcile-po p-3 rounded-lg border border-[var(--line)] bg-black/5 space-y-2.5" data-po-id="${esc(po.id)}">
                   <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div><strong class="font-mono">${esc(po.po_number)}</strong> &middot; <strong>${esc(po.vendor)}</strong> &middot; ETA: ${esc(po.expected_arrival || 'TBD')}</div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <input type="text" name="recPoNum" value="${esc(po.po_number)}" placeholder="PO #" class="kms-input text-xs font-mono font-bold w-32" title="PO #" />
+                      <span>&middot; <strong>${esc(po.vendor)}</strong></span>
+                      <span class="tag ${po.status === 'requested' ? 'tag-LOW' : 'tag-OK'}">${esc(po.status.toUpperCase())}</span>
+                      <input type="text" name="recInvNum" value="${esc(po.vendor_conf || '')}" placeholder="Vendor Invoice #" class="kms-input text-xs font-mono w-32" title="Vendor Invoice #" />
+                    </div>
                     <button type="submit" class="kms-btn-ok px-3 py-1.5 text-xs">Reconcile &amp; Check In PO</button>
                   </div>
                   <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
                       <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1 pr-2">Item</th><th class="py-1 pr-2">Ordered</th><th class="py-1">Actually Received</th></tr></thead>
                       <tbody class="divide-y divide-[var(--line)]">
-                        ${(po.lines || []).filter(l => (l.approved_qty || l.qty || 0) > 0).map(ln => `
+                        ${(po.lines || []).filter(l => (l.qty || 0) > 0).map(ln => `
                           <tr>
-                            <td class="py-1.5 pr-2 font-semibold">${esc(ln.item_name || ln.name)}</td>
-                            <td class="py-1.5 pr-2">${ln.approved_qty || ln.qty} ${esc(ln.unit || '')}</td>
-                            <td class="py-1.5"><input type="number" step="0.5" min="0" name="rec_${esc(ln.item_id || ln.id)}" value="${ln.approved_qty || ln.qty}" class="kms-input w-20 text-xs font-bold text-center" /></td>
+                            <td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td>
+                            <td class="py-1.5 pr-2">${ln.qty} ${esc(ln.unit || '')}</td>
+                            <td class="py-1.5"><input type="number" step="1" min="0" name="rec_${esc(ln.item_id)}" value="${Math.max(0, Math.ceil(ln.qty - (ln.received || 0)))}" class="kms-input w-20 text-xs font-bold text-center" /></td>
                           </tr>
                         `).join('')}
                       </tbody>
@@ -2096,6 +2105,7 @@
                 ${(rec.allergens || []).length ? `<p class="text-xs font-bold text-[#b3122b]">Contains: ${esc(rec.allergens.join(', '))}</p>` : ''}
               </div>
               <div class="flex flex-wrap gap-1.5 no-print">
+                <button type="button" id="btn-rec-pending-pos" class="kms-btn-alt px-3 py-1 text-xs">Expected / Pending POs (${(state.purchaseOrders || []).filter(p => ['requested','approved','ordered'].includes(p.status)).length})</button>
                 <button type="button" id="btn-toggle-rec-matrix" class="kms-btn-alt px-3 py-1 text-xs">${showMatrix ? 'Single Scale View' : '40–80 Quick-Scan Table'}</button>
                 <button type="button" id="btn-print-recipe-sheet" class="kms-btn-navy px-3 py-1 text-xs">Print Recipe + QR</button>
                 <button type="button" data-del-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Delete</button>
@@ -2148,7 +2158,7 @@
               <div class="space-y-2">
                 ${(rec.ingredients || []).map((g, i) => `
                   <div class="p-2.5 rounded-lg border border-[var(--line)] text-xs space-y-1">
-                    <div class="flex justify-between font-bold"><span>${esc(g.name)}</span><span class="text-sm text-[#b3122b]">${fmtNum((g.qty || 0) * factor)} ${esc(g.unit)}</span></div>
+                    <div class="flex justify-between font-bold"><span>${esc(g.name)}${g.inv_id && onOrderQty(g.inv_id) > 0 ? ` <span class="tag tag-LOW ml-1">On PO: ${onOrderQty(g.inv_id)}</span>` : ''}</span><span class="text-sm text-[#b3122b]">${fmtNum((g.qty || 0) * factor)} ${esc(g.unit)}</span></div>
                     <div class="flex flex-wrap items-center gap-2 opacity-80 no-print">
                       <span>Takes out of stock:</span>
                       <select data-rec-ing="${rec.id}:${i}:inv_id" class="kms-input text-xs">
@@ -3201,7 +3211,11 @@
         openModal(`Edit Purchase Order — ${po.po_number}`, `
           <form id="form-edit-po" class="space-y-3 text-xs">
             <input type="hidden" name="poId" value="${esc(po.id)}" />
-            <p class="opacity-75">Update requested quantities below (set to 0 to remove an item).</p>
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="block font-semibold mb-1">PO #</label><input name="poNumber" type="text" required value="${esc(po.po_number)}" class="kms-input w-full text-xs font-mono" /></div>
+              <div><label class="block font-semibold mb-1">Vendor Invoice / Conf #</label><input name="vendorConf" type="text" value="${esc(po.vendor_conf || '')}" placeholder="e.g. INV-4821" class="kms-input w-full text-xs font-mono" /></div>
+            </div>
+            <p class="opacity-75">Update requested whole-case quantities below (set to 0 to remove an item).</p>
             <div class="max-h-60 overflow-y-auto divide-y divide-[var(--line)] border border-[var(--line)] rounded-lg">
               ${(po.lines || []).map(l => `
                 <div class="p-2 flex items-center justify-between gap-2">
@@ -3567,6 +3581,29 @@
       const rows = [['Item', 'Vendor', 'On Hand', 'Par', 'Unit', 'Whole Cases Needed', 'Unit Price']];
       activeItems.forEach(x => rows.push([x.name, x.vendor || '', x.on_hand, x.par, x.unit, Math.max(1, Math.ceil(itemNeed(x))), x.unit_price || 0]));
       download('executive_restock_needs.csv', rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
+      return;
+    }
+    if (e.target.id === 'btn-rec-pending-pos') {
+      const pending = (state.purchaseOrders || []).filter(p => ['requested', 'approved', 'ordered'].includes(p.status));
+      openModal(`Expected & Pending POs (${pending.length})`, `
+        <div class="space-y-3 text-xs">
+          ${!pending.length ? '<p class="opacity-70">No pending or expected purchase orders right now.</p>' : pending.map(po => `
+            <div class="p-3 rounded-lg border border-[var(--line)] space-y-1.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div><strong class="font-mono">${esc(po.po_number)}</strong>${po.vendor_conf ? ` <span class="font-mono opacity-75">· Inv ${esc(po.vendor_conf)}</span>` : ''} &middot; <strong>${esc(po.vendor)}</strong></div>
+                <span class="tag ${po.status === 'ordered' || po.status === 'approved' ? 'tag-OK' : 'tag-LOW'}">${esc(po.status.toUpperCase())}</span>
+              </div>
+              <div class="divide-y divide-[var(--line)]">
+                ${(po.lines || []).map(l => `<div class="py-1 flex justify-between"><span>${esc(l.name)}</span><span class="font-bold">${Math.max(1, Math.ceil(l.qty))} ${esc(l.unit)}</span></div>`).join('')}
+              </div>
+            </div>
+          `).join('')}
+          <div class="flex gap-2 pt-1">
+            <button type="button" data-tab="orders" onclick="closeModal()" class="kms-btn-navy flex-1 py-2 text-xs">Go to Orders &amp; POs</button>
+            <button type="button" data-tab="receive" onclick="closeModal()" class="kms-btn-ok flex-1 py-2 text-xs">Go to Receive / Check-In</button>
+          </div>
+        </div>
+      `);
       return;
     }
     if (e.target.id === 'btn-start-tour') {
@@ -3993,7 +4030,8 @@
       if (!lines.length) { showToast('Check at least one item with qty > 0 to request a PO', 'warn'); return; }
       const po = {
         id: uid('po'),
-        po_number: (cad === 'W' ? 'MAR-' : 'JB-') + localDateStr().replace(/-/g, '') + '-' + ((state.purchaseOrders || []).length + 1),
+        po_number: String(fd.get('customPoNum') || '').trim() || ((cad === 'W' ? 'MAR-' : 'JB-') + localDateStr().replace(/-/g, '') + '-' + ((state.purchaseOrders || []).length + 1)),
+        vendor_conf: String(fd.get('customInvNum') || '').trim(),
         vendor: cad === 'W' ? 'Marberger / Produce' : 'Jordan Banana',
         cadence: cad,
         status: 'requested',
@@ -4029,8 +4067,12 @@
           }
         }
         if (!nextLines.length) { showToast('PO must have at least 1 item', 'warn'); return; }
+        const newPoNum = String(fd.get('poNumber') || '').trim();
+        const newConf = String(fd.get('vendorConf') || '').trim();
+        if (newPoNum) po.po_number = newPoNum;
+        po.vendor_conf = newConf;
         po.lines = nextLines;
-        logActivity('PO UPDATED', `${po.po_number} (${nextLines.length} items)`);
+        logActivity('PO UPDATED', `${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${nextLines.length} items)`);
         saveState();
         closeModal();
         render();
@@ -4072,31 +4114,35 @@
 
     if (e.target.classList && e.target.classList.contains('form-reconcile-po')) {
       const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.poId);
-      if (po && po.status === 'APPROVED_ORDERED') {
+      if (po && ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(po.status)) {
         const uName = getActiveUser().name;
         const todayStr = localDateStr();
+        const poNum = String(fd.get('recPoNum') || '').trim();
+        if (poNum) po.po_number = poNum;
+        const invNum = String(fd.get('recInvNum') || '').trim();
+        if (invNum) po.vendor_conf = invNum;
         let added = 0;
         (po.lines || []).forEach(ln => {
-          const iid = ln.item_id || ln.id;
-          const ord = Number(ln.approved_qty || ln.qty || 0);
+          const iid = ln.item_id;
+          const ord = Number(ln.qty || 0);
           if (ord <= 0) return;
           const recVal = parseFloat(fd.get('rec_' + iid));
-          const actual = isNaN(recVal) ? ord : Math.max(0, recVal);
-          ln.received_qty = actual;
+          const actual = isNaN(recVal) ? ord : Math.max(0, Math.ceil(recVal));
+          ln.received = actual;
           if (actual <= 0) return;
           const x = state.items.find(i => i.id === iid);
           if (!x) return;
           x.on_hand = Math.round((x.on_hand + actual) * 100) / 100;
           state.transactions.unshift({
             id: uid('tx'), tx_date: todayStr, tx_type: 'RECEIVE', item_id: x.id, item_name: x.name,
-            unit: x.unit, qty: actual, source: `PO ${po.po_number} (${po.vendor})`,
+            unit: x.unit, qty: actual, source: `PO ${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${po.vendor})`,
             exp_date: '', cleared: false, staff_name: uName
           });
           added++;
         });
-        po.status = 'RECEIVED';
+        po.status = 'closed';
         po.received_by = uName;
-        logActivity('PO RECEIVED', `${po.po_number} (${added} items checked in)`);
+        logActivity('PO RECEIVED', `${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${added} items checked in)`);
         saveState();
         render();
         showToast(`Reconciled ${po.po_number}: updated ${added} item(s) in stock!`);
