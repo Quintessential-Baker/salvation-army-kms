@@ -731,7 +731,9 @@
     if (aRole !== 'ADMIN' && aRole !== 'MANAGER') return false;
     if (!target) return false;
     if (target.id === 'usr-1') return false;
-    return (ROLE_RANK[normalizeRole(target.role)] || 0) < (ROLE_RANK[aRole] || 0);
+    const tRank = ROLE_RANK[normalizeRole(target.role)] || 0;
+    const aRank = ROLE_RANK[aRole] || 0;
+    return aRole === 'ADMIN' ? tRank <= aRank : tRank < aRank;
   }
   function isMgmtOrHigher(u) { const r = normalizeRole((u || getActiveUser()).role); return r === 'ADMIN' || r === 'MANAGER'; }
   function isStaffOrHigher(u) { const r = normalizeRole((u || getActiveUser()).role); return r === 'ADMIN' || r === 'MANAGER' || r === 'STAFF'; }
@@ -1088,10 +1090,13 @@
           done_by: c.done_by || '', done_at: c.done_at || '', priority_carryover: !!c.priority_carryover
         })), { onConflict: 'id' }),
         sbClient.from('kms_users').upsert(state.users.map(u => ({
-          id: u.id, name: u.name, role: u.role, initials: u.initials, pin_hash: u.pin_hash,
+          id: u.id, name: u.name, role: normalizeRole(u.role), initials: u.initials, pin_hash: u.pin_hash,
           pin_salt: u.pin_salt, must_change_pin: !!u.must_change_pin, active: u.active !== false,
-          onboarding_completed: !!u.onboarding_completed, completed_training_ids: u.completed_training_ids || []
-        })), { onConflict: 'id' }),
+          onboarding_completed: !!u.onboarding_completed, completed_training_ids: u.completed_training_ids || [],
+          email: u.email || ''
+        })), { onConflict: 'id' }).then(res => {
+          if (res && res.error) showToast('Cloud user sync failed — run updated supabase_setup.sql in Supabase', 'error');
+        }),
         sbClient.from('kms_announcements').upsert(state.announcements.map(a => ({
           id: a.id, priority: a.priority, title: a.title, body: a.body, alert_at: a.alert_at || '', repeat_rule: a.repeat_rule || 'none',
           repeat_days: a.repeat_days || [], expires_at: a.expires_at || '', author: a.author || '',
@@ -3039,7 +3044,7 @@
     if (!isMgmtOrHigher()) { main.innerHTML = '<div class="kms-card p-6 text-center text-xs">ADMIN or MANAGER access required.</div>'; return; }
     const me = getActiveUser();
     const myRank = ROLE_RANK[normalizeRole(me.role)] || 0;
-    const assignableRoles = ['VOLUNTEER', 'STAFF', 'MANAGER', 'ADMIN'].filter(r => ROLE_RANK[r] < myRank);
+    const assignableRoles = ['VOLUNTEER', 'STAFF', 'MANAGER', 'ADMIN'].filter(r => isAdminRole(me) ? ROLE_RANK[r] <= myRank : ROLE_RANK[r] < myRank);
     const todayAdm = localDateStr();
     main.innerHTML = `
       <div class="space-y-4">
@@ -4078,7 +4083,7 @@
       const me = getActiveUser();
       if (!u || !canManageUserAccount(me, u)) { showToast('You can only edit accounts with a role lower than yours', 'warn'); return; }
       const myRank = ROLE_RANK[normalizeRole(me.role)] || 0;
-      const roleOpts = ['VOLUNTEER', 'STAFF', 'MANAGER', 'ADMIN'].filter(r => ROLE_RANK[r] < myRank);
+      const roleOpts = ['VOLUNTEER', 'STAFF', 'MANAGER', 'ADMIN'].filter(r => isAdminRole(me) ? ROLE_RANK[r] <= myRank : ROLE_RANK[r] < myRank);
       openModal(`Edit Account — ${u.name}`, `
         <form id="form-edit-usr" class="space-y-3 text-xs">
           <input type="hidden" name="userId" value="${esc(u.id)}" />
@@ -4777,7 +4782,7 @@
       const u = state.users.find(x => x.id === fd.get('userId'));
       const me = getActiveUser();
       const newRole = normalizeRole(fd.get('role'));
-      if (!u || !canManageUserAccount(me, u) || (ROLE_RANK[newRole] || 0) >= (ROLE_RANK[normalizeRole(me.role)] || 0)) {
+      if (!u || !canManageUserAccount(me, u) || !(isAdminRole(me) ? (ROLE_RANK[newRole] || 0) <= (ROLE_RANK[normalizeRole(me.role)] || 0) : (ROLE_RANK[newRole] || 0) < (ROLE_RANK[normalizeRole(me.role)] || 0))) {
         showToast('You can only assign roles lower than yours', 'warn');
         return;
       }
