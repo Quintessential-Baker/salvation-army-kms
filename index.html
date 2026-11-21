@@ -605,7 +605,7 @@
   // Role Access Control (ADMIN, MANAGER, STAFF, VOLUNTEER)
   const ROLE_TABS = {
     ADMIN: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'report', 'users', 'help'],
-    MANAGER: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'report', 'help'],
+    MANAGER: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'report', 'users', 'help'],
     STAFF: ['dashboard', 'stock', 'orders', 'receive', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'forecasting', 'records', 'help'],
     VOLUNTEER: ['dashboard', 'stock', 'menu', 'prep', 'recipes', 'safety', 'storage', 'checklists', 'records', 'help']
   };
@@ -618,7 +618,16 @@
     if (r === 'VOLUNTEER') return 'VOLUNTEER';
     return 'VOLUNTEER';
   }
+  const ROLE_RANK = { ADMIN: 4, MANAGER: 3, STAFF: 2, VOLUNTEER: 1 };
   function isAdminRole(u) { return normalizeRole((u || getActiveUser()).role) === 'ADMIN'; }
+  function canManageUserAccount(actor, target) {
+    const a = actor || getActiveUser();
+    const aRole = normalizeRole(a.role);
+    if (aRole !== 'ADMIN' && aRole !== 'MANAGER') return false;
+    if (!target) return false;
+    if (target.id === 'usr-1') return false;
+    return (ROLE_RANK[normalizeRole(target.role)] || 0) < (ROLE_RANK[aRole] || 0);
+  }
   function isMgmtOrHigher(u) { const r = normalizeRole((u || getActiveUser()).role); return r === 'ADMIN' || r === 'MANAGER'; }
   function isStaffOrHigher(u) { const r = normalizeRole((u || getActiveUser()).role); return r === 'ADMIN' || r === 'MANAGER' || r === 'STAFF'; }
 
@@ -2907,7 +2916,10 @@
 
   // 14. USERS & ACTIVITY FEED
   function renderUsers(main) {
-    if (!isAdminRole()) { main.innerHTML = '<div class="kms-card p-6 text-center text-xs">ADMIN access required.</div>'; return; }
+    if (!isMgmtOrHigher()) { main.innerHTML = '<div class="kms-card p-6 text-center text-xs">ADMIN or MANAGER access required.</div>'; return; }
+    const me = getActiveUser();
+    const myRank = ROLE_RANK[normalizeRole(me.role)] || 0;
+    const assignableRoles = ['VOLUNTEER', 'STAFF', 'MANAGER', 'ADMIN'].filter(r => ROLE_RANK[r] < myRank);
     const todayAdm = localDateStr();
     main.innerHTML = `
       <div class="space-y-4">
@@ -2952,7 +2964,7 @@
             <h2 class="text-sm font-bold">Add Staff / Volunteer</h2>
             <input name="name" required placeholder="Full name" class="kms-input w-full text-sm" />
             <div class="grid grid-cols-2 gap-2">
-              <select name="role" class="kms-input text-sm"><option value="VOLUNTEER">VOLUNTEER</option><option value="STAFF">STAFF</option><option value="MANAGER">MANAGER</option><option value="ADMIN">ADMIN</option></select>
+              <select name="role" class="kms-input text-sm">${assignableRoles.map(r => `<option value="${r}">${r}</option>`).join('')}</select>
               <input name="initials" maxlength="4" required placeholder="Initials" class="kms-input text-sm uppercase" />
             </div>
             <input name="pin" required minlength="6" placeholder="Starting PIN (6+ chars)" class="kms-input w-full text-sm" />
@@ -2961,15 +2973,20 @@
 
           <div class="lg:col-span-2 kms-card p-4 space-y-2">
             <h3 class="text-sm font-bold">Team Roster</h3>
-            ${state.users.map(u => `
+            ${state.users.map(u => {
+              const canManage = canManageUserAccount(me, u);
+              const isSelfOwner = (u.id === 'usr-1' && me.id === 'usr-1');
+              return `
               <div class="p-2.5 rounded-lg border border-[var(--line)] flex flex-wrap justify-between items-center gap-2 text-xs">
-                <div><strong>${esc(u.name)}</strong> (${esc(u.initials)}) · ${esc(u.role)}${u.id === 'usr-1' ? ' <span class="tag tag-OK ml-1">PROTECTED OWNER</span>' : ''}</div>
-                <div class="flex gap-1.5">
-                  ${(u.id !== 'usr-1' || getActiveUser().id === 'usr-1') ? `<button type="button" data-reset-pin="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Reset PIN</button>` : ''}
-                  ${u.id !== 'usr-1' ? `<button type="button" data-toggle-usr="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">${u.active !== false ? 'Deactivate' : 'Activate'}</button>` : ''}
+                <div><strong>${esc(u.name)}</strong> (${esc(u.initials)}) · ${esc(u.role)}${u.active === false ? ' <span class="tag tag-OUT ml-1">INACTIVE</span>' : ''}</div>
+                <div class="flex flex-wrap gap-1.5">
+                  ${canManage ? `<button type="button" data-edit-usr="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit</button>` : ''}
+                  ${(canManage || isSelfOwner) ? `<button type="button" data-reset-pin="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Reset PIN</button>` : ''}
+                  ${canManage ? `<button type="button" data-toggle-usr="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">${u.active !== false ? 'Deactivate' : 'Activate'}</button>` : ''}
+                  ${canManage && u.id !== me.id ? `<button type="button" data-del-usr="${u.id}" class="kms-btn-primary px-2.5 py-1 text-xs">Delete</button>` : ''}
                 </div>
               </div>
-            `).join('')}
+            `; }).join('')}
           </div>
         </div>
 
@@ -3900,11 +3917,47 @@
       return;
     }
 
+    const editUsrBtn = e.target.closest('[data-edit-usr]');
+    if (editUsrBtn) {
+      const u = state.users.find(x => x.id === editUsrBtn.dataset.editUsr);
+      const me = getActiveUser();
+      if (!u || !canManageUserAccount(me, u)) { showToast('You can only edit accounts with a role lower than yours', 'warn'); return; }
+      const myRank = ROLE_RANK[normalizeRole(me.role)] || 0;
+      const roleOpts = ['VOLUNTEER', 'STAFF', 'MANAGER', 'ADMIN'].filter(r => ROLE_RANK[r] < myRank);
+      openModal(`Edit Account — ${u.name}`, `
+        <form id="form-edit-usr" class="space-y-3 text-xs">
+          <input type="hidden" name="userId" value="${esc(u.id)}" />
+          <div><label class="block font-semibold mb-1">Full Name</label><input name="name" type="text" required value="${esc(u.name)}" class="kms-input w-full text-sm" /></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block font-semibold mb-1">Initials</label><input name="initials" type="text" maxlength="4" required value="${esc(u.initials)}" class="kms-input w-full text-sm uppercase" /></div>
+            <div><label class="block font-semibold mb-1">Role</label><select name="role" class="kms-input w-full text-sm">${roleOpts.map(r => `<option value="${r}" ${normalizeRole(u.role) === r ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
+          </div>
+          <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-semibold">Save Account Changes</button>
+        </form>
+      `);
+      return;
+    }
+    const delUsrBtn = e.target.closest('[data-del-usr]');
+    if (delUsrBtn) {
+      const u = state.users.find(x => x.id === delUsrBtn.dataset.delUsr);
+      const me = getActiveUser();
+      if (!u || !canManageUserAccount(me, u) || u.id === me.id) { showToast('You can only delete accounts lower than your role', 'warn'); return; }
+      askConfirm('Delete User Permanently', `Permanently delete ${u.name} (${u.role})? This removes their login completely.`, () => {
+        state.users = state.users.filter(x => x.id !== u.id);
+        if (sbClient) sbClient.from('kms_users').delete().eq('id', u.id).then(() => {});
+        logActivity('USER DELETED', `Permanently deleted ${u.name} (${u.role})`);
+        saveState();
+        render();
+        showToast(`Deleted user ${u.name}`);
+      });
+      return;
+    }
     const rpBtn = e.target.closest('[data-reset-pin]');
     if (rpBtn) {
       const u = state.users.find(x => x.id === rpBtn.dataset.resetPin);
-      if (u && u.id === 'usr-1' && getActiveUser().id !== 'usr-1') {
-        showToast('Only the primary owner can reset their own PIN', 'warn');
+      const me = getActiveUser();
+      if (u && !canManageUserAccount(me, u) && !(u.id === 'usr-1' && me.id === 'usr-1')) {
+        showToast('You can only reset PINs for accounts lower than your role', 'warn');
         return;
       }
       if (u) {
@@ -3920,7 +3973,7 @@
     if (tuBtn) {
       const u = state.users.find(x => x.id === tuBtn.dataset.toggleUsr);
       if (u) {
-        if (u.id === 'usr-1') { showToast('Primary owner account cannot be deactivated or removed', 'warn'); return; }
+        if (!canManageUserAccount(getActiveUser(), u)) { showToast('You can only deactivate accounts lower than your role', 'warn'); return; }
         u.active = u.active === false ? true : false;
         saveState();
         render();
@@ -4539,8 +4592,33 @@
       return;
     }
 
+    if (e.target.id === 'form-edit-usr') {
+      const u = state.users.find(x => x.id === fd.get('userId'));
+      const me = getActiveUser();
+      const newRole = normalizeRole(fd.get('role'));
+      if (!u || !canManageUserAccount(me, u) || (ROLE_RANK[newRole] || 0) >= (ROLE_RANK[normalizeRole(me.role)] || 0)) {
+        showToast('You can only assign roles lower than yours', 'warn');
+        return;
+      }
+      u.name = String(fd.get('name') || '').trim() || u.name;
+      u.initials = String(fd.get('initials') || '').trim().toUpperCase() || u.initials;
+      u.role = newRole;
+      logActivity('USER UPDATED', `${u.name} (${u.role})`);
+      closeModal();
+      saveState();
+      render();
+      showToast(`Updated ${u.name} (${u.role})`);
+      return;
+    }
+
     if (e.target.id === 'form-add-user') {
-      const u = makeUser(uid('usr'), fd.get('name').trim(), fd.get('role'), fd.get('initials').trim().toUpperCase(), fd.get('pin'), true);
+      const me = getActiveUser();
+      const reqRole = normalizeRole(fd.get('role'));
+      if (!isMgmtOrHigher(me) || (ROLE_RANK[reqRole] || 0) >= (ROLE_RANK[normalizeRole(me.role)] || 0)) {
+        showToast('You can only create accounts with a role lower than yours', 'warn');
+        return;
+      }
+      const u = makeUser(uid('usr'), fd.get('name').trim(), reqRole, fd.get('initials').trim().toUpperCase(), fd.get('pin'), true);
       state.users.push(u);
       logActivity('ADD USER', `${u.name} (${u.role})`);
       saveState();
