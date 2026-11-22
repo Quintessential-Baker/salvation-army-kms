@@ -1414,319 +1414,572 @@
       { id: 'forecasting', label: 'Served & Forecast' }
     ]},
     { id: 'admin', label: 'Admin & Reports', tabs: [
-      { id: 'report', label: 'Monthly Report' },
+      { id: 'report', label: 'Reports Center' },
       { id: 'users', label: 'Users & Activity' }, { id: 'help', label: 'Help & Training' }
     ]}
   ];
-
-  function renderNav() {
-    const locked = !!state.isLocked;
-    ['btn-sync-pill', 'btn-open-chat', 'btn-switch-user', 'btn-lock-app', 'btn-tools', 'nav-groups', 'nav-subtabs', 'mobile-dock'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle('hidden', locked);
-    });
-    const tmEl = document.getElementById('tools-menu');
-    if (tmEl && locked) tmEl.classList.add('hidden');
-    if (locked) {
-      closeModal();
-      document.getElementById('hdr-user').textContent = 'Locked';
-      return;
-    }
-    const u = getActiveUser();
-    const allowed = getAllowedTabs(u);
-    if (!allowed.includes(state.activeTab)) state.activeTab = allowed[0];
-    document.getElementById('hdr-user').textContent = `${u.name} (${u.role})`;
-    updateChatBadge();
-
-    const activeGrp = NAV_GROUPS.find(g => g.tabs.some(t => t.id === state.activeTab)) || NAV_GROUPS[0];
-    const grpEl = document.getElementById('nav-groups');
-    grpEl.innerHTML = NAV_GROUPS.map(g => {
-      const visTabs = g.tabs.filter(t => allowed.includes(t.id));
-      if (!visTabs.length) return '';
-      const isOn = g.id === activeGrp.id;
-      return `<button type="button" data-grp="${g.id}" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${isOn ? 'bg-[#b3122b] text-white shadow' : 'text-white/80 hover:bg-white/10'}">${g.label}</button>`;
-    }).join('');
-
-    const subEl = document.getElementById('nav-subtabs');
-    const visSub = activeGrp.tabs.filter(t => allowed.includes(t.id));
-    subEl.classList.toggle('hidden', visSub.length <= 1);
-    subEl.innerHTML = visSub.map(t => {
-      const isOn = t.id === state.activeTab;
-      return `<button type="button" data-tab="${t.id}" class="px-3 py-1 rounded-md text-xs font-semibold transition ${isOn ? 'bg-white text-[#1b365d] shadow-sm' : 'text-white/85 hover:bg-white/15'}">${t.label}</button>`;
-    }).join('');
-
-    const dockEl = document.getElementById('mobile-dock');
-    const dockTabs = [
-      ['dashboard', 'Home'], ['stock', 'Stock'], ['menu', 'Menu'], ['safety', 'Safety'], ['receive', 'Receive']
-    ].filter(([id]) => allowed.includes(id));
-    dockEl.innerHTML = dockTabs.map(([id, lbl]) => `
-      <button type="button" data-tab="${id}" class="px-2.5 py-1.5 rounded-lg text-xs font-bold ${state.activeTab === id ? 'bg-[#b3122b] text-white' : 'opacity-75'}">${lbl}</button>
-    `).join('');
-
-    const unread = state.messages.filter(m => m.sender_id !== u.id && (m.recipient_id === 'ALL' || m.recipient_id === u.id)).length;
-    const cb = document.getElementById('chat-badge');
-    if (cb) {
-      cb.textContent = String(unread);
-      cb.classList.toggle('hidden', unread === 0);
-    }
-  }
-
-  // Mandatory Modals (PIN Change & Training)
-  function checkMandatoryModals() {
-    const u = getActiveUser();
-    const pinB = document.getElementById('pin-change-backdrop');
-    const trnB = document.getElementById('training-backdrop');
-    if (state.isLocked) {
-      pinB.classList.add('hidden'); pinB.classList.remove('flex');
-      trnB.classList.add('hidden'); trnB.classList.remove('flex');
-      return;
-    }
-    if (u.must_change_pin) {
-      document.getElementById('pin-change-sub').textContent = `Hi ${u.name}, please set your personal 6+ character PIN before using the system.`;
-      pinB.classList.remove('hidden'); pinB.classList.add('flex');
-      trnB.classList.add('hidden'); trnB.classList.remove('flex');
-      return;
-    }
-    pinB.classList.add('hidden'); pinB.classList.remove('flex');
-    const pendingTrn = (state.trainingModules || []).filter(m => (m.role === 'ALL' || normalizeRole(m.role) === normalizeRole(u.role)) && !(u.completed_training_ids || []).includes(m.id));
-    if (pendingTrn.length && !u.onboarding_completed) {
-      if (trainingStep >= pendingTrn.length) trainingStep = pendingTrn.length - 1;
-      const mod = pendingTrn[trainingStep];
-      document.getElementById('trn-title').textContent = mod.title;
-      document.getElementById('trn-body').textContent = mod.content;
-      document.getElementById('trn-step').textContent = `${trainingStep + 1} / ${pendingTrn.length}`;
-      document.getElementById('btn-trn-prev').disabled = trainingStep === 0;
-      document.getElementById('btn-trn-next').textContent = trainingStep === pendingTrn.length - 1 ? 'Complete Training ✓' : 'Next →';
-      trnB.classList.remove('hidden'); trnB.classList.add('flex');
-    } else {
-      trnB.classList.add('hidden'); trnB.classList.remove('flex');
-    }
-  }
-
-  // Main Render Router
-  function render() {
-    relearnPars();
-    renderNav();
-    updateSyncUI();
-    const main = document.getElementById('app-main');
-    if (forecastChart) { forecastChart.destroy(); forecastChart = null; }
-
-    if (state.isLocked) {
-      const activeUsers = sortUsersByRoleAndName(state.users.filter(u => u.active !== false));
+  // 13. COMPREHENSIVE KITCHEN REPORTS CENTER
+  function renderReport(main) {
+    if (!isMgmtOrHigher()) {
       main.innerHTML = `
-        <div class="max-w-md mx-auto mt-10 kms-card p-6 space-y-4 shadow-md">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-bold">SA</div>
-            <div>
-              <h2 class="text-base font-bold">Kitchen OS Locked</h2>
-              <p class="text-xs opacity-70">Select your profile and enter your PIN.</p>
-            </div>
-          </div>
-          <form id="form-unlock" class="space-y-3">
-            <select name="userId" class="kms-input w-full text-sm">
-              ${activeUsers.map(u => `<option value="${u.id}" ${u.id === state.activeUserId ? 'selected' : ''}>${esc(u.name)} — ${esc(u.role)}</option>`).join('')}
-            </select>
-            <input name="pin" type="password" required placeholder="Enter your personal PIN" class="kms-input w-full text-sm" />
-            <div id="unlock-err" class="text-xs font-bold text-red-600 hidden">Incorrect PIN.</div>
-            <button type="submit" class="kms-btn-primary w-full py-2.5 text-sm">Sign In &amp; Unlock</button>
-          </form>
-          <details class="pt-3 border-t border-[var(--line)] text-xs">
-            <summary class="cursor-pointer font-semibold opacity-75 hover:opacity-100">Admin / Tech-Support Login (Supabase Auth)</summary>
-            <form id="form-sb-auth" class="space-y-2.5 mt-3">
-              <p class="opacity-70">Verified server-side by Supabase Auth. Create your admin account in Supabase Dashboard &rarr; Authentication &rarr; Users.</p>
-              <input name="email" type="email" required placeholder="Admin email" class="kms-input w-full text-xs" />
-              <input name="password" type="password" required placeholder="Supabase Auth password" class="kms-input w-full text-xs" />
-              <div id="sb-auth-err" class="text-xs font-bold text-red-600 hidden"></div>
-              <button type="submit" class="kms-btn-navy w-full py-2 text-xs">Verify via Supabase Auth &amp; Unlock ADMIN</button>
-            </form>
-          </details>
+        <div class="kms-card p-6 max-w-lg mx-auto text-center space-y-2">
+          <div class="tag tag-OUT inline-block">MANAGEMENT ONLY</div>
+          <h2 class="text-base font-bold">Restricted Kitchen &amp; Executive Reports</h2>
+          <p class="text-xs opacity-75">This section contains financial, compliance, inventory, and management reports and is restricted to Management accounts.</p>
         </div>
       `;
-      checkMandatoryModals();
       return;
     }
 
-    switch (state.activeTab) {
-      case 'dashboard': renderDashboard(main); break;
-      case 'stock': renderStock(main); break;
-      case 'orders': renderOrders(main); break;
-      case 'receive': renderReceive(main); break;
-      case 'menu': renderMenu(main); break;
-      case 'prep': renderPrep(main); break;
-      case 'recipes': renderRecipes(main); break;
-      case 'safety': renderSafety(main); break;
-      case 'storage': renderStorage(main); break;
-      case 'checklists': renderChecklists(main); break;
-      case 'forecasting': renderForecasting(main); break;
-      case 'records': renderRecords(main); break;
-      case 'report': renderReport(main); break;
-      case 'users': renderUsers(main); break;
-      case 'help': renderHelp(main); break;
-      default: renderDashboard(main);
+    const today = localDateStr();
+    const rm = state.reportMonth || today.slice(0, 7);
+    const rangeMode = state.reportRange || 'month';
+    const subRep = state.reportType || 'exec';
+    const invLocFilter = state._repInvLoc || 'ALL';
+    const months = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+      months.push(localDateStr(d).slice(0, 7));
     }
-    if (tourState.active) {
-      const steps = getRoleTourSteps();
-      const idx = Math.min(tourState.stepIndex, Math.max(0, steps.length - 1));
-      const step = steps[idx];
-      if (step) {
-        tourState.completedTabs[step.tab] = true;
-        const banner = document.createElement('div');
-        banner.id = 'tour-banner';
-        banner.className = 'mb-4 bg-[#1b365d] text-white rounded-xl p-4 shadow-lg border border-white/20 no-print';
-        banner.innerHTML = `
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div class="space-y-1.5 flex-1 min-w-[240px]">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="px-2 py-0.5 rounded bg-[#b3122b] text-[11px] font-bold uppercase tracking-wide">Interactive Tutorial &bull; Step ${idx + 1} of ${steps.length}</span>
-                <span class="text-xs text-white/85 font-semibold">${esc(step.title)}</span>
-              </div>
-              <p class="text-xs sm:text-sm text-white leading-relaxed">${esc(step.desc)}</p>
-              <p class="text-xs text-amber-300 font-medium"><strong>Try it now:</strong> ${esc(step.tryIt)}</p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <button type="button" id="btn-tour-prev" ${idx === 0 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg border border-white/30 text-xs font-semibold ${idx === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-white/10'}">&larr; Back</button>
-              ${idx < steps.length - 1
-                ? `<button type="button" id="btn-tour-next" class="px-3.5 py-1.5 rounded-lg bg-[#b3122b] hover:bg-[#910d22] text-white text-xs font-semibold">Next Step &rarr;</button>`
-                : `<button type="button" id="btn-tour-finish" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Finish Tour</button>`
-              }
-              <button type="button" id="btn-tour-exit" class="px-2.5 py-1.5 rounded-lg text-white/75 hover:text-white text-xs font-medium">Exit</button>
-            </div>
-          </div>
-        `;
-        main.prepend(banner);
-      }
+
+    let startStr = rm + '-01';
+    let endStr = rm + '-31';
+    let periodLabel = `Month: ${rm}`;
+    if (rangeMode === '30d') { startStr = addDays(today, -29); endStr = today; periodLabel = `Last 30 Days (${startStr} to ${today})`; }
+    else if (rangeMode === '90d') { startStr = addDays(today, -89); endStr = today; periodLabel = `Last 90 Days (${startStr} to ${today})`; }
+    else if (rangeMode === 'ytd') { startStr = today.slice(0, 4) + '-01-01'; endStr = today; periodLabel = `Year-to-Date (${today.slice(0, 4)})`; }
+    else if (rangeMode === '365d') { startStr = addDays(today, -364); endStr = today; periodLabel = `Last 12 Months (${startStr} to ${today})`; }
+    else if (rangeMode === 'all') { startStr = '2000-01-01'; endStr = '2099-12-31'; periodLabel = 'All-Time Records'; }
+
+    const inPeriod = (ds) => { const s = String(ds || '').slice(0, 10); return s >= startStr && s <= endStr; };
+
+    // Core Metrics
+    const servedDays = state.menuPlan.filter(m => m.status === 'SERVED' && inPeriod(m.service_date)).sort((a, b) => b.service_date.localeCompare(a.service_date));
+    const meals = servedDays.reduce((s, m) => s + (m.served_portions || 0), 0);
+    const plannedTotal = servedDays.reduce((s, m) => s + (m.planned_portions || 0), 0);
+    const avgPerDay = servedDays.length ? (meals / servedDays.length) : 0;
+
+    const recvs = state.transactions.filter(t => t.tx_type === 'RECEIVE' && inPeriod(t.tx_date));
+    const donatedRecvs = recvs.filter(t => /donat|food bank/i.test(t.source || ''));
+    const purchasedRecvs = recvs.filter(t => !/donat|food bank/i.test(t.source || ''));
+    const spend = purchasedRecvs.reduce((s, t) => {
+      const item = state.items.find(i => i.id === t.item_id);
+      const unitP = Number(t.cost || (item ? item.unit_price : 0) || 0);
+      return s + (t.cost ? Number(t.cost) : (Number(t.qty || 0) * unitP));
+    }, 0);
+    const costPerMeal = meals > 0 && spend > 0 ? (spend / meals) : 0;
+
+    const waste = state.transactions.filter(t => t.tx_type === 'WASTE' && inPeriod(t.tx_date));
+    const savedLeftovers = (state.storageTags || []).filter(t => t.status === 'USED' && inPeriod(t.prep_date)).length;
+    const tossedLeftovers = (state.storageTags || []).filter(t => t.status === 'DISCARDED' && inPeriod(t.prep_date)).length;
+
+    const safetyDates = Object.keys(state.safetyLogs || {}).filter(d => inPeriod(d)).sort((a, b) => b.localeCompare(a));
+    let checks = 0, fails = 0;
+    safetyDates.forEach(d => {
+      const t = state.safetyLogs[d].temps || {};
+      TEMP_CHECKS.forEach((c, i) => {
+        if (t[i] === undefined || t[i] === null || t[i] === '') return;
+        checks++;
+        if (c[1] === 'max' ? Number(t[i]) > c[2] : Number(t[i]) < c[2]) fails++;
+      });
+    });
+    const safetyPct = checks ? Math.round(((checks - fails) / checks) * 100) : null;
+
+    const activeItems = state.items.filter(x => !x.discontinued);
+    const stockValue = activeItems.reduce((s, x) => s + (x.on_hand || 0) * (x.unit_price || 0), 0);
+    const lowItems = activeItems.filter(x => itemStatus(x) !== 'OK').map(x => {
+      const needCases = x.on_hand <= 0 ? Math.max(1, Math.floor(x.par || 1)) : Math.floor(itemNeed(x));
+      const estCost = needCases * (x.unit_price || 0);
+      return { item: x, needCases, estCost };
+    }).sort((a, b) => b.needCases - a.needCases);
+    const restockCost = lowItems.reduce((s, r) => s + r.estCost, 0);
+    const parHealthPct = activeItems.length ? Math.round(((activeItems.length - lowItems.length) / activeItems.length) * 100) : 100;
+
+    const fc = getForecastMetrics();
+    const proj30Meals = Math.round(fc.avgRecent * 17);
+    const proj90Meals = Math.round(fc.avgRecent * 51);
+    const proj365Meals = Math.round(fc.avgRecent * 204);
+    const benchPerMeal = costPerMeal > 0 ? costPerMeal : 3.25;
+    const usingBench = costPerMeal <= 0;
+    const proj30Budget = Math.round(proj30Meals * benchPerMeal);
+    const proj90Budget = Math.round(proj90Meals * benchPerMeal);
+    const proj365Budget = Math.round(proj365Meals * benchPerMeal);
+    const next7Days = serviceDaysBetween(today, addDays(today, 14)).slice(0, 7);
+    const next7Meals = next7Days.reduce((s, d) => s + forecastWeekday(d), 0);
+    const peakDow = Object.entries(fc.dowFactor || {}).sort((a, b) => b[1] - a[1])[0];
+
+    const REPORT_TYPES = [
+      ['exec', 'Executive & Funding'],
+      ['inventory', 'Inventory & Valuation'],
+      ['orders', 'Orders, Spend & Donations'],
+      ['meals', 'Meals & Attendance'],
+      ['safety', 'HACCP Food Safety'],
+      ['waste', 'Waste & Blind Audits'],
+      ['activity', 'Staff Accountability']
+    ];
+
+    const suggestions = [];
+    if (lowItems.length > 0) {
+      suggestions.push(`<strong>Restock Funding / Purchase Request:</strong> ${lowItems.length} staple item(s) are below Par (${lowItems.reduce((s, r) => s + r.needCases, 0)} whole cases needed${restockCost > 0 ? ', est. $' + restockCost.toFixed(2) : ''}). Prioritize: ${lowItems.slice(0, 4).map(r => esc(r.item.name) + ' (' + r.needCases + ' cs)').join(', ')}.`);
+    } else {
+      suggestions.push('<strong>Inventory Readiness:</strong> 100% of active inventory items are at or above Par Level.');
     }
-    checkMandatoryModals();
-  }
+    if (donatedRecvs.length > 0 || purchasedRecvs.length > 0) {
+      suggestions.push(`<strong>Donation Leverage:</strong> ${donatedRecvs.length} Food Bank / Donor check-in(s) and ${purchasedRecvs.length} vendor purchase(s) recorded in this period. Targeting in-kind donations for top-turn items (${lowItems.slice(0, 3).map(r => esc(r.item.name)).join(', ') || 'canned proteins & dry pasta'}) directly lowers cash cost per meal.`);
+    }
+    if (fc.avgRecent > 0) {
+      suggestions.push(`<strong>Demand &amp; Staffing Outlook:</strong> Recent trend averages <strong>${fc.avgRecent.toFixed(1)} patrons/day</strong> (${proj90Meals.toLocaleString()} meals next quarter)${peakDow ? `; highest-turnout day is <strong>${peakDow[0]}</strong> (${Math.round((peakDow[1] - 1) * 100) >= 0 ? '+' : ''}${Math.round((peakDow[1] - 1) * 100)}% vs. avg)` : ''}. Plan prep &amp; volunteer coverage accordingly.`);
+    }
+    if (fails > 0) {
+      suggestions.push(`<strong>Food Safety Action:</strong> ${fails} temperature check(s) were flagged out of range in this period — review equipment calibration and corrective actions before leadership audit.`);
+    } else if (checks > 0) {
+      suggestions.push(`<strong>Food Safety Compliance:</strong> 100% pass rate across ${checks} logged HACCP temperature check(s).`);
+    }
+    if (waste.length > 3) {
+      suggestions.push(`<strong>Waste Reduction Opportunity:</strong> ${waste.length} waste entries logged — tighten FIFO rotation in Storage &amp; Date Labels and shift surplus to Leftovers Service.`);
+    }
 
-  const tourState = { active: false, stepIndex: 0, completedTabs: {} };
-  const TOUR_STEPS = [
-    { tab: 'dashboard', title: '1. Home Dashboard & Announcements', desc: 'Your daily command center: see Quick Shift Actions, color-coded Announcements & Reminders, Use-By alerts, Priority Carryover tasks, today\'s meal, and next-service forecast.', tryIt: 'Review any red or amber notices first, or tap a Quick Shift Action button.' },
-    { tab: 'stock', title: '2. Living Stock & Par Levels', desc: 'Tracks real-time quantities across Dry Storage, Walk-In Cooler, and Walk-In Freezer against auto-learning 8-week Par Levels, with QR labels and quick adjustments.', tryIt: 'Search or filter by zone, or tap + / - to adjust on-hand stock.' },
-    { tab: 'orders', title: '3. Orders & Purchase Orders', desc: 'Separates Weekly orders (Marberger Dairy & Produce) from Monthly orders (3rd Friday Jordan Banana). Create Draft POs, approve quantities, and track deliveries.', tryIt: 'Review items below par and create a Draft PO for approval.' },
-    { tab: 'receive', title: '4. Receive & Scan Deliveries', desc: 'Scan barcodes/QR labels with your camera or USB/Bluetooth scanner to check in deliveries or reconcile expected Purchase Orders into Living Stock.', tryIt: 'Scan or select an item and enter packs received.' },
-    { tab: 'menu', title: '5. Menu Planner', desc: 'Schedule meals for Mon/Tue/Wed/Fri service days, mark closed holidays, and commit/deduct ingredients directly from Living Stock.', tryIt: 'Select a service date to assign a recipe or mark Leftovers Service.' },
-    { tab: 'prep', title: '6. Next-Day Prep List', desc: 'Automatically pulls tomorrow\'s ingredient requirements grouped by storage zone (Cooler, Freezer, Dry Storage) plus FIFO leftovers.', tryIt: 'Check off each ingredient pull as you stage it for service.' },
-    { tab: 'recipes', title: '7. Recipes (40–80) & QR Scan', desc: 'Paste new recipes, search or scan recipe QR cards, drag the 40–80 portion slider, or open the 40–80 Quick-Scan Table to see 40/50/60/70/80 amounts side-by-side.', tryIt: 'Drag the 40–80 slider or click "40–80 Quick-Scan Table".' },
-    { tab: 'safety', title: '8. Daily Temps & Cleaning (HACCP)', desc: 'Log the 6 required serving-day temperature checks (Coolers <=41°F, Freezers <=0°F, Entree >=165°F, Steam Table >=135°F) and 7-point cleaning checks.', tryIt: 'Enter a temperature reading to verify PASS vs. FLAGGED auto-check.' },
-    { tab: 'storage', title: '9. Storage & Date Labels (FIFO)', desc: 'Use 1-Tap Presets for Cut Salad Greens/Fruit (3d), Dairy/Deli Salads (4d), Cooked Entrees (7d), and Freezer (90d) so Use-By alerts fire automatically.', tryIt: 'Tap a 1-Tap Preset or mark a stored container as Served/Used.' },
-    { tab: 'checklists', title: '10. Daily, Weekly & Monthly Checklists', desc: 'Stamp your name and time on cleaning, ordering, and food safety tasks. Unfinished tasks automatically carry over as red Priority Carryover items.', tryIt: 'Switch between Daily, Weekly, and Monthly tabs and check off a task.' },
-    { tab: 'forecasting', title: '11. Patrons Served & Forecasting', desc: 'Log actual patrons served, bulk-enter up to 1 year of past dates, or paste CSV/Spreadsheet rows to drive weekday & monthly attendance forecasts.', tryIt: 'Log a test count or open "+ Bulk Enter Past Dates".' },
-    { tab: 'records', title: '12. Records, Blind Audit & Backups', desc: 'Run Blind Audits (system stock stays hidden while volunteers count), log waste, inspect history, and export/import full JSON backups.', tryIt: 'Enter a physical count in Blind Audit and click Reveal Variances.' },
-    { tab: 'report', title: '13. Monthly Operations Report', desc: 'View monthly meals served, top items used, waste summary, and print-ready compliance reports.', tryIt: 'Pick a month and click Print Report.' },
-    { tab: 'users', title: '14. Users, Announcements & Activity', desc: 'Manage Management, Staff, Volunteer, and Other profiles, post/schedule Announcements, and watch the Real-Time Accountability Feed.', tryIt: 'Click "+ Post / Schedule Announcement" or review the Accountability Feed.' }
-  ];
-  function getRoleTourSteps() {
-    const allowed = getAllowedTabs(getActiveUser());
-    return TOUR_STEPS.filter(s => allowed.includes(s.tab));
-  }
+    const fundingBrief = [
+      `THE SALVATION ARMY COMMUNITY MEALS (BUTLER, PA) — FUNDING & OPERATIONS BRIEF (${periodLabel})`,
+      `• Community Impact: ${meals.toLocaleString()} hot lunches served across ${servedDays.length} open service day(s) (avg ${avgPerDay.toFixed(1)} patrons/day).`,
+      `• Financial & Donation Snapshot: $${spend.toFixed(2)} vendor spend recorded (${costPerMeal > 0 ? '$' + costPerMeal.toFixed(2) + '/meal' : 'est. $3.25/meal benchmark'}), supplemented by ${donatedRecvs.length} in-kind/food bank deliveries. Current inventory value: $${stockValue.toFixed(2)} (${parHealthPct}% items at/above Par).`,
+      `• Forecasted Need: Projecting ${proj30Meals.toLocaleString()} meals next 30 days (~$${proj30Budget.toLocaleString()}), ${proj90Meals.toLocaleString()} meals next 90 days (~$${proj90Budget.toLocaleString()}), and ${proj365Meals.toLocaleString()} meals annually (~$${proj365Budget.toLocaleString()}).`,
+      `• Immediate Restock / Donation Priorities (${lowItems.length} items below Par${restockCost > 0 ? ', est. $' + restockCost.toFixed(2) : ''}): ${lowItems.slice(0, 6).map(r => r.item.name + ' (' + r.needCases + ' cases)').join('; ') || 'All items at Par'}.`,
+      `• Compliance & Stewardship: ${safetyPct !== null ? safetyPct + '% HACCP temp pass rate (' + checks + ' checks)' : 'HACCP active'}, ${savedLeftovers} leftover container(s) safely reused via FIFO.`
+    ].join('\n');
 
-  function renderHelp(main) {
-    const u = getActiveUser();
-    const allowed = getAllowedTabs(u);
-    const steps = getRoleTourSteps();
-    const goBtn = (tab, label) => allowed.includes(tab)
-      ? `<button type="button" data-tab="${tab}" class="mt-2 inline-block text-xs font-bold text-[#b3122b] hover:underline">Open ${label} &rarr;</button>`
-      : '';
-    main.innerHTML = `
-      <div class="space-y-4">
-        <div class="kms-card p-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-base sm:text-lg font-bold">Training Center, Guided Tour &amp; Kitchen Reference</h2>
-            <p class="text-xs opacity-75">Learn every part of the Community Meals KMS step-by-step, tailored to your role (${esc(u.role)}).</p>
+    let bodyHtml = '';
+
+    if (subRep === 'exec') {
+      bodyHtml = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+          <div class="kms-card p-4">
+            <div class="text-xs uppercase opacity-65 font-semibold">Meals Served</div>
+            <div class="text-2xl font-bold text-[#b3122b] mt-1">${meals.toLocaleString()}</div>
+            <div class="text-xs opacity-75 mt-1">${servedDays.length} service day(s) &bull; Avg ${avgPerDay.toFixed(1)}/day</div>
           </div>
-          <div class="flex flex-wrap gap-2 no-print">
-            <button type="button" id="btn-start-tour" class="kms-btn-primary px-3.5 py-2 text-xs font-semibold">Start Interactive Guided Tour</button>
-            <button type="button" id="btn-retrain-self" class="kms-btn-alt px-3 py-2 text-xs font-semibold">Replay First-Login Training</button>
-            <button type="button" onclick="window.print()" class="kms-btn-navy px-3 py-2 text-xs font-semibold">Print Guide</button>
+          <div class="kms-card p-4">
+            <div class="text-xs uppercase opacity-65 font-semibold">Food Spend &amp; Donations</div>
+            <div class="text-2xl font-bold mt-1">$${spend.toFixed(2)}</div>
+            <div class="text-xs opacity-75 mt-1">${costPerMeal > 0 ? '$' + costPerMeal.toFixed(2) + ' / meal' : 'Est. $3.25/meal'} &bull; ${donatedRecvs.length} donated drop(s)</div>
+          </div>
+          <div class="kms-card p-4">
+            <div class="text-xs uppercase opacity-65 font-semibold">Inventory &amp; Restock Gap</div>
+            <div class="text-2xl font-bold mt-1">${parHealthPct}% At Par</div>
+            <div class="text-xs opacity-75 mt-1">Stock value: $${stockValue.toFixed(2)} &bull; ${lowItems.length} item(s) below par</div>
+          </div>
+          <div class="kms-card p-4">
+            <div class="text-xs uppercase opacity-65 font-semibold">Safety &amp; Stewardship</div>
+            <div class="text-2xl font-bold text-emerald-700 mt-1">${safetyPct !== null ? safetyPct + '% Pass' : 'N/A'}</div>
+            <div class="text-xs opacity-75 mt-1">${checks} temp check(s), ${fails} flagged &bull; ${waste.length} waste / ${savedLeftovers} reused</div>
           </div>
         </div>
 
         <div class="kms-card p-4 space-y-3">
-          <h3 class="text-sm font-bold uppercase tracking-wide">Daily Kitchen Workflow (Mon / Tue / Wed / Fri Service)</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-            <div class="p-3.5 rounded-lg border border-[var(--line)]">
-              <div class="font-bold text-[#b3122b] uppercase">Step 1 &bull; Morning Opening</div>
-              <div class="font-bold text-sm mt-1">Log Temps &amp; Receive Deliveries</div>
-              <p class="opacity-80 mt-1 leading-relaxed">Log Walk-In &amp; Kitchen Cooler (&le;41&deg;F) and Freezer (&le;0&deg;F) temps in <strong>Safety</strong>. Scan or check in vendor deliveries in <strong>Receive</strong>.</p>
-              ${goBtn('safety', 'Safety')}
+          <div>
+            <h3 class="text-sm font-bold">Demand Forecasts &amp; Funding Projections</h3>
+            <p class="text-xs opacity-75">Based on ${fc.openCount} recorded open service day(s) (recent trend: ${fc.avgRecent.toFixed(1)} patrons/day)${usingBench ? ' &bull; Using $3.25/meal benchmark where item prices are blank' : ''}.</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div class="p-3 rounded-lg border border-[var(--line)] bg-black/5">
+              <div class="font-bold uppercase opacity-65">Next 7 Service Days</div>
+              <div class="text-lg font-bold mt-1">${next7Meals.toLocaleString()} meals</div>
+              <div class="opacity-75">Est. food need: $${Math.round(next7Meals * benchPerMeal).toLocaleString()}</div>
             </div>
-            <div class="p-3.5 rounded-lg border border-[var(--line)]">
-              <div class="font-bold text-[#b3122b] uppercase">Step 2 &bull; Recipes &amp; Menu</div>
-              <div class="font-bold text-sm mt-1">Scale 40–80 &amp; Plan Menu</div>
-              <p class="opacity-80 mt-1 leading-relaxed">Scale any recipe from <strong>40 to 80 portions</strong> (or scan its QR card) in <strong>Recipes</strong>. Schedule meals in <strong>Menu</strong> and deduct stock when cooked.</p>
-              ${goBtn('recipes', 'Recipes')}
+            <div class="p-3 rounded-lg border border-[var(--line)] bg-black/5">
+              <div class="font-bold uppercase opacity-65">Next 30 Days (Monthly)</div>
+              <div class="text-lg font-bold mt-1">${proj30Meals.toLocaleString()} meals</div>
+              <div class="opacity-75">Est. budget: $${proj30Budget.toLocaleString()}</div>
             </div>
-            <div class="p-3.5 rounded-lg border border-[var(--line)]">
-              <div class="font-bold text-[#b3122b] uppercase">Step 3 &bull; Prep &amp; Service</div>
-              <div class="font-bold text-sm mt-1">Pull Prep &amp; Hot Hold</div>
-              <p class="opacity-80 mt-1 leading-relaxed">Follow <strong>Prep</strong> pulls grouped by Cooler, Freezer, and Dry Storage. Verify cooking (&ge;165&deg;F) and steam table (&ge;135&deg;F) temps before 11:30 AM.</p>
-              ${goBtn('prep', 'Prep')}
+            <div class="p-3 rounded-lg border border-[var(--line)] bg-black/5">
+              <div class="font-bold uppercase opacity-65">Next 90 Days (Quarterly)</div>
+              <div class="text-lg font-bold mt-1">${proj90Meals.toLocaleString()} meals</div>
+              <div class="opacity-75">Est. budget: $${proj90Budget.toLocaleString()}</div>
             </div>
-            <div class="p-3.5 rounded-lg border border-[var(--line)]">
-              <div class="font-bold text-[#b3122b] uppercase">Step 4 &bull; After Service</div>
-              <div class="font-bold text-sm mt-1">Date-Label &amp; Log Patrons</div>
-              <p class="opacity-80 mt-1 leading-relaxed">Tag leftovers &amp; salad bar items in <strong>Storage</strong> (3d greens/fruit, 4d dairy, 7d cooked, 90d frozen). Log actual patrons served in <strong>Forecasting</strong>.</p>
-              ${goBtn('forecasting', 'Forecasting')}
-            </div>
-            <div class="p-3.5 rounded-lg border border-[var(--line)]">
-              <div class="font-bold text-[#b3122b] uppercase">Step 5 &bull; Weekly / Monthly</div>
-              <div class="font-bold text-sm mt-1">Blind Audits &amp; Ordering</div>
-              <p class="opacity-80 mt-1 leading-relaxed">Run unbiased physical counts in <strong>Records &rarr; Blind Audit</strong>. Submit Weekly (Marberger/Produce) and Monthly 3rd-Friday (Jordan Banana) POs in <strong>Orders</strong>.</p>
-              ${goBtn('orders', 'Orders')}
-            </div>
-            <div class="p-3.5 rounded-lg border border-[var(--line)]">
-              <div class="font-bold text-[#b3122b] uppercase">Step 6 &bull; Security &amp; Sync</div>
-              <div class="font-bold text-sm mt-1">PINs, Auto-Lock &amp; Cloud Sync</div>
-              <p class="opacity-80 mt-1 leading-relaxed">Shared tablets auto-lock after 5 minutes. Every change stamps your name and syncs live to Supabase across all kitchen devices.</p>
-              ${goBtn('users', 'Users & Activity')}
+            <div class="p-3 rounded-lg border border-[var(--line)] bg-black/5">
+              <div class="font-bold uppercase opacity-65">Annual Projection (12 Mo)</div>
+              <div class="text-lg font-bold text-[#b3122b] mt-1">${proj365Meals.toLocaleString()} meals</div>
+              <div class="opacity-75">Est. annual budget: $${proj365Budget.toLocaleString()}</div>
             </div>
           </div>
         </div>
 
-        <div class="kms-card p-4 space-y-3 no-print">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold uppercase tracking-wide">Interactive Walkthrough by Feature (Click Any Card)</h3>
-            <span class="text-xs opacity-70">${Object.keys(tourState.completedTabs).length} / ${steps.length} explored</span>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="kms-card p-4 space-y-2.5">
+            <h3 class="text-sm font-bold">Executive Suggestions &amp; Action Plan</h3>
+            <ul class="space-y-2 text-xs leading-relaxed">
+              ${suggestions.map(s => `<li class="p-2.5 rounded-lg border border-[var(--line)]">${s}</li>`).join('')}
+            </ul>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            ${steps.map((s, idx) => `
-              <button type="button" data-launch-tour-step="${idx}" class="text-left p-3 rounded-lg border transition ${tourState.completedTabs[s.tab] ? 'border-emerald-400 bg-emerald-50/40' : 'border-[var(--line)] hover:bg-black/5'}">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-xs font-bold">${esc(s.title)}</span>
-                  <span class="tag ${tourState.completedTabs[s.tab] ? 'tag-OK' : 'tag-LOW'}">${tourState.completedTabs[s.tab] ? 'Visited' : 'Start →'}</span>
-                </div>
-                <p class="text-[11px] opacity-75 mt-1 line-clamp-2">${esc(s.desc)}</p>
-              </button>
-            `).join('')}
+
+          <div class="kms-card p-4 space-y-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-sm font-bold">Ready-to-Send Funding / Donation Brief</h3>
+              <button type="button" id="btn-copy-funding-brief-2" class="kms-btn-alt px-2.5 py-1 text-xs no-print">Copy Text</button>
+            </div>
+            <textarea id="exec-funding-brief" rows="8" readonly class="kms-input w-full text-xs font-mono leading-relaxed">${esc(fundingBrief)}</textarea>
           </div>
         </div>
 
-        <div class="kms-card p-4 space-y-2.5 text-xs">
-          <h3 class="text-sm font-bold uppercase tracking-wide">Role Permissions Matrix (ADMIN / MANAGER / STAFF / VOLUNTEER)</h3>
+        <div class="kms-card print-flow p-4 space-y-2.5">
+          <h3 class="text-sm font-bold">Priority Restock &amp; In-Kind Donation Needs (${lowItems.length} Items Below Par)</h3>
+          ${!lowItems.length ? '<p class="text-xs opacity-70">All active items are at or above Par Level.</p>' : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-[var(--line)] opacity-70 uppercase">
+                    <th class="py-1.5 pr-2">Item</th>
+                    <th class="py-1.5 pr-2">Vendor</th>
+                    <th class="py-1.5 pr-2">On Hand / Par</th>
+                    <th class="py-1.5 pr-2">Cases Needed</th>
+                    <th class="py-1.5">Est. Cost</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--line)]">
+                  ${lowItems.slice(0, 25).map(r => `
+                    <tr>
+                      <td class="py-1.5 pr-2 font-semibold">${esc(r.item.name)}</td>
+                      <td class="py-1.5 pr-2 opacity-75">${esc(r.item.vendor || '')}</td>
+                      <td class="py-1.5 pr-2">${r.item.on_hand} / ${r.item.par} ${esc(r.item.unit)}</td>
+                      <td class="py-1.5 pr-2 font-bold text-[#b3122b]">${r.needCases} whole case(s)</td>
+                      <td class="py-1.5">${r.estCost > 0 ? '$' + r.estCost.toFixed(2) : '—'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      `;
+    } else if (subRep === 'inventory') {
+      const filteredInv = activeItems.filter(x => invLocFilter === 'ALL' || x.location === invLocFilter);
+      const locSummary = LOCATIONS.map(loc => {
+        const grp = activeItems.filter(x => x.location === loc);
+        const val = grp.reduce((s, x) => s + (x.on_hand || 0) * (x.unit_price || 0), 0);
+        const low = grp.filter(x => itemStatus(x) !== 'OK').length;
+        return { loc, count: grp.length, val, low };
+      });
+      bodyHtml = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          ${locSummary.map(ls => `
+            <div class="kms-card p-3.5 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-sm">${esc(ls.loc)}</div>
+                <div class="opacity-75 mt-0.5">${ls.count} items &bull; ${ls.low} below par</div>
+              </div>
+              <div class="text-right">
+                <div class="text-base font-bold text-[#1b365d]">$${ls.val.toFixed(2)}</div>
+                <div class="opacity-65">Est. Value</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="kms-card print-flow p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold">Complete Inventory Valuation &amp; Par Report (${filteredInv.length} Items)</h3>
+              <p class="text-xs opacity-75">Total catalog value: <strong>$${stockValue.toFixed(2)}</strong> &bull; Total restock gap: <strong>$${restockCost.toFixed(2)}</strong></p>
+            </div>
+            <select id="rep-inv-loc" class="kms-input text-xs no-print">
+              <option value="ALL">All Locations (${activeItems.length})</option>
+              ${LOCATIONS.map(l => `<option value="${esc(l)}" ${invLocFilter === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}
+            </select>
+          </div>
           <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead><tr class="border-b border-[var(--line)] uppercase opacity-70"><th class="py-1.5 pr-2">Role</th><th class="py-1.5 pr-2">Access &amp; Tabs</th><th class="py-1.5">Allowed Actions</th></tr></thead>
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="border-b border-[var(--line)] opacity-75 uppercase">
+                  <th class="py-1.5 pr-2">SKU</th>
+                  <th class="py-1.5 pr-2">Item</th>
+                  <th class="py-1.5 pr-2">Location</th>
+                  <th class="py-1.5 pr-2">Cadence</th>
+                  <th class="py-1.5 pr-2">On Hand / Par</th>
+                  <th class="py-1.5 pr-2">Status</th>
+                  <th class="py-1.5 pr-2">Unit $</th>
+                  <th class="py-1.5">Ext. Value</th>
+                </tr>
+              </thead>
               <tbody class="divide-y divide-[var(--line)]">
-                <tr><td class="py-2 pr-2 font-bold text-[#b3122b]">ADMIN</td><td class="py-2 pr-2">All 15 Tabs (incl. Users &amp; Reports)</td><td class="py-2">Manage logins/PINs/roles, training modules, announcements, backups, PO approvals/placement, and all operations.</td></tr>
-                <tr><td class="py-2 pr-2 font-bold text-[#1b365d]">MANAGER</td><td class="py-2 pr-2">14 Tabs (incl. Executive Reports)</td><td class="py-2">Approve/reject/place/edit any PO, access Funding Reports, edit Pars/Items/Recipes, reconcile Blind Audits, edit attendance.</td></tr>
-                <tr><td class="py-2 pr-2 font-bold text-emerald-700">STAFF</td><td class="py-2 pr-2">13 Operational Tabs</td><td class="py-2">Create &amp; edit PO requests (until approved/ordered), enter Delivery Slips, schedule/serve Menu, scale/add Recipes, log Temps &amp; Patrons.</td></tr>
-                <tr><td class="py-2 pr-2 font-bold opacity-80">VOLUNTEER</td><td class="py-2 pr-2">10 Floor Tabs</td><td class="py-2">View Stock/Menu/Recipes (scale 40–80), check off Prep &amp; Checklists, log Temps &amp; Date Labels, submit Blind Counts.</td></tr>
+                ${filteredInv.map(x => {
+                  const st = itemStatus(x);
+                  const ext = (x.on_hand || 0) * (x.unit_price || 0);
+                  return `
+                    <tr>
+                      <td class="py-1.5 pr-2 font-mono">${esc(x.sku)}</td>
+                      <td class="py-1.5 pr-2 font-semibold">${esc(x.name)}</td>
+                      <td class="py-1.5 pr-2">${esc(x.location)}</td>
+                      <td class="py-1.5 pr-2">${x.cadence === 'W' ? 'Weekly' : 'Monthly'}</td>
+                      <td class="py-1.5 pr-2">${x.on_hand} / ${x.par} ${esc(x.unit)}</td>
+                      <td class="py-1.5 pr-2"><span class="tag tag-${st}">${st}</span></td>
+                      <td class="py-1.5 pr-2">${x.unit_price ? '$' + Number(x.unit_price).toFixed(2) : '—'}</td>
+                      <td class="py-1.5 font-semibold">${ext > 0 ? '$' + ext.toFixed(2) : '—'}</td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           </div>
         </div>
-        <div class="kms-card p-4 space-y-2.5 text-xs">
-          <h3 class="text-sm font-bold uppercase tracking-wide">Kitchen &amp; App Glossary</h3>
-          <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-            <div><dt class="font-bold">Living Stock &amp; Par Level</dt><dd class="opacity-75">Real-time food on hand vs. the target amount needed (auto-learned from 8-week usage).</dd></div>
-            <div><dt class="font-bold">PO (Purchase Order)</dt><dd class="opacity-75">Draft order list for Marberger (weekly dairy/produce) or Jordan Banana (monthly 3rd Friday dry/frozen).</dd></div>
-            <div><dt class="font-bold">Blind Audit</dt><dd class="opacity-75">Counting shelves without seeing expected system stock first, keeping counts honest.</dd></div>
-            <div><dt class="font-bold">HACCP / Time &amp; Temp</dt><dd class="opacity-75">Daily serving-day temperature checks: Cold &le;41&deg;F, Frozen &le;0&deg;F, Cook &ge;165&deg;F, Hot Hold &ge;135&deg;F.</dd></div>
-            <div><dt class="font-bold">FIFO &amp; Use-By Date</dt><dd class="opacity-75">First In, First Out — use oldest dated containers first and discard anything past its Use-By date.</dd></div>
-            <div><dt class="font-bold">Priority Carryover</dt><dd class="opacity-75">Unfinished checklist tasks from yesterday that stay highlighted in red until completed.</dd></div>
-          </dl>
+      `;
+    } else if (subRep === 'orders') {
+      const periodPOs = (state.purchaseOrders || []).filter(p => inPeriod(p.requested_date));
+      const marSpend = purchasedRecvs.filter(t => /marberger/i.test(t.source || '')).reduce((s, t) => s + (t.cost ? Number(t.cost) : 0), 0);
+      const jbSpend = purchasedRecvs.filter(t => /jordan/i.test(t.source || '')).reduce((s, t) => s + (t.cost ? Number(t.cost) : 0), 0);
+      bodyHtml = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Purchase Orders</div><div class="text-xl font-bold mt-1">${periodPOs.length}</div><div class="opacity-75">In selected period</div></div>
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Marberger / Produce</div><div class="text-xl font-bold mt-1">$${marSpend.toFixed(2)}</div><div class="opacity-75">Weekly vendor receipts</div></div>
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Jordan Banana</div><div class="text-xl font-bold mt-1">$${jbSpend.toFixed(2)}</div><div class="opacity-75">Monthly vendor receipts</div></div>
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">In-Kind / Food Bank</div><div class="text-xl font-bold text-emerald-700 mt-1">${donatedRecvs.length} drops</div><div class="opacity-75">${donatedRecvs.reduce((s, t) => s + Number(t.qty || 0), 0)} total units received</div></div>
         </div>
+
+        <div class="kms-card print-flow p-4 space-y-2.5">
+          <h3 class="text-sm font-bold">Purchase Orders Ledger (${periodPOs.length})</h3>
+          ${!periodPOs.length ? '<p class="text-xs opacity-70">No purchase orders in this date range.</p>' : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1.5 pr-2">PO #</th><th class="py-1.5 pr-2">Vendor</th><th class="py-1.5 pr-2">Date</th><th class="py-1.5 pr-2">Status</th><th class="py-1.5 pr-2">Requested / Approved By</th><th class="py-1.5">Items</th></tr></thead>
+                <tbody class="divide-y divide-[var(--line)]">
+                  ${periodPOs.map(po => `
+                    <tr>
+                      <td class="py-1.5 pr-2 font-mono font-bold">${esc(po.po_number)}</td>
+                      <td class="py-1.5 pr-2">${esc(po.vendor)}</td>
+                      <td class="py-1.5 pr-2">${esc(po.requested_date)}</td>
+                      <td class="py-1.5 pr-2"><span class="tag ${po.status === 'closed' || po.status === 'approved' ? 'tag-OK' : 'tag-LOW'}">${esc(po.status.toUpperCase())}</span></td>
+                      <td class="py-1.5 pr-2">${esc(po.requested_by || '')}${po.approved_by ? ' → ' + esc(po.approved_by) : ''}</td>
+                      <td class="py-1.5">${(po.lines || []).map(l => `${l.qty} ${esc(l.unit)} ${esc(l.name)}`).join(', ')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+
+        <div class="kms-card print-flow p-4 space-y-2.5">
+          <h3 class="text-sm font-bold">Deliveries, Purchases &amp; Donations Received (${recvs.length})</h3>
+          ${!recvs.length ? '<p class="text-xs opacity-70">No receiving entries in this period.</p>' : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1.5 pr-2">Date</th><th class="py-1.5 pr-2">Item</th><th class="py-1.5 pr-2">Qty</th><th class="py-1.5 pr-2">Source / Invoice</th><th class="py-1.5 pr-2">Logged By</th><th class="py-1.5">Cost</th></tr></thead>
+                <tbody class="divide-y divide-[var(--line)]">
+                  ${recvs.map(t => `
+                    <tr>
+                      <td class="py-1.5 pr-2 font-mono">${esc(t.tx_date)}</td>
+                      <td class="py-1.5 pr-2 font-semibold">${esc(t.item_name)}</td>
+                      <td class="py-1.5 pr-2 font-bold text-emerald-700">+${t.qty} ${esc(t.unit)}</td>
+                      <td class="py-1.5 pr-2">${esc(t.source || '')}</td>
+                      <td class="py-1.5 pr-2">${esc(t.staff_name || '')}</td>
+                      <td class="py-1.5">${Number(t.cost) > 0 ? '$' + Number(t.cost).toFixed(2) : '—'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      `;
+    } else if (subRep === 'meals') {
+      const varianceTotal = meals - plannedTotal;
+      bodyHtml = `
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Total Meals Served</div><div class="text-2xl font-bold text-[#b3122b] mt-1">${meals.toLocaleString()}</div><div class="opacity-75">Across ${servedDays.length} service day(s)</div></div>
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Daily Average</div><div class="text-2xl font-bold mt-1">${avgPerDay.toFixed(1)}</div><div class="opacity-75">Patrons per open service</div></div>
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Planned vs. Actual Variance</div><div class="text-2xl font-bold mt-1">${varianceTotal >= 0 ? '+' : ''}${varianceTotal}</div><div class="opacity-75">Planned ${plannedTotal} vs. Served ${meals}</div></div>
+        </div>
+        <div class="kms-card print-flow p-4 space-y-2.5">
+          <h3 class="text-sm font-bold">Service Attendance &amp; Menu Log (${servedDays.length} Days)</h3>
+          ${!servedDays.length ? '<p class="text-xs opacity-70">No served meals recorded in this period.</p>' : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1.5 pr-2">Date</th><th class="py-1.5 pr-2">Menu Served</th><th class="py-1.5 pr-2">Planned</th><th class="py-1.5 pr-2">Served</th><th class="py-1.5 pr-2">Diff</th><th class="py-1.5 pr-2">Condition</th><th class="py-1.5">Notes</th></tr></thead>
+                <tbody class="divide-y divide-[var(--line)]">
+                  ${servedDays.map(m => {
+                    const rec = m.recipe_id ? state.recipes.find(r => r.id === m.recipe_id) : null;
+                    const title = rec ? rec.name : (m.custom_title || 'Community Meal');
+                    const diff = (m.served_portions || 0) - (m.planned_portions || 0);
+                    return `
+                      <tr>
+                        <td class="py-1.5 pr-2 font-mono whitespace-nowrap">${esc(m.service_date)}</td>
+                        <td class="py-1.5 pr-2 font-semibold">${esc(title)}</td>
+                        <td class="py-1.5 pr-2">${m.planned_portions || 0}</td>
+                        <td class="py-1.5 pr-2 font-bold text-[#b3122b]">${m.served_portions || 0}</td>
+                        <td class="py-1.5 pr-2">${diff >= 0 ? '+' : ''}${diff}</td>
+                        <td class="py-1.5 pr-2">${esc(m.circumstance || 'Normal Day')}</td>
+                        <td class="py-1.5 opacity-80">${esc(m.note || '—')}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      `;
+    } else if (subRep === 'safety') {
+      const periodTags = (state.storageTags || []).filter(t => inPeriod(t.prep_date));
+      bodyHtml = `
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">HACCP Temp Pass Rate</div><div class="text-2xl font-bold text-emerald-700 mt-1">${safetyPct !== null ? safetyPct + '%' : 'N/A'}</div><div class="opacity-75">${checks} checks logged, ${fails} flagged</div></div>
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Days Logged</div><div class="text-2xl font-bold mt-1">${safetyDates.length}</div><div class="opacity-75">Daily sanitation &amp; temps</div></div>
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">ServSafe Date Labels</div><div class="text-2xl font-bold mt-1">${periodTags.length}</div><div class="opacity-75">${savedLeftovers} used &bull; ${tossedLeftovers} discarded</div></div>
+        </div>
+        <div class="kms-card print-flow p-4 space-y-2.5">
+          <h3 class="text-sm font-bold">HACCP Temperature &amp; Sanitation Audit Log (${safetyDates.length} Days)</h3>
+          ${!safetyDates.length ? '<p class="text-xs opacity-70">No temperature or cleaning logs recorded in this period.</p>' : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-[var(--line)] opacity-70 uppercase">
+                    <th class="py-1.5 pr-2">Date</th>
+                    ${TEMP_CHECKS.map(c => `<th class="py-1.5 pr-2">${esc(c[0].split(' ')[0])}</th>`).join('')}
+                    <th class="py-1.5 pr-2">Cleaning</th>
+                    <th class="py-1.5">Logged By</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--line)]">
+                  ${safetyDates.map(ds => {
+                    const entry = state.safetyLogs[ds] || { temps: {}, cleaning: {} };
+                    const cleanDone = Object.values(entry.cleaning || {}).filter(Boolean).length;
+                    return `
+                      <tr>
+                        <td class="py-1.5 pr-2 font-mono font-bold whitespace-nowrap">${esc(ds)}</td>
+                        ${TEMP_CHECKS.map((c, i) => {
+                          const v = (entry.temps || {})[i];
+                          const has = v !== undefined && v !== null && v !== '';
+                          const ok = has ? (c[1] === 'max' ? Number(v) <= c[2] : Number(v) >= c[2]) : true;
+                          return `<td class="py-1.5 pr-2 font-semibold ${!has ? 'opacity-50' : ok ? 'text-emerald-700' : 'text-red-600 font-bold'}">${has ? v + '°F' : '—'}</td>`;
+                        }).join('')}
+                        <td class="py-1.5 pr-2">${cleanDone}/${CLEANING_TASKS.length}</td>
+                        <td class="py-1.5">${esc(entry.logged_by || '—')}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      `;
+    } else if (subRep === 'waste') {
+      const audits = (state.blindAudits || []).filter(a => inPeriod(a.audit_date));
+      const byReason = {};
+      waste.forEach(w => { const r = w.reason || 'Other'; byReason[r] = (byReason[r] || 0) + Math.abs(Number(w.qty) || 0); });
+      bodyHtml = `
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Waste Incidents</div><div class="text-2xl font-bold text-[#b3122b] mt-1">${waste.length}</div><div class="opacity-75">${Object.entries(byReason).map(([k, v]) => `${k}: ${fmtNum(v)}`).join(' · ') || 'No waste logged'}</div></div>
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Expired / Tossed Containers</div><div class="text-2xl font-bold mt-1">${tossedLeftovers}</div><div class="opacity-75">From ServSafe date labels</div></div>
+          <div class="kms-card p-3.5"><div class="uppercase opacity-65 font-semibold">Blind Physical Audits</div><div class="text-2xl font-bold mt-1">${audits.length}</div><div class="opacity-75">Inventory accuracy checks</div></div>
+        </div>
+
+        <div class="kms-card print-flow p-4 space-y-2.5">
+          <h3 class="text-sm font-bold">Itemized Waste &amp; Spoilage Log (${waste.length})</h3>
+          ${!waste.length ? '<p class="text-xs opacity-70">No waste recorded in this period.</p>' : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1.5 pr-2">Date</th><th class="py-1.5 pr-2">Item</th><th class="py-1.5 pr-2">Qty Wasted</th><th class="py-1.5 pr-2">Reason</th><th class="py-1.5">Logged By</th></tr></thead>
+                <tbody class="divide-y divide-[var(--line)]">
+                  ${waste.map(w => `
+                    <tr>
+                      <td class="py-1.5 pr-2 font-mono">${esc(w.tx_date)}</td>
+                      <td class="py-1.5 pr-2 font-semibold">${esc(w.item_name)}</td>
+                      <td class="py-1.5 pr-2 font-bold text-[#b3122b]">${Math.abs(Number(w.qty) || 0)} ${esc(w.unit)}</td>
+                      <td class="py-1.5 pr-2">${esc(w.reason || 'Other')}</td>
+                      <td class="py-1.5">${esc(w.staff_name || '')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+
+        <div class="kms-card print-flow p-4 space-y-2.5">
+          <h3 class="text-sm font-bold">Blind Physical Count Variance Audits (${audits.length})</h3>
+          ${!audits.length ? '<p class="text-xs opacity-70">No blind physical audits in this period.</p>' : audits.map(a => {
+            const vars = (a.rows || []).filter(r => Number(r.sys) !== Number(r.phys));
+            return `
+              <div class="p-3 rounded-lg border border-[var(--line)] text-xs space-y-1.5">
+                <div class="flex justify-between font-bold"><span>Audit Date: ${esc(a.audit_date)} &bull; Auditor: ${esc(a.auditor)}</span><span>${(a.rows || []).length} counted &bull; ${vars.length} variance(s)</span></div>
+                ${!vars.length ? '<div class="opacity-70">100% match — zero variances found.</div>' : `
+                  <div class="divide-y divide-[var(--line)]">
+                    ${vars.map(v => `<div class="py-1 flex justify-between"><span>${esc(v.name)}</span><span>System: ${v.sys} &rarr; Physical: <strong>${v.phys} ${esc(v.unit)}</strong> (${Number(v.phys) - Number(v.sys) >= 0 ? '+' : ''}${fmtNum(Number(v.phys) - Number(v.sys))})</span></div>`).join('')}
+                  </div>
+                `}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    } else if (subRep === 'activity') {
+      const periodActs = (state.activityLogs || []).filter(a => inPeriod(a.timestamp_label));
+      bodyHtml = `
+        <div class="kms-card print-flow p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold">Staff &amp; Volunteer Accountability Audit Trail (${periodActs.length} Events)</h3>
+              <p class="text-xs opacity-75">Complete timestamped log of sign-ins, logouts, stock edits, PO approvals, recipes, and safety checks.</p>
+            </div>
+          </div>
+          ${!periodActs.length ? '<p class="text-xs opacity-70">No activity events in this period.</p>' : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1.5 pr-2">Timestamp</th><th class="py-1.5 pr-2">User</th><th class="py-1.5 pr-2">Role</th><th class="py-1.5 pr-2">Category</th><th class="py-1.5">Action Detail</th></tr></thead>
+                <tbody class="divide-y divide-[var(--line)]">
+                  ${periodActs.slice(0, 200).map(a => `
+                    <tr>
+                      <td class="py-1.5 pr-2 font-mono whitespace-nowrap">${esc(a.timestamp_label)}</td>
+                      <td class="py-1.5 pr-2 font-semibold">${esc(a.actor_name)}</td>
+                      <td class="py-1.5 pr-2">${esc(a.actor_role || '')}</td>
+                      <td class="py-1.5 pr-2 font-mono">[${esc(a.category)}]</td>
+                      <td class="py-1.5">${esc(a.detail)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    main.innerHTML = `
+      <div class="space-y-4">
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="tag tag-OK">MANAGEMENT ONLY</span>
+                <h2 class="text-lg font-bold">Kitchen Operations &amp; Executive Reports Center</h2>
+              </div>
+              <p class="text-xs opacity-75">Run, export, and print any operational, financial, inventory, HACCP safety, or audit report (${esc(periodLabel)}).</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5 no-print">
+              <button type="button" id="btn-copy-funding-brief" class="kms-btn-alt px-3 py-1.5 text-xs">Copy Brief</button>
+              <button type="button" id="btn-export-current-report-csv" class="kms-btn-alt px-3 py-1.5 text-xs">Export CSV</button>
+              <button type="button" id="btn-print-exec-report" class="kms-btn-primary px-3.5 py-1.5 text-xs">Print This Report</button>
+            </div>
+          </div>
+
+          <!-- Report Category Selector -->
+          <div class="flex flex-wrap gap-1.5 pt-1 border-t border-[var(--line)] text-xs no-print">
+            ${REPORT_TYPES.map(([k, lbl]) => `
+              <button type="button" data-rep-type="${k}" class="px-3 py-1.5 rounded-lg font-bold border transition ${subRep === k ? 'bg-[#1b365d] text-white border-[#1b365d] shadow-sm' : 'border-[var(--line)] hover:bg-black/5'}">${lbl}</button>
+            `).join('')}
+          </div>
+
+          <!-- Date Range Selector -->
+          <div class="flex flex-wrap items-center gap-1.5 text-xs no-print">
+            <span class="font-semibold opacity-70 mr-1">Date Window:</span>
+            ${[['month', 'By Month'], ['30d', 'Last 30 Days'], ['90d', 'Last 90 Days'], ['ytd', 'Year-to-Date'], ['365d', 'Last 12 Months'], ['all', 'All Time']].map(([k, lbl]) => `
+              <button type="button" data-rep-range="${k}" class="px-2.5 py-1 rounded-lg border font-semibold ${rangeMode === k ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">${lbl}</button>
+            `).join('')}
+            ${rangeMode === 'month' ? `<select id="rep-month" class="kms-input text-xs ml-1">${months.map(m => `<option ${m === rm ? 'selected' : ''}>${m}</option>`).join('')}</select>` : ''}
+          </div>
+        </div>
+
+        <textarea id="exec-funding-brief" class="hidden">${esc(fundingBrief)}</textarea>
+        ${bodyHtml}
       </div>
     `;
   }
@@ -4550,6 +4803,12 @@
       render();
       return;
     }
+    const repTypeBtn = e.target.closest('[data-rep-type]');
+    if (repTypeBtn) {
+      state.reportType = repTypeBtn.dataset.repType;
+      render();
+      return;
+    }
     if (e.target.id === 'btn-print-exec-report') { window.print(); return; }
     if (e.target.id === 'btn-copy-funding-brief' || e.target.id === 'btn-copy-funding-brief-2') {
       const ta = document.getElementById('exec-funding-brief');
@@ -4559,14 +4818,39 @@
       showToast('Copied Funding & Operations Brief to clipboard');
       return;
     }
-    if (e.target.id === 'btn-export-exec-csv') {
-      const activeItems = state.items.filter(x => !x.discontinued && itemNeed(x) > 0);
-      const rows = [['Item', 'Vendor', 'On Hand', 'Par', 'Unit', 'Whole Cases Needed', 'Unit Price']];
-      activeItems.forEach(x => rows.push([x.name, x.vendor || '', x.on_hand, x.par, x.unit, Math.max(1, Math.ceil(itemNeed(x))), x.unit_price || 0]));
+    if (e.target.id === 'btn-export-exec-csv' || e.target.id === 'btn-export-current-report-csv') {
+      const rt = state.reportType || 'exec';
+      let rows = [];
+      if (rt === 'inventory') {
+        rows = [['SKU', 'Item', 'Location', 'Cadence', 'On Hand', 'Par', 'Unit', 'Status', 'Unit Price', 'Extended Value']];
+        state.items.filter(x => !x.discontinued).forEach(x => rows.push([x.sku, x.name, x.location, x.cadence === 'W' ? 'Weekly' : 'Monthly', x.on_hand, x.par, x.unit, itemStatus(x), x.unit_price || 0, Math.round((x.on_hand || 0) * (x.unit_price || 0) * 100) / 100]));
+      } else if (rt === 'orders') {
+        rows = [['PO Number', 'Vendor', 'Requested Date', 'Status', 'Requested By', 'Approved By', 'Lines']];
+        (state.purchaseOrders || []).forEach(p => rows.push([p.po_number, p.vendor, p.requested_date, p.status, p.requested_by || '', p.approved_by || '', (p.lines || []).map(l => `${l.qty} ${l.unit} ${l.name}`).join('; ')]));
+      } else if (rt === 'meals') {
+        rows = [['Date', 'Menu', 'Planned', 'Served', 'Circumstance', 'Notes']];
+        (state.menuPlan || []).filter(m => m.status === 'SERVED').forEach(m => rows.push([m.service_date, m.custom_title || '', m.planned_portions || 0, m.served_portions || 0, m.circumstance || '', m.note || '']));
+      } else if (rt === 'safety') {
+        rows = [['Date', ...TEMP_CHECKS.map(c => c[0]), 'Logged By']];
+        Object.keys(state.safetyLogs || {}).sort().forEach(ds => {
+          const t = state.safetyLogs[ds].temps || {};
+          rows.push([ds, ...TEMP_CHECKS.map((_, i) => t[i] ?? ''), state.safetyLogs[ds].logged_by || '']);
+        });
+      } else if (rt === 'waste') {
+        rows = [['Date', 'Item', 'Qty Wasted', 'Unit', 'Reason', 'Staff']];
+        (state.transactions || []).filter(t => t.tx_type === 'WASTE').forEach(w => rows.push([w.tx_date, w.item_name, Math.abs(Number(w.qty) || 0), w.unit, w.reason || '', w.staff_name || '']));
+      } else if (rt === 'activity') {
+        rows = [['Timestamp', 'Actor', 'Role', 'Category', 'Detail']];
+        (state.activityLogs || []).forEach(a => rows.push([a.timestamp_label, a.actor_name, a.actor_role || '', a.category, a.detail]));
+      } else {
+        const activeItems = state.items.filter(x => !x.discontinued && itemNeed(x) > 0);
+        rows = [['Item', 'Vendor', 'On Hand', 'Par', 'Unit', 'Whole Cases Needed', 'Unit Price']];
+        activeItems.forEach(x => rows.push([x.name, x.vendor || '', x.on_hand, x.par, x.unit, Math.max(1, Math.ceil(itemNeed(x))), x.unit_price || 0]));
+      }
       const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-      a.download = `executive_restock_needs-${localDateStr()}.csv`;
+      a.download = `kms_report_${rt}_${localDateStr()}.csv`;
       a.click();
       return;
     }
@@ -5036,7 +5320,7 @@
     if (e.target.id === 'fc-whatif-meal') { state._fcMealFilter = e.target.value; render(); return; }
     if (e.target.id === 'fc-whatif-circ') { state._fcCircFilter = e.target.value; render(); return; }
     if (e.target.id === 'rep-month') { state.reportMonth = e.target.value; render(); return; }
-
+    if (e.target.id === 'rep-inv-loc') { state._repInvLoc = e.target.value; render(); return; }
     const itemField = e.target.dataset.itemField;
     if (itemField) {
       const [id, f] = itemField.split(':');
