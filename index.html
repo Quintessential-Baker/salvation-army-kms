@@ -2361,14 +2361,34 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="space-y-3 no-print">
           ${isMgmtOrHigher() ? `
-            <form id="form-import-recipe-url" class="kms-card p-4 space-y-2">
-              <h2 class="text-sm font-bold">Import Recipe from URL</h2>
-              <p class="text-[11px] opacity-75">Paste any recipe web link to import ingredients &amp; steps and scale to 40–80 portions.</p>
-              <div class="flex gap-1.5">
-                <input name="url" type="url" required placeholder="https://www.allrecipes.com/recipe/..." class="kms-input flex-1 text-xs" />
-                <button type="submit" id="btn-import-url" class="kms-btn-navy px-3 py-1.5 text-xs shrink-0">Import</button>
-              </div>
-            </form>
+            <div class="kms-card p-4 space-y-2.5">
+              <h2 class="text-sm font-bold">Search or Import Online Recipes</h2>
+              <form id="form-search-web-recipes" class="flex gap-1.5">
+                <input name="q" type="text" required value="${esc(state._webRecQuery || '')}" placeholder="Search online recipes (e.g. Lasagna, Chili)..." class="kms-input flex-1 text-xs" />
+                <button type="submit" id="btn-search-web-rec" class="kms-btn-alt px-3 py-1.5 text-xs shrink-0">Search</button>
+              </form>
+              ${state._webRecQuery ? `
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between text-[11px] opacity-75">
+                    <span>Results for "${esc(state._webRecQuery)}"</span>
+                    <a href="https://www.google.com/search?q=${encodeURIComponent(state._webRecQuery + ' recipe (site:allrecipes.com OR site:budgetbytes.com OR site:simplyrecipes.com)')}" target="_blank" rel="noopener noreferrer" class="underline font-semibold text-[#b3122b]">Search Recipe Sites ↗</a>
+                  </div>
+                  ${!(state._webRecResults || []).length ? '<p class="text-[11px] opacity-70">No direct matches found — try Search Recipe Sites ↗ and paste the URL below.</p>' : (state._webRecResults || []).slice(0, 6).map(m => `
+                    <div class="p-2 rounded border border-[var(--line)] flex items-center justify-between gap-2 text-xs">
+                      <div class="min-w-0">
+                        <div class="font-bold truncate">${esc(m.strMeal)}</div>
+                        <div class="text-[10px] opacity-65">${esc(m.strCategory || 'Main')}${m.strArea ? ' · ' + esc(m.strArea) : ''}</div>
+                      </div>
+                      <button type="button" data-import-mealdb="${esc(m.idMeal)}" class="kms-btn-ok px-2.5 py-1 text-[11px] shrink-0">Import</button>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+              <form id="form-import-recipe-url" class="flex gap-1.5 pt-2 border-t border-[var(--line)]/60">
+                <input name="url" type="url" required placeholder="Or paste any recipe URL (https://...)" class="kms-input flex-1 text-xs" />
+                <button type="submit" id="btn-import-url" class="kms-btn-navy px-3 py-1.5 text-xs shrink-0">Import URL</button>
+              </form>
+            </div>
             <form id="form-paste-recipe" class="kms-card p-4 space-y-2.5">
               <h2 class="text-sm font-bold">Add / Paste a Recipe</h2>
               <textarea name="raw" rows="4" required placeholder="Title on line 1&#10;Servings: 50&#10;4 boxes Spaghetti&#10;1 cases Spaghetti sauce&#10;Directions:&#10;1. Boil pasta..." class="kms-input w-full text-xs"></textarea>
@@ -3896,6 +3916,54 @@
     }
     const selRec = e.target.closest('[data-sel-rec]');
     if (selRec) { state.selectedRecipeId = selRec.dataset.selRec; render(); return; }
+    const importMealBtn = e.target.closest('[data-import-mealdb]');
+    if (importMealBtn) {
+      if (!isMgmtOrHigher()) { showToast('Only Management can import recipes', 'warn'); return; }
+      const meal = (state._webRecResults || []).find(m => String(m.idMeal) === String(importMealBtn.dataset.importMealdb));
+      if (meal) {
+        const baseServ = 4;
+        const rawLines = [];
+        for (let k = 1; k <= 20; k++) {
+          const ing = String(meal['strIngredient' + k] || '').trim();
+          const meas = String(meal['strMeasure' + k] || '').trim();
+          if (ing) rawLines.push((meas ? meas + ' ' : '') + ing);
+        }
+        const steps = String(meal.strInstructions || '').split(/\\r?\\n+/).map(s => s.trim()).filter(Boolean);
+        const allText = (meal.strMeal || '') + ' ' + rawLines.join(' ');
+        const allergenKeywords = {
+          milk: /milk|cheese|butter|cream|yogurt|dairy/i,
+          eggs: /egg/i,
+          wheat: /flour|pasta|spaghetti|penne|noodles|macaroni|bread|biscuit|cracker|wheat/i,
+          soy: /\bsoy\b|tofu/i,
+          peanuts: /peanut/i,
+          'tree nuts': /almond|walnut|pecan|cashew/i,
+          fish: /tuna|salmon|fish|cod/i,
+          shellfish: /shrimp|crab|lobster/i,
+          sesame: /sesame|tahini/i
+        };
+        const allergens = Object.keys(allergenKeywords).filter(a => allergenKeywords[a].test(allText));
+        const r = {
+          id: uid('rec'),
+          name: meal.strMeal || 'Imported Recipe',
+          category: meal.strCategory || 'Main Entree',
+          base_servings: baseServ,
+          prep_min: 20,
+          cook_min: 35,
+          allergens,
+          steps,
+          ingredients: rawLines.map(ln => parseIngredientLine(ln, baseServ))
+        };
+        state.recipes.unshift(r);
+        state.selectedRecipeId = r.id;
+        state.recipeScale = Math.min(80, Math.max(40, forecastWeekday(localDateStr()) || 65));
+        logActivity('RECIPE IMPORTED', `${r.name} (web search)`);
+        saveState();
+        render();
+        showToast(`Imported "${r.name}" (scaled to ${state.recipeScale} portions)`);
+      }
+      return;
+    }
+
     const delRec = e.target.closest('[data-del-rec]');
     if (delRec) {
       askConfirm('Delete Recipe', 'Delete this recipe?', () => {
@@ -4861,6 +4929,26 @@
       showToast(`Submitted "${title}" for ADMIN / MANAGER approval!`);
       return;
     }
+    if (e.target.id === 'form-search-web-recipes') {
+      const q = String(fd.get('q') || '').trim();
+      if (!q) return;
+      state._webRecQuery = q;
+      const btn = document.getElementById('btn-search-web-rec');
+      if (btn) { btn.disabled = true; btn.textContent = 'Searching...'; }
+      fetch('https://www.themealdb.com/api/json/v1/1/search.php?s=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(data => {
+          state._webRecResults = Array.isArray(data.meals) ? data.meals : [];
+          render();
+        })
+        .catch(() => {
+          state._webRecResults = [];
+          render();
+          showToast('Web search offline — try Search Recipe Sites ↗ or paste a URL', 'warn');
+        });
+      return;
+    }
+
     if (e.target.id === 'form-import-recipe-url') {
       if (!isMgmtOrHigher()) { showToast('Only Management can import recipes', 'warn'); return; }
       const targetUrl = String(fd.get('url') || '').trim();
