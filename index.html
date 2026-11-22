@@ -1288,6 +1288,13 @@
           priority: m.priority || 'normal', body: m.body, created_at_ms: m.created_at_ms, timestamp_label: m.timestamp_label
         })), { onConflict: 'id' });
       }
+      if (state.activityLogs && state.activityLogs.length) {
+        await sbClient.from('kms_activity_logs').upsert(state.activityLogs.slice(0, 120).map(a => ({
+          id: a.id, actor_name: a.actor_name || 'System', actor_role: a.actor_role || '',
+          category: a.category || 'ACTION', detail: a.detail || '',
+          timestamp_label: a.timestamp_label || '', created_at_ms: a.created_at_ms || Date.now()
+        })), { onConflict: 'id' });
+      }
     } catch (e) {}
   }
 
@@ -1306,7 +1313,7 @@
         return;
       }
       if (invData && invData.length > 0) {
-        const [recR, mpR, poR, txR, tagR, chkR, usrR, annR, msgR, safR] = await Promise.all([
+        const [recR, mpR, poR, txR, tagR, chkR, usrR, annR, msgR, safR, actR] = await Promise.all([
           sbClient.from('kms_recipes').select('*'),
           sbClient.from('kms_menu_plan').select('*'),
           sbClient.from('kms_purchase_orders').select('*'),
@@ -1316,7 +1323,8 @@
           sbClient.from('kms_users').select('*'),
           sbClient.from('kms_announcements').select('*'),
           sbClient.from('kms_messages').select('*').order('created_at_ms', { ascending: true }).limit(50),
-          sbClient.from('kms_safety_logs').select('*')
+          sbClient.from('kms_safety_logs').select('*'),
+          sbClient.from('kms_activity_logs').select('*').order('created_at_ms', { ascending: false }).limit(150)
         ]);
         state.items = invData;
         if (recR.data && recR.data.length) state.recipes = recR.data.map(normalizeRecipe);
@@ -1328,6 +1336,7 @@
         if (usrR.data && usrR.data.length) { state.users = usrR.data; ensureOwnerIntegrity(); }
         if (annR.data) state.announcements = annR.data;
         if (msgR.data) state.messages = msgR.data;
+        if (actR && actR.data && actR.data.length) state.activityLogs = actR.data;
         if (safR.data) {
           safR.data.forEach(s => { state.safetyLogs[s.log_date] = s; });
         }
@@ -3368,14 +3377,40 @@
         </div>
 
         <div class="kms-card p-4 space-y-2">
-          <h3 class="text-sm font-bold">Real-Time Accountability Feed</h3>
-          <div class="max-h-72 overflow-y-auto space-y-1.5 text-xs">
-            ${!state.activityLogs.length ? '<p class="opacity-70">No actions logged yet.</p>' : state.activityLogs.slice(0, 80).map(a => `
-              <div class="p-2 rounded border border-[var(--line)] flex justify-between gap-2">
-                <span><strong>${esc(a.actor_name)}</strong> [${esc(a.category)}] ${esc(a.detail)}</span>
-                <span class="opacity-60 font-mono shrink-0">${esc(a.timestamp_label)}</span>
-              </div>
-            `).join('')}
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-sm font-bold">Real-Time Accountability Feed (${state.activityLogs.length})</h3>
+            <div class="flex flex-wrap gap-1.5 text-xs">
+              <select id="act-cat-filter" class="kms-input text-xs">
+                <option value="ALL" ${(state._actCat || 'ALL') === 'ALL' ? 'selected' : ''}>All Actions</option>
+                <option value="AUTH" ${state._actCat === 'AUTH' ? 'selected' : ''}>Sign-Ins &amp; Log Outs</option>
+                <option value="STOCK" ${state._actCat === 'STOCK' ? 'selected' : ''}>Stock &amp; POs</option>
+                <option value="RECIPE" ${state._actCat === 'RECIPE' ? 'selected' : ''}>Recipes &amp; Menu</option>
+                <option value="SAFETY" ${state._actCat === 'SAFETY' ? 'selected' : ''}>Safety &amp; Users</option>
+              </select>
+              <input id="act-search-inp" type="text" value="${esc(state._actSearch || '')}" placeholder="Filter by user or action..." class="kms-input text-xs w-44" />
+            </div>
+          </div>
+          <div class="max-h-80 overflow-y-auto space-y-1.5 text-xs">
+            ${(() => {
+              const cat = state._actCat || 'ALL';
+              const q = (state._actSearch || '').toLowerCase();
+              const filtered = (state.activityLogs || []).filter(a => {
+                const c = String(a.category || '').toUpperCase();
+                if (cat === 'AUTH' && !/LOGIN|LOGOUT|LOCK|AUTH/.test(c)) return false;
+                if (cat === 'STOCK' && !/STOCK|PO |DELIVERY|RECEIVE|WASTE|AUDIT|PAR/.test(c)) return false;
+                if (cat === 'RECIPE' && !/RECIPE|MENU|SERVED/.test(c)) return false;
+                if (cat === 'SAFETY' && !/TEMP|CLEANING|USER|ANNOUNCEMENT|CHECKLIST|TAG/.test(c)) return false;
+                if (q && !`${a.actor_name} ${a.category} ${a.detail}`.toLowerCase().includes(q)) return false;
+                return true;
+              });
+              if (!filtered.length) return '<p class="opacity-70">No matching actions logged.</p>';
+              return filtered.slice(0, 120).map(a => `
+                <div class="p-2 rounded border border-[var(--line)] flex justify-between gap-2">
+                  <span><strong>${esc(a.actor_name)}</strong> <span class="font-mono text-[10px] px-1 py-0.5 rounded bg-black/5">[${esc(a.category)}]</span> ${esc(a.detail)}</span>
+                  <span class="opacity-60 font-mono shrink-0">${esc(a.timestamp_label)}</span>
+                </div>
+              `).join('');
+            })()}
           </div>
         </div>
       </div>
@@ -3605,7 +3640,7 @@
     if (e.target.closest('#btn-open-chat')) { showChatModal(); return; }
     const chatTgtBtn = e.target.closest('[data-chat-target]');
     if (chatTgtBtn) { state._chatTarget = chatTgtBtn.dataset.chatTarget; showChatModal(); return; }
-    if (e.target.closest('#btn-lock-app')) { state.isLocked = true; delete state._sbAuthEmail; setSessionUnlocked(false); if (sbClient && sbClient.auth) { try { sbClient.auth.signOut(); } catch (err) {} } saveState(); render(); return; }
+    if (e.target.closest('#btn-lock-app')) { const curU = getActiveUser(); logActivity('LOGOUT', `${curU.name} locked / signed out`); state.isLocked = true; delete state._sbAuthEmail; setSessionUnlocked(false); if (sbClient && sbClient.auth) { try { sbClient.auth.signOut(); } catch (err) {} } saveState(); render(); return; }
     if (e.target.id === 'btn-undo' || e.target.id === 'btn-stock-undo') { doUndo(); return; }
     if (e.target.id === 'btn-print-qr') { showQrLabelsModal(); return; }
     if (e.target.id === 'btn-print-page') { window.print(); return; }
@@ -4642,6 +4677,7 @@
   document.addEventListener('input', (e) => {
     if (e.target.id === 'stock-search') { state._stockSearch = e.target.value; render(); const el = document.getElementById('stock-search'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
     if (e.target.id === 'rec-scale-inp' || e.target.id === 'rec-scale-slider') { state.recipeScale = Math.max(1, parseFloat(e.target.value) || 1); render(); return; }
+    if (e.target.id === 'act-search-inp') { state._actSearch = e.target.value; render(); const el = document.getElementById('act-search-inp'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
     if (e.target.id === 'rec-search-inp') {
       state._recSearch = e.target.value;
       const q = state._recSearch.trim().toLowerCase();
@@ -4656,6 +4692,7 @@
   });
 
   document.addEventListener('change', (e) => {
+    if (e.target.id === 'act-cat-filter') { state._actCat = e.target.value; render(); return; }
     if (e.target.id === 'rec-photo-file') {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
@@ -4755,6 +4792,7 @@
         if (f === 'qty' || f === 'stock_per_unit' || f === 'per100') ing[f] = parseFloat(e.target.value) || 0;
         else ing[f] = e.target.value;
         if (f !== 'per100') recomputeIngredientPer100(ing, r.base_servings);
+        logActivity('RECIPE EDITED', `${r.name}: updated ${ing.name} (${f})`);
         saveState();
         render();
       }
@@ -4764,6 +4802,7 @@
       const today = localDateStr();
       const log = state.safetyLogs[today] = state.safetyLogs[today] || { temps: {}, cleaning: {} };
       log.temps[e.target.dataset.tempIdx] = e.target.value === '' ? null : parseFloat(e.target.value);
+      logActivity('SAFETY TEMP', `${TEMP_CHECKS[e.target.dataset.tempIdx]?.[0] || 'Temp'}: ${e.target.value || 'cleared'}°F`);
       log.logged_by = getActiveUser().name;
       logActivity('TEMP', `${TEMP_CHECKS[e.target.dataset.tempIdx][0]}: ${e.target.value}°F`);
       saveState();
@@ -4774,6 +4813,7 @@
       const today = localDateStr();
       const log = state.safetyLogs[today] = state.safetyLogs[today] || { temps: {}, cleaning: {} };
       log.cleaning[e.target.dataset.cleanIdx] = e.target.checked;
+      logActivity('CLEANING LOG', `${CLEANING_TASKS[e.target.dataset.cleanIdx] || 'Task'}: ${e.target.checked ? 'Done' : 'Unchecked'}`);
       logActivity('CLEANING', CLEANING_TASKS[e.target.dataset.cleanIdx]);
       saveState();
       render();
@@ -4830,6 +4870,7 @@
     if (e.target.id === 'form-unlock' || e.target.id === 'form-switch-user') {
       const u = state.users.find(x => x.id === fd.get('userId') && x.active !== false);
       if (!u || !verifyPin(u, fd.get('pin'))) {
+        if (u) { logActivity('LOGIN FAILED', `Incorrect PIN attempt for ${u.name}`); saveState(); }
         document.getElementById(e.target.id === 'form-unlock' ? 'unlock-err' : 'sw-err')?.classList.remove('hidden');
         return;
       }
@@ -5511,6 +5552,7 @@
     clearTimeout(inactivityTimer);
     if (!state.autoLockMinutes || state.isLocked) return;
     inactivityTimer = setTimeout(() => {
+      if (!state.isLocked) logActivity('AUTO LOCK', `${getActiveUser().name} auto-locked after inactivity`);
       state.isLocked = true;
       setSessionUnlocked(false);
       saveState();
@@ -5578,6 +5620,7 @@
     try { return sessionStorage.getItem('sa_kms_session_unlocked') === '1'; } catch (e) { return false; }
   }
   function lockOnExit() {
+    if (!state.isLocked) logActivity('LOGOUT', `${getActiveUser().name} session ended on exit`);
     state.isLocked = true;
     delete state._sbAuthEmail;
     setSessionUnlocked(false);
