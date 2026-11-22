@@ -1292,7 +1292,7 @@
         await sbClient.from('kms_activity_logs').upsert(state.activityLogs.slice(0, 120).map(a => ({
           id: a.id, actor_name: a.actor_name || 'System', actor_role: a.actor_role || '',
           category: a.category || 'ACTION', detail: a.detail || '',
-          timestamp_label: a.timestamp_label || '', created_at_ms: a.created_at_ms || Date.now()
+          timestamp_label: a.timestamp_label || '', created_at_ms: Math.round(Number(a.created_at_ms) || Date.now())
         })), { onConflict: 'id' });
       }
     } catch (e) {}
@@ -1336,7 +1336,11 @@
         if (usrR.data && usrR.data.length) { state.users = usrR.data; ensureOwnerIntegrity(); }
         if (annR.data) state.announcements = annR.data;
         if (msgR.data) state.messages = msgR.data;
-        if (actR && actR.data && actR.data.length) state.activityLogs = actR.data;
+        if (actR && actR.data && actR.data.length) {
+          const byId = new Map();
+          [...(state.activityLogs || []), ...actR.data].forEach(a => { if (a && a.id) byId.set(a.id, a); });
+          state.activityLogs = Array.from(byId.values()).sort((a, b) => (Number(b.created_at_ms) || 0) - (Number(a.created_at_ms) || 0)).slice(0, 200);
+        }
         if (safR.data) {
           safR.data.forEach(s => { state.safetyLogs[s.log_date] = s; });
         }

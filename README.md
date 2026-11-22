@@ -2,49 +2,83 @@
 
 **Butler, PA · Mon / Tue / Wed / Fri Lunch Service (11:30 AM – 12:30 PM)**
 
-This unified KMS combines the simplicity, Butler PA stockroom seed, 8-week auto-learning par levels, and printable Daily Sheets of **Community Meals Inventory** with the multi-user security, forecasting, checklists, QR scanning, and relational Supabase cloud sync of **Kitchen OS**.
-
-## What Was Merged & Recreated
-
-1. **Community Inventory Core (Base Architecture)**:
-   - **Warm, high-contrast touch UI** (`#f6f4f0` background, `#1b365d` Salvation Army Navy, `#b3122b` Red) with **Dark Mode**, **3-step Text Size toggle**, and **Undo Last Change**.
-   - **Full Butler, PA Seed Inventory** across `Walk-in cooler`, `Walk-in freezer`, and `Stockroom` with exact units (`cases`, `cans`, `boxes`, `bottles`, `jugs`, `bags`, `packs`, `crates`, `pieces`, `tubs`) and `W` (Weekly: Marberger & produce) / `M` (Monthly: Jordan Banana) cadence.
-   - **8-Week Auto-Learning Par Levels**: Automatically computes `par = avg weekly use × cycle weeks × 1.25` after 7+ days of usage; typing a custom par locks that item.
-   - **Smart Recipe Text/Paste Parser + Scaled Recipes**: Paste any recipe text to auto-extract servings, ingredients, steps, and major allergens—or build/edit recipes manually and map ingredients (`per 100 servings`) to Living Stock.
-   - **Printable Daily Service Sheet**: Scaled ingredients, cooking directions, storage pull list grouped by location, blank temperature log, and 7-day leftover labels.
-   - **Monthly Report**: Meals served, total purchases & cost per meal, food received by source, waste breakdown, food safety pass %, top-used items, and below-par summary.
-
-2. **Merged Kitchen OS Features**:
-   - **Home Dashboard**: Quick Shift Actions, *Today's Recipe & To-Do* modal, Priority Carryover alerts, Reorder alerts, Expiring Date-Tag alerts, Scheduled/Repeating Announcements, and 7-Day Menu Strip.
-   - **Role-Based PIN Security & Auto-Lock**: `Management`, `Staff`, `Volunteer`, and `Other` tiers with salted SHA-256 PIN hashing, force-change-PIN on first login, 5-minute configurable inactivity auto-lock, and mandatory first-login training walkthrough.
-   - **Fast Scan Terminal & Printable QR Labels**: Camera QR/barcode scanning (`html5-qrcode`), USB/Bluetooth scanner input, and printable shelf/bin QR labels (`qrcode-generator`).
-   - **Next-Day Prep List**: Tomorrow's pulls grouped by storage zone with checkboxes and FIFO leftovers reminder.
-   - **Operational Checklists**: Daily, Weekly, and Monthly cycles with auto-reset, Priority Carryover for unfinished tasks, and permanent completion log.
-   - **Blind Physical Count**: Hides system quantities during counting, records variances, and updates Living Stock upon reconciliation.
-   - **Storage & Date Labels (>24 Hours)**: Separate FIFO tracking for **Meal Leftovers** and **Daily Salad Bar & Cold Prep** with 1-tap shelf-life presets (`3d` greens/fruit, `4d` dairy/deli, `7d` cooked entrees, `90d` freezer).
-   - **Multi-Horizon Forecasting (Chart.js)**: Predicts patron turnout across Days (7), Weeks (8), Months (12), and Years (3) using weekday, time-of-month, and US Federal Holiday factors.
-   - **Kitchen Instant Messaging (Chat)**: Real-time team broadcast & direct messages with Urgent alerts.
-
-3. **Recreated Relational Database (`supabase_setup.sql`)**:
-   - Replaced the single JSON blob with **14 normalized PostgreSQL tables** (`kms_users`, `kms_inventory_items`, `kms_recipes`, `kms_menu_plan`, `kms_purchase_orders`, `kms_transactions`, `kms_safety_logs`, `kms_storage_tags`, `kms_checklists`, `kms_blind_audits`, `kms_announcements`, `kms_messages`, `kms_activity_logs`, `kms_settings`), complete with Row Level Security and Supabase Realtime subscriptions.
+A unified, mobile- and tablet-ready Kitchen Management System combining living stockroom inventory, whole-case purchase orders, 40–80 portion recipe scaling with culinary unit conversions, food-safety logging, patron forecasting, and real-time multi-device cloud sync via Supabase.
 
 ---
 
-## Setup & Deployment
+## Repository Files
 
-1. **Database Setup**: Open your Supabase Dashboard → **SQL Editor**, paste and run **`supabase_setup.sql`**.
-2. **Hosting**: Upload **`index.html`**, **`README.md`**, and **`supabase_setup.sql`** to your GitHub Pages repository (`main` branch, `/ (root)`).
-3. **First Login**: Sign in as **William Clark (`Management`)** using PIN `1234` (you will be prompted to set a personal 6+ character PIN and complete the brief role training).
+| File | Purpose | Where to Deploy |
+| :--- | :--- | :--- |
+| `index.html` | Complete single-file KMS web application | GitHub Pages (`main` branch, root `/`) |
+| `.nojekyll` | Disables Jekyll processing on GitHub Pages | GitHub Pages (`main` branch, root `/`) |
+| `README.md` | System overview, roles, and deployment guide | GitHub repository root |
+| `supabase_setup.sql` | 14-table PostgreSQL schema, RLS policies, Realtime publication, and idempotent migrations | Supabase Dashboard → **SQL Editor** |
+| `supabase_edge_notify.ts` | `notify-alert` Edge Function for automated background email alerts via Resend | Supabase Dashboard → **Edge Functions** (`notify-alert`) |
+| `supabase_edge_scrape_recipe.ts` | `scrape-recipe` Edge Function for multi-site recipe search & URL import (with reader-proxy fallback) | Supabase Dashboard → **Edge Functions** (`scrape-recipe`) |
 
+---
 
-## Admin / Tech-Support Login (Supabase Auth)
-1. Open your **Supabase Dashboard** → **Authentication** → **Users** → **Add User**.
-2. Create an email and strong password for your Admin / Tech-Support recovery account.
-3. On the app's Lock Screen, expand **Admin / Tech-Support Login (Supabase Auth)** and sign in with that email and password—verified server-side by Supabase with no secrets stored in `index.html`.
+## Key Capabilities
 
+### 1. Living Inventory, Whole-Case POs & Receiving
+- **Butler, PA Stockroom Seed**: Organized across `Walk-in cooler`, `Walk-in freezer`, and `Stockroom` with vendor cadences (`W` = Weekly Marberger & Produce; `M` = Monthly Jordan Banana).
+- **8-Week Auto-Learning Pars**: Calculates `par = avg weekly use × cycle weeks × 1.25` (rounded to `0.01`) after 7+ days of usage; manual edits lock that item's par.
+- **Whole-Case Ordering & Par Guardrails**: PO suggestions only trigger when `>= 1` whole case is needed (or `on_hand <= 0` after subtracting open POs), with selectable/editable lines, custom `PO #` / `Vendor Invoice #`, and brand-new item creation inside **Edit PO / Invoice #**.
+- **Order Workflow & Delivery Reminders**: `STAFF` can request, edit, and delete `requested` POs; `ADMIN`/`MANAGER` approve, reject, mark ordered (with optional **Expected Delivery Date** and automatic 8:00 AM system reminder), and reconcile full delivery slips under **Receive & Scan**.
+- **Fast Scan Terminal & Blind Audits**: Camera QR/barcode scanning (`html5-qrcode`), USB/Bluetooth SKU entry, printable 2-column Shelf QR Labels, and Blind Physical Counts.
 
-## Free Automated Background Email Alerts (Supabase Edge Function + Resend)
-1. Create a free **Resend** account (`resend.com`, 3,000 emails/month free) and copy your API key.
-2. In **Supabase Dashboard → Edge Functions**, create a function named `notify-alert` and paste the contents of `supabase_edge_notify.ts`.
-3. Under **Edge Functions → Secrets**, add `RESEND_API_KEY` with your Resend key.
-4. In the KMS **Users & Activity** tab, enter each user's **Email** and (optionally) **Mobile # + Carrier**—the app will automatically send background email and email-to-SMS alerts whenever a PO is submitted for approval or an urgent Broadcast/DM is sent.
+### 2. Standardized Recipes (40–80 Portions) & Menu Planning
+- **Kitchen-Friendly Measurements & Background Stock Accuracy**: Recipes display culinary units (`cups`, `tbsp`, `tsp`, `fl oz`, `oz`, `lbs`, `quarts`, `gallons`, `pieces`, `to taste`) with fractions (`¼`, `½`, `¾`, etc.) while automatically converting to inventory stock units (`cases`, `cans`, `boxes`, `packs`) in the background (`1 stock unit = X recipe units`).
+- **40–80 Portion Scaling & Quick-Scan Table**: Interactive slider, `40–80` presets, `Predicted` turnout button, and a 5-column `40/50/60/70/80` Quick-Scan Table.
+- **Web Search, URL Import & Photo Support**: Search recipes across Budget Bytes, Skinnytaste, Sally's Baking Addiction, TheMealDB, and DummyJSON; import from any recipe URL (with automatic Jina Reader fallback for `403`-protected sites); paste raw text; or upload/link recipe photos.
+- **Staff Suggestions & Menu Deduction**: `STAFF` submit recipe and menu suggestions for `ADMIN`/`MANAGER` approval; marking a scheduled meal **Served** deducts mapped ingredients from Living Stock and logs leftovers.
+
+### 3. Food Safety, Forecasting, Chat & Automated Alerts
+- **6-Point Temperature & 7-Point Cleaning Logs**: Daily pass/fail checks (`≤41°F` coolers, `≤0°F` freezers, `≥135°F` hot hold/steam table) with printable single-page safety logs.
+- **Date Labels (>24 Hours) & Operational Checklists**: FIFO tracking for cooked leftovers (`7d`) and Daily Salad Bar (`3d`/`4d`), plus Daily/Weekly/Monthly checklists with Priority Carryover.
+- **Federal Holiday & Order Schedule Alerts**: Automatic 14-day lookahead for all 11 US federal holidays + Thanksgiving Friday, shifting Friday order deadlines to the preceding open business day when a holiday falls on or near Friday.
+- **Multi-Factor Patron Forecasting**: Predicts turnout across Days, Weeks, Months, and Years using weekday, meal popularity, and holiday/weather factors with a What-If simulator.
+- **Team Chat & Email Alerts**: Real-time **Alert All (Broadcast)** and **Private DMs** with unread badges, automated background emails via Resend (`notify-alert`), and `mailto:` fallback on PO submissions and urgent messages.
+
+### 4. Role-Based Access Control (RBAC), Accountability & Printing
+- **4 Strict Roles**: `ADMIN`, `MANAGER`, `STAFF`, and `VOLUNTEER` with salted SHA-256 PINs, mandatory first-login PIN change, role-specific onboarding training, **Interactive Guided Tour**, and auto-lock on idle or tab close/reopen.
+- **User Hierarchy**: `ADMIN` can create, edit, promote (up to `ADMIN`), deactivate, and delete accounts; `MANAGER` can manage `STAFF` and `VOLUNTEER` accounts.
+- **Cloud-Synced Accountability Feed**: Tracks sign-ins, failed PINs, manual/auto logouts, stock/PO updates, recipe edits, and safety logs in `kms_activity_logs` with category and keyword filters.
+- **Standardized Letter-Size Printing**: Clean `@media print` pagination (`0.45in` Letter margins, `break-inside: avoid`, repeated table headers) for Daily Sheets, Recipe + QR cards, Next-Day Prep lists, Safety Logs, Shelf QR Labels, and Executive Monthly Reports.
+
+---
+
+## Setup & Deployment Guide
+
+### Step 1: Supabase Database (`supabase_setup.sql`)
+1. Open your **Supabase Dashboard → SQL Editor**.
+2. Paste and run the entire contents of **`supabase_setup.sql`**.
+   - Creates (or safely migrates) all **14 normalized tables**: `kms_users`, `kms_inventory_items`, `kms_recipes`, `kms_menu_plan`, `kms_purchase_orders`, `kms_transactions`, `kms_safety_logs`, `kms_storage_tags`, `kms_checklists`, `kms_blind_audits`, `kms_announcements`, `kms_messages`, `kms_activity_logs`, and `kms_settings`.
+   - Enables Row Level Security and adds all tables to the `supabase_realtime` publication.
+
+### Step 2: Supabase Auth Recovery Account (Optional Admin Fallback)
+1. Open **Supabase Dashboard → Authentication → Users → Add User**.
+2. Create an email and strong password for Admin / Tech-Support recovery.
+3. On the app's Lock Screen, expand **Admin / Tech-Support Login (Supabase Auth)** to sign in server-side without storing credentials in `index.html`.
+
+### Step 3: Deploy Edge Functions (Free Tier)
+1. **Automated Email Alerts (`notify-alert`)**:
+   - Create a free **Resend** account (`resend.com`, 3,000 emails/month free) and copy your API key.
+   - In **Supabase Dashboard → Edge Functions**, create a function named **`notify-alert`** using **`supabase_edge_notify.ts`**.
+   - Under **Edge Functions → Secrets**, add `RESEND_API_KEY` (and optionally `FROM_EMAIL`).
+   - Add each team member's email address in **Admin & Reports → Users & Activity**.
+2. **Recipe Web Search & URL Scraper (`scrape-recipe`)**:
+   - In **Supabase Dashboard → Edge Functions**, create a function named **`scrape-recipe`** using **`supabase_edge_scrape_recipe.ts`** (no external API keys required; included in Supabase's free 500,000 invocations/month tier).
+
+### Step 4: GitHub Pages Hosting
+1. Upload **`index.html`**, **`.nojekyll`**, **`README.md`**, and the backend reference files to your GitHub repository (`main` branch).
+2. In **Repository Settings → Pages**, set **Source** to `Deploy from a branch`, **Branch** to `main` / `/ (root)`, and save.
+3. After updating `index.html`, **hard-refresh** all kitchen tablets/browsers so every device runs the latest version and syncs identically.
+
+### Step 5: Initial Sign-In
+- Default starting accounts (all force a personal 6+ character PIN change on first login):
+  - **William Clark (`ADMIN`)**: starting PIN `1234`
+  - **Kitchen Manager (`MANAGER`)**: starting PIN `1111`
+  - **Sabrina (`STAFF`)**: starting PIN `2222`
+  - **Volunteer Team (`VOLUNTEER`)**: starting PIN `0000`
