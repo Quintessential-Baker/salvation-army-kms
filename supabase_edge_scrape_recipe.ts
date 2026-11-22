@@ -2,7 +2,7 @@
 // Deploy in Supabase Dashboard -> Edge Functions -> Create a new function named "scrape-recipe"
 // Supports both:
 //   1) POST { "query": "meatloaf" } -> searches Budget Bytes, Skinnytaste, Sally's Baking Addiction, TheMealDB, and DummyJSON
-//   2) POST { "url": "https://..." } -> scrapes Schema.org Recipe JSON-LD from a recipe page
+//   2) POST { "url": "https://..." } -> scrapes Schema.org Recipe JSON-LD (with automatic reader-proxy fallback for 403-protected sites)
 // Free tier: included in Supabase Free plan (up to 500,000 invocations/month, no extra API keys needed).
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -106,6 +106,87 @@ async function fetchJsonSafe(url: string) {
   }
 }
 
+function parseMarkdownRecipe(md: string, sourceUrl: string) {
+  const lines = String(md || "").split(/\r?\n/).map((l) => l.trim());
+  let name = "";
+  let baseServings = 4;
+  const ingredients: string[] = [];
+  const steps: string[] = [];
+  let mode: "none" | "ing" | "step" = "none";
+
+  for (const rawLine of lines) {
+    if (!rawLine) continue;
+    const titleMeta = rawLine.match(/^Title:\s*(.+)$/i);
+    if (titleMeta && !name) {
+      name = titleMeta[1].replace(/\s*[-|].*(Food Network|Allrecipes|Recipe).*$/i, "").trim();
+      continue;
+    }
+    if (!name && /^#\s+/.test(rawLine)) {
+      name = rawLine.replace(/^#+\s*/, "").trim();
+      continue;
+    }
+    const yieldMatch = rawLine.match(/^(?:Yield|Servings|Serves)\s*:?\s*(\d+)/i);
+    if (yieldMatch) {
+      baseServings = Math.max(1, Number(yieldMatch[1]));
+      continue;
+    }
+    if (/^#{1,4}\s*Ingredients\b|^Ingredients\s*:?$/i.test(rawLine)) {
+      mode = "ing";
+      continue;
+    }
+    if (/^#{1,4}\s*(?:Directions|Instructions|Method|Preparation|Steps)\b|^(?:Directions|Instructions|Method|Preparation)\s*:?$/i.test(rawLine)) {
+      mode = "step";
+      continue;
+    }
+    if (/^#{1,4}\s*(?:Nutrition|Reviews|Shop|Related|More|Video|Cook's Note|Notes|Equipment)\b/i.test(rawLine)) {
+      if (mode !== "none" && ingredients.length && steps.length) break;
+      mode = "none";
+      continue;
+    }
+
+    const clean = rawLine.replace(/^[-*•\[\]xX\s]+(?=[A-Za-z0-9¼½¾⅓⅔⅛])/, "").replace(/^\*+|\*+$/g, "").trim();
+    if (!clean || /^(Deselect All|Select All|Get Ingredients|Add to Shopping List|View Shopping List|Save Recipe|Print|Email)$/i.test(clean)) continue;
+    if (/^!\[|^\[.*\]\(http/.test(rawLine)) continue;
+
+    if (mode === "ing") {
+      if (clean.length < 180) ingredients.push(clean);
+    } else if (mode === "step") {
+      const stepTxt = clean.replace(/^\d+[\.\)]\s*/, "").trim();
+      if (stepTxt.length > 8) steps.push(stepTxt);
+    }
+  }
+
+  if (!ingredients.length) return null;
+  return {
+    name: name || "Imported Recipe",
+    category: "Main Entree",
+    base_servings: baseServings,
+    prep_min: 20,
+    cook_min: 35,
+    ingredients,
+    steps,
+    source_url: sourceUrl,
+  };
+}
+
+async function fetchViaReaderFallback(targetUrl: string) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 9000);
+  try {
+    const res = await fetch(`https://r.jina.ai/${targetUrl}`, {
+      headers: { "Accept": "text/plain" },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return parseMarkdownRecipe(text, targetUrl);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function searchAllRecipeSources(query: string) {
   const q = encodeURIComponent(query);
   const wpSites = [
@@ -123,7 +204,6 @@ async function searchAllRecipeSources(query: string) {
   const results: Array<Record<string, unknown>> = [];
   const seen = new Set<string>();
 
-  // 1. WordPress Recipe Sites (Budget Bytes, Skinnytaste, Sally's Baking)
   wpSites.forEach((site, idx) => {
     const posts = wpResults[idx];
     if (!Array.isArray(posts)) return;
@@ -144,7 +224,6 @@ async function searchAllRecipeSources(query: string) {
     });
   });
 
-  // 2. TheMealDB
   if (mdb && Array.isArray(mdb.meals)) {
     mdb.meals.forEach((m: Record<string, unknown>) => {
       const title = String(m.strMeal || "").trim();
@@ -172,7 +251,6 @@ async function searchAllRecipeSources(query: string) {
     });
   }
 
-  // 3. DummyJSON Recipes
   if (dj && Array.isArray(dj.recipes)) {
     dj.recipes.forEach((d: Record<string, unknown>) => {
       const title = String(d.name || "").trim();
@@ -233,6 +311,15 @@ serve(async (req) => {
 
     const res = await fetch(parsedUrl.toString(), { headers: BROWSER_HEADERS });
     if (!res.ok) {
+      if ([401, 403, 429].includes(res.status)) {
+        const fallbackRecipe = await fetchViaReaderFallback(parsedUrl.toString());
+        if (fallbackRecipe) {
+          return new Response(JSON.stringify({ ok: true, recipe: fallbackRecipe }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
       const msg = res.status === 403
         ? `${parsedUrl.hostname} blocks automated imports (HTTP 403). Copy & paste the recipe text into "Add / Paste a Recipe" below.`
         : `${parsedUrl.hostname} returned HTTP ${res.status}`;
@@ -256,6 +343,13 @@ serve(async (req) => {
     }
 
     if (!recipeObj) {
+      const fallbackRecipe = await fetchViaReaderFallback(parsedUrl.toString());
+      if (fallbackRecipe) {
+        return new Response(JSON.stringify({ ok: true, recipe: fallbackRecipe }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: "No structured Recipe data found on that page. Copy and paste the recipe text instead." }), {
         status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
