@@ -386,7 +386,7 @@
   }
   function fmtNum(n) { return String(Math.round((Number(n) || 0) * 100) / 100); }
 
-  const KITCHEN_UNITS = ['tsp', 'tbsp', 'fl oz', 'cups', 'pints', 'quarts', 'gallons', 'oz', 'lbs', 'pieces', 'cans', 'boxes', 'bags', 'packs', 'cases'];
+  const KITCHEN_UNITS = ['tsp', 'tbsp', 'fl oz', 'cups', 'pints', 'quarts', 'gallons', 'oz', 'lbs', 'pieces', 'cans', 'boxes', 'bags', 'packs', 'cases', 'to taste'];
   const UNIT_ALIASES = {
     teaspoon: 'tsp', teaspoons: 'tsp', tsp: 'tsp',
     tablespoon: 'tbsp', tablespoons: 'tbsp', tbsp: 'tbsp', tbs: 'tbsp',
@@ -434,12 +434,17 @@
     return fmtNum(v);
   }
   function formatKitchenAmt(qty, unit) {
+    const rawU = String(unit || '').trim().toLowerCase();
+    if (rawU === 'to taste' || rawU === 'as needed') return 'To taste';
     let q = Number(qty) || 0;
+    if (q <= 0) return 'To taste';
     let u = normUnit(unit);
+    if (u === 'tsp' && q >= 3) { q = q / 3; u = 'tbsp'; }
     if (u === 'cups' && q > 0 && q < 0.25) { q = q * 16; u = 'tbsp'; }
     if (u === 'tbsp' && q > 0 && q < 1) { q = q * 3; u = 'tsp'; }
     else if (u === 'tbsp' && q >= 16) { q = q / 16; u = 'cups'; }
-    if (u === 'lbs' && q > 0 && q < 1) { q = q * 16; u = 'oz'; }
+    if (u === 'oz' && q >= 16) { q = q / 16; u = 'lbs'; }
+    else if (u === 'lbs' && q > 0 && q < 1) { q = q * 16; u = 'oz'; }
     if (u === 'quarts' && q > 0 && q < 1) { q = q * 4; u = 'cups'; }
     if (u === 'gallons' && q > 0 && q < 1) { q = q * 4; u = 'quarts'; }
     return formatKitchenFraction(q) + ' ' + u;
@@ -464,7 +469,7 @@
     Object.keys(uniMap).forEach(k => { ln = ln.split(k).join(uniMap[k]); });
     ln = ln.replace(/^[-*•]\s*/, '').replace(/\s+/g, ' ').trim();
     const m = ln.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)(?:\s*[-–]\s*(\d+(?:\.\d+)?))?\s*(fl\s+oz|[a-zA-Z#]+)?\s+(.+)$/i);
-    if (!m) return { name: ln, qty: 1, unit: 'pieces', inv_id: '', stock_per_unit: 0, per100: 0 };
+    if (!m) return { name: ln, qty: 0, unit: 'to taste', inv_id: '', stock_per_unit: 0, per100: 0 };
     const parseFrac = (tok) => {
       const parts = String(tok).trim().split(/\s+/);
       let sum = 0;
