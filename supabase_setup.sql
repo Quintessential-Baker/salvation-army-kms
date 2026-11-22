@@ -260,3 +260,6 @@ alter table public.kms_users add constraint kms_users_role_check check (role in 
 alter table public.kms_messages add column if not exists recipient_id text not null default 'ALL';
 alter table public.kms_messages add column if not exists recipient_name text not null default 'Everyone';
 alter table public.kms_messages add column if not exists priority text not null default 'normal';
+
+alter table public.kms_recipes add column if not exists photo_url text not null default '';
+alter table public.kms_recipes add column if not exists notes text not null default '';

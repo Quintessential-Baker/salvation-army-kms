@@ -371,6 +371,13 @@ serve(async (req) => {
         cook_min: parseIsoMinutes(recipeObj.cookTime) || 35,
         ingredients,
         steps,
+        image: (() => {
+          const im = recipeObj.image;
+          if (typeof im === "string") return im;
+          if (Array.isArray(im) && im[0]) return typeof im[0] === "string" ? im[0] : String((im[0] as Record<string, unknown>)?.url || "");
+          if (im && typeof im === "object") return String((im as Record<string, unknown>).url || "");
+          return "";
+        })(),
         source_url: parsedUrl.toString(),
       },
     }), {

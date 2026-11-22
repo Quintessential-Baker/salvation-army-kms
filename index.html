@@ -70,14 +70,20 @@
       input[type="checkbox"], input[type="radio"] { width: 1.25rem; height: 1.25rem; }
     }
     @media print {
-      .no-print, header, nav, #mobile-dock, #toast-container { display: none !important; }
-      body { background: #fff !important; color: #000 !important; }
-      .kms-card { border-color: #999 !important; box-shadow: none !important; }
+      @page { size: letter portrait; margin: 0.45in; }
+      .no-print, header, nav, #mobile-dock, #toast-container, #pin-change-backdrop { display: none !important; }
+      html, body { height: auto !important; overflow: visible !important; background: #fff !important; color: #000 !important; font-size: 10.5pt !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      #app-main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      .kms-card { border: 1px solid #cbd5e1 !important; box-shadow: none !important; background: #fff !important; color: #000 !important; break-inside: avoid; page-break-inside: avoid; }
+      .kms-card.print-flow { break-inside: auto; page-break-inside: auto; }
+      tr, .qr-label-card, .print-keep { break-inside: avoid; page-break-inside: avoid; }
+      thead { display: table-header-group; }
+      .qr-print-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
       body:not(.printing-modal) #modal-backdrop { display: none !important; }
       body.printing-modal #app-main { display: none !important; }
-      body.printing-modal #modal-backdrop { position: static !important; background: #fff !important; padding: 0 !important; display: block !important; }
-      body.printing-modal #modal-box { box-shadow: none !important; border: none !important; max-width: 100% !important; max-height: none !important; }
-      .qr-print-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+      body.printing-modal #modal-backdrop { position: static !important; inset: auto !important; display: block !important; background: transparent !important; padding: 0 !important; overflow: visible !important; }
+      body.printing-modal #modal-box { position: static !important; max-width: 100% !important; width: 100% !important; max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; background: #fff !important; color: #000 !important; padding: 0 !important; }
+      body.printing-modal #modal-close { display: none !important; }
     }
   </style>
 </head>
@@ -492,6 +498,43 @@
     const ingObj = { name: ingName, qty: Math.round(q * 100) / 100, unit, inv_id: matchInv ? matchInv.id : '', stock_per_unit: 0, per100: 0 };
     recomputeIngredientPer100(ingObj, baseServings);
     return ingObj;
+  }
+
+  function normalizeRecipe(r) {
+    if (!r || typeof r !== 'object') return r;
+    const baseServ = Math.max(1, Number(r.base_servings) || 65);
+    const rawSteps = Array.isArray(r.steps) && r.steps.length
+      ? r.steps
+      : String(r.directions || '').split(/\r?\n+/).filter(Boolean);
+    const steps = rawSteps.map(s => String(s || '').replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+    const ingredients = (Array.isArray(r.ingredients) ? r.ingredients : []).map(g => {
+      const unit = normUnit(g.unit || (Number(g.qty) > 0 ? 'pieces' : 'to taste'));
+      const ing = {
+        name: String(g.name || 'Ingredient').trim(),
+        qty: unit === 'to taste' ? 0 : (Number(g.qty) || 0),
+        unit,
+        inv_id: g.inv_id || '',
+        stock_per_unit: Number(g.stock_per_unit) || 0,
+        per100: Number(g.per100) || 0
+      };
+      recomputeIngredientPer100(ing, baseServ);
+      return ing;
+    });
+    const out = {
+      ...r,
+      name: String(r.name || 'Untitled Recipe').trim(),
+      category: String(r.category || 'Main Entree').trim() || 'Main Entree',
+      base_servings: baseServ,
+      prep_min: Math.max(0, Number(r.prep_min) || 20),
+      cook_min: Math.max(0, Number(r.cook_min) || 35),
+      allergens: Array.from(new Set((Array.isArray(r.allergens) ? r.allergens : []).map(a => String(a || '').toLowerCase().trim()).filter(Boolean))),
+      photo_url: String(r.photo_url || '').trim(),
+      notes: String(r.notes || '').trim(),
+      steps,
+      ingredients
+    };
+    delete out.directions;
+    return out;
   }
 
   function getFederalHoliday(dateStr) {
@@ -1170,8 +1213,17 @@
         sbClient.from('kms_recipes').upsert(state.recipes.map(r => ({
           id: r.id, name: r.name, category: r.category, base_servings: r.base_servings,
           prep_min: r.prep_min || 20, cook_min: r.cook_min || 35, allergens: r.allergens || [],
-          steps: r.steps || [], ingredients: r.ingredients || [], updated_at: new Date().toISOString()
-        })), { onConflict: 'id' }),
+          steps: r.steps || [], ingredients: r.ingredients || [],
+          photo_url: r.photo_url || '', notes: r.notes || '', updated_at: new Date().toISOString()
+        })), { onConflict: 'id' }).then(res => {
+          if (res && res.error) {
+            sbClient.from('kms_recipes').upsert(state.recipes.map(r => ({
+              id: r.id, name: r.name, category: r.category, base_servings: r.base_servings,
+              prep_min: r.prep_min || 20, cook_min: r.cook_min || 35, allergens: r.allergens || [],
+              steps: r.steps || [], ingredients: r.ingredients || [], updated_at: new Date().toISOString()
+            })), { onConflict: 'id' });
+          }
+        }),
         sbClient.from('kms_menu_plan').upsert(state.menuPlan.map(m => ({
           id: m.id, service_date: m.service_date, recipe_id: m.recipe_id || '', custom_title: m.custom_title || '',
           menu_type: m.menu_type || 'RECIPE', planned_portions: m.planned_portions || 65,
@@ -1208,7 +1260,13 @@
           onboarding_completed: !!u.onboarding_completed, completed_training_ids: u.completed_training_ids || [],
           email: u.email || ''
         })), { onConflict: 'id' }).then(res => {
-          if (res && res.error) showToast('Cloud user sync failed — run updated supabase_setup.sql in Supabase', 'error');
+          if (res && res.error) {
+            const nowMs = Date.now();
+            if (!window._lastUserSyncErr || nowMs - window._lastUserSyncErr > 15000) {
+              window._lastUserSyncErr = nowMs;
+              showToast('Cloud user sync failed: ' + (res.error.message || 'run updated supabase_setup.sql in Supabase'), 'error');
+            }
+          }
         }),
         sbClient.from('kms_announcements').upsert(state.announcements.map(a => ({
           id: a.id, priority: a.priority, title: a.title, body: a.body, alert_at: a.alert_at || '', repeat_rule: a.repeat_rule || 'none',
@@ -1233,16 +1291,14 @@
     } catch (e) {}
   }
 
-  async function initSupabase() {
-    if (!window.supabase || !window.supabase.createClient) {
-      syncStatus = 'local';
-      updateSyncUI();
-      return;
-    }
-    syncStatus = 'connecting';
-    updateSyncUI();
+  let sbRealtimeChannel = null;
+  let sbRefreshTimer = null;
+  let sbRefreshing = false;
+
+  async function refreshFromCloud() {
+    if (!sbClient || sbRefreshing) return;
+    sbRefreshing = true;
     try {
-      sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       const { data: invData, error } = await sbClient.from('kms_inventory_items').select('*');
       if (error) {
         syncStatus = 'local';
@@ -1263,7 +1319,7 @@
           sbClient.from('kms_safety_logs').select('*')
         ]);
         state.items = invData;
-        if (recR.data && recR.data.length) state.recipes = recR.data;
+        if (recR.data && recR.data.length) state.recipes = recR.data.map(normalizeRecipe);
         if (mpR.data && mpR.data.length) state.menuPlan = mpR.data;
         if (poR.data) state.purchaseOrders = poR.data;
         if (txR.data) state.transactions = txR.data;
@@ -1282,14 +1338,33 @@
       }
       syncStatus = 'live';
       updateSyncUI();
-      sbClient.channel('kms_relational_live')
-        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-          initSupabase();
-        }).subscribe();
       render();
     } catch (e) {
       syncStatus = 'local';
       updateSyncUI();
+    } finally {
+      sbRefreshing = false;
+    }
+  }
+
+  async function initSupabase() {
+    if (!window.supabase || !window.supabase.createClient) {
+      syncStatus = 'local';
+      updateSyncUI();
+      return;
+    }
+    if (!sbClient) sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    if (syncStatus !== 'live') {
+      syncStatus = 'connecting';
+      updateSyncUI();
+    }
+    await refreshFromCloud();
+    if (!sbRealtimeChannel && sbClient) {
+      sbRealtimeChannel = sbClient.channel('kms_relational_live')
+        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+          clearTimeout(sbRefreshTimer);
+          sbRefreshTimer = setTimeout(() => { refreshFromCloud(); }, 900);
+        }).subscribe();
     }
   }
 
@@ -2227,7 +2302,7 @@
     });
 
     main.innerHTML = `
-      <div class="kms-card p-5 space-y-4">
+      <div class="kms-card print-flow p-5 space-y-4">
         <div class="flex flex-wrap gap-2 justify-between items-center no-print">
           <button type="button" id="btn-back-menu" class="kms-btn-alt px-3 py-1.5 text-xs">&larr; Back to Menu</button>
           <button type="button" onclick="window.print()" class="kms-btn-primary px-4 py-1.5 text-xs">Print Daily Sheet</button>
@@ -2350,7 +2425,7 @@
         ingredients.push(parseIngredientLine(ln, servings));
       }
     });
-    return { id: uid('rec'), name, category: 'Main Entree', base_servings: servings, prep_min: 20, cook_min: 35, allergens, steps, ingredients };
+    return normalizeRecipe({ id: uid('rec'), name, category: 'Main Entree', base_servings: servings, prep_min: 20, cook_min: 35, allergens, steps, ingredients });
   }
 
   function renderRecipes(main) {
@@ -2460,16 +2535,19 @@
         <div class="lg:col-span-2 kms-card p-4 space-y-4">
           ${!rec ? '<p class="text-sm opacity-70">Select or add a recipe.</p>' : `
             <div class="flex flex-wrap justify-between items-start gap-2 border-b border-[var(--line)] pb-3">
-              <div>
-                <div class="text-[11px] font-bold uppercase opacity-60">${esc(rec.category || 'Main')} &bull; ID: ${esc(rec.id)}</div>
-                <h2 class="text-lg font-bold">${esc(rec.name)}</h2>
-                ${(rec.allergens || []).length ? `<p class="text-xs font-bold text-[#b3122b]">Contains: ${esc(rec.allergens.join(', '))}</p>` : ''}
+              <div class="flex items-start gap-3">
+                ${rec.photo_url ? `<img src="${esc(rec.photo_url)}" alt="${esc(rec.name)}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border border-[var(--line)] shrink-0" />` : ''}
+                <div>
+                  <div class="text-[11px] font-bold uppercase opacity-60">${esc(rec.category || 'Main')} &bull; Prep ${rec.prep_min || 20}m &bull; Cook ${rec.cook_min || 35}m &bull; ID: ${esc(rec.id)}</div>
+                  <h2 class="text-lg font-bold">${esc(rec.name)}</h2>
+                  ${(rec.allergens || []).length ? `<p class="text-xs font-bold text-[#b3122b]">Contains: ${esc(rec.allergens.join(', '))}</p>` : ''}
+                  ${rec.notes ? `<p class="text-xs opacity-75 mt-0.5">${esc(rec.notes)}</p>` : ''}
+                </div>
               </div>
               <div class="flex flex-wrap gap-1.5 no-print">
-                <button type="button" id="btn-rec-pending-pos" class="kms-btn-alt px-3 py-1 text-xs">Expected / Pending POs (${(state.purchaseOrders || []).filter(p => ['requested','approved','ordered'].includes(p.status)).length})</button>
                 <button type="button" id="btn-toggle-rec-matrix" class="kms-btn-alt px-3 py-1 text-xs">${showMatrix ? 'Single Scale View' : '40–80 Quick-Scan Table'}</button>
                 <button type="button" id="btn-print-recipe-sheet" class="kms-btn-navy px-3 py-1 text-xs">Print Recipe + QR</button>
-                ${isMgmtOrHigher() ? `<button type="button" data-del-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Delete</button>` : ''}
+                ${isMgmtOrHigher() ? `<button type="button" data-edit-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Edit Details &amp; Directions</button><button type="button" data-del-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Delete</button>` : ''}
               </div>
             </div>
 
@@ -2530,7 +2608,7 @@
                     ${invItem && deductAtScale ? `<div class="text-[11px] opacity-65">Background inventory: deducts ~${deductAtScale} ${esc(invItem.unit)} of ${esc(invItem.name)} at ${scale} portions</div>` : ''}
                     ${isMgmtOrHigher() ? `
                       <div class="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[var(--line)]/60 opacity-85 no-print">
-                        <span class="font-semibold">Base (${rec.base_servings}):</span>
+                        <input type="text" value="${esc(g.name)}" data-rec-ing="${rec.id}:${i}:name" class="kms-input w-36 text-xs font-semibold" title="Ingredient name" /><span class="font-semibold">Base (${rec.base_servings}):</span>
                         <input type="number" step="0.25" min="0" value="${g.qty || 0}" data-rec-ing="${rec.id}:${i}:qty" class="kms-input w-16 text-xs text-center" title="Kitchen amount at base servings" />
                         <select data-rec-ing="${rec.id}:${i}:unit" class="kms-input text-xs">${unitOpts.map(u => `<option value="${esc(u)}" ${normUnit(g.unit) === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
                         <span>→ Stock:</span>
@@ -2543,6 +2621,7 @@
                           <input type="number" step="0.5" min="0" value="${g.stock_per_unit || ''}" placeholder="auto" data-rec-ing="${rec.id}:${i}:stock_per_unit" class="kms-input w-16 text-xs text-center" title="How many recipe units are in 1 stock unit" />
                           <span>${esc(normUnit(g.unit))}</span>
                         ` : ''}
+                        <button type="button" data-del-rec-ing="${rec.id}:${i}" class="ml-auto text-red-600 hover:underline font-semibold" title="Remove ingredient">Remove</button>
                       </div>
                     ` : ''}
                   </div>
@@ -2584,9 +2663,12 @@
     main.innerHTML = `
       <div class="space-y-4">
         <div class="kms-card p-4 space-y-3">
-          <div>
-            <h2 class="text-base font-bold">Daily Temperature Log — ${dLabel(today)}</h2>
-            <p class="text-xs opacity-75">Coolers: ≤41°F · Freezers: ≤0°F · Hot Hold: ≥135°F</p>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold">Daily Temperature Log — ${dLabel(today)}</h2>
+              <p class="text-xs opacity-75">Coolers: ≤41°F · Freezers: ≤0°F · Hot Hold: ≥135°F</p>
+            </div>
+            <button type="button" onclick="window.print()" class="kms-btn-navy px-3 py-1.5 text-xs no-print">Print Daily Safety Log</button>
           </div>
           <div class="space-y-2">
             ${TEMP_CHECKS.map((c, i) => {
@@ -3871,22 +3953,34 @@
           qrSvg = qr.createSvgTag({ cellSize: 3, margin: 1 });
         }
       } catch (err) {}
-      openModal(`Print Recipe Sheet — ${rec.name}`, `
+      document.body.classList.add('printing-modal');
+      const rNorm = normalizeRecipe(rec);
+      openModal(`The Salvation Army (Butler, PA) — Standardized Recipe`, `
         <div class="space-y-3 text-xs">
-          <div class="flex items-start justify-between gap-3 border-b border-[var(--line)] pb-3">
-            <div>
-              <div class="font-bold text-base">${esc(rec.name)}</div>
-              <div class="opacity-70">${esc(rec.category || 'Main')} &bull; Scaled for <strong>${scale} portions</strong> (40–80 range)</div>
+          <div class="flex items-start justify-between gap-3 border-b border-[var(--line)] pb-3 print-keep">
+            <div class="flex items-start gap-3">
+              ${rNorm.photo_url ? `<img src="${esc(rNorm.photo_url)}" alt="${esc(rNorm.name)}" class="w-16 h-16 rounded-lg object-cover border border-[var(--line)] shrink-0" />` : ''}
+              <div>
+                <div class="font-bold text-base">${esc(rNorm.name)}</div>
+                <div class="opacity-75">${esc(rNorm.category)} &bull; Prep ${rNorm.prep_min}m &bull; Cook ${rNorm.cook_min}m &bull; Scaled for <strong>${scale} portions</strong></div>
+                ${(rNorm.allergens || []).length ? `<div class="font-bold text-[#b3122b] mt-0.5">Contains: ${esc(rNorm.allergens.join(', '))}</div>` : ''}
+                ${rNorm.notes ? `<div class="opacity-80 mt-0.5">${esc(rNorm.notes)}</div>` : ''}
+              </div>
             </div>
-            ${qrSvg ? `<div class="shrink-0 text-center">${qrSvg}<div class="text-[10px] font-mono opacity-70">${esc(rec.id)}</div></div>` : ''}
+            ${qrSvg ? `<div class="shrink-0 text-center">${qrSvg}<div class="text-[10px] font-mono opacity-70">${esc(rNorm.id)}</div></div>` : ''}
           </div>
           <table class="w-full text-left border-collapse text-xs">
             <thead><tr class="border-b border-[var(--line)] uppercase opacity-65"><th class="py-1.5">Ingredient</th><th class="py-1.5">40 Port.</th><th class="py-1.5 font-bold text-[#b3122b]">${scale} Port.</th><th class="py-1.5">80 Port.</th></tr></thead>
             <tbody class="divide-y divide-[var(--line)]">
-              ${(rec.ingredients || []).map(g => `<tr><td class="py-1.5 font-semibold">${esc(g.name)}</td><td class="py-1.5">${fmtNum((g.qty || 0) * (40 / (rec.base_servings || 65)))} ${esc(g.unit)}</td><td class="py-1.5 font-bold text-[#b3122b]">${fmtNum((g.qty || 0) * factor)} ${esc(g.unit)}</td><td class="py-1.5">${fmtNum((g.qty || 0) * (80 / (rec.base_servings || 65)))} ${esc(g.unit)}</td></tr>`).join('')}
+              ${(rNorm.ingredients || []).map(g => `<tr><td class="py-1.5 font-semibold">${esc(g.name)}</td><td class="py-1.5">${esc(formatKitchenAmt((g.qty || 0) * (40 / rNorm.base_servings), g.unit))}</td><td class="py-1.5 font-bold text-[#b3122b]">${esc(formatKitchenAmt((g.qty || 0) * factor, g.unit))}</td><td class="py-1.5">${esc(formatKitchenAmt((g.qty || 0) * (80 / rNorm.base_servings), g.unit))}</td></tr>`).join('')}
             </tbody>
           </table>
-          ${rec.directions ? `<div class="p-2.5 rounded bg-black/5 whitespace-pre-line">${esc(rec.directions)}</div>` : ''}
+          ${(rNorm.steps || []).length ? `
+            <div class="p-2.5 rounded bg-black/5 space-y-1 print-keep">
+              <div class="font-bold uppercase opacity-70">Directions</div>
+              <ol class="list-decimal list-inside space-y-1 leading-relaxed">${rNorm.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+            </div>
+          ` : ''}
           <button type="button" id="btn-print-rec-modal-now" class="kms-btn-navy w-full py-2 text-xs no-print">Print Recipe Sheet</button>
         </div>
       `);
@@ -3954,6 +4048,7 @@
           prep_min: meal.prep_min || 20,
           cook_min: meal.cook_min || 35,
           allergens,
+          photo_url: meal.photo_url || '',
           steps,
           ingredients: rawLines.map(ln => parseIngredientLine(ln, baseServ))
         };
@@ -3964,6 +4059,71 @@
         saveState();
         render();
         showToast(`Imported "${r.name}" (scaled to ${state.recipeScale} portions)`);
+      }
+      return;
+    }
+
+    const editRecBtn = e.target.closest('[data-edit-rec]');
+    if (editRecBtn) {
+      if (!isMgmtOrHigher()) { showToast('Only Management can edit recipes', 'warn'); return; }
+      const r = state.recipes.find(x => x.id === editRecBtn.dataset.editRec);
+      if (r) {
+        const stepsTxt = (r.steps && r.steps.length) ? r.steps.join('\n') : String(r.directions || '');
+        openModal(`Edit Recipe — ${r.name}`, `
+          <form id="form-edit-recipe" class="space-y-3 text-xs">
+            <input type="hidden" name="recId" value="${esc(r.id)}" />
+            <div><label class="block font-semibold mb-1">Recipe Title</label><input name="name" type="text" required value="${esc(r.name)}" class="kms-input w-full text-sm" /></div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div><label class="block font-semibold mb-1">Category</label><input name="category" type="text" value="${esc(r.category || 'Main Entree')}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Base Servings</label><input name="baseServings" type="number" min="1" value="${r.base_servings || 65}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Prep (min)</label><input name="prepMin" type="number" min="0" value="${r.prep_min || 20}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Cook (min)</label><input name="cookMin" type="number" min="0" value="${r.cook_min || 35}" class="kms-input w-full text-xs" /></div>
+            </div>
+            <div><label class="block font-semibold mb-1">Allergens (comma-separated)</label><input name="allergens" type="text" value="${esc((r.allergens || []).join(', '))}" placeholder="milk, wheat, soy..." class="kms-input w-full text-xs" /></div>
+            <div class="p-2.5 rounded-lg border border-[var(--line)] bg-black/5 space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <label class="font-semibold">Recipe Photo (Upload or URL)</label>
+                ${r.photo_url ? `<button type="button" id="btn-clear-rec-photo" class="text-[11px] text-red-600 underline font-semibold">Remove Photo</button>` : ''}
+              </div>
+              <div class="flex items-center gap-2">
+                <img id="rec-photo-preview" src="${esc(r.photo_url || '')}" alt="Preview" class="${r.photo_url ? '' : 'hidden '}w-14 h-14 rounded-lg object-cover border border-[var(--line)] shrink-0" />
+                <div class="flex-1 space-y-1.5">
+                  <input id="rec-photo-file" type="file" accept="image/*" class="kms-input w-full text-[11px]" />
+                  <input id="rec-photo-url-inp" name="photoUrl" type="text" value="${esc(r.photo_url || '')}" placeholder="Or paste image URL (https://...)" class="kms-input w-full text-xs" />
+                </div>
+              </div>
+            </div>
+            <div><label class="block font-semibold mb-1">Prep / Serving Notes (optional)</label><textarea name="notes" rows="2" placeholder="e.g. Hold >=135°F on steam table; serve with salad bar..." class="kms-input w-full text-xs">${esc(r.notes || '')}</textarea></div>
+            <div>
+              <label class="block font-semibold mb-1">Directions / Steps (one step per line)</label>
+              <textarea name="stepsText" rows="7" placeholder="1. Preheat oven to 350°F..." class="kms-input w-full text-xs leading-relaxed">${esc(stepsTxt)}</textarea>
+            </div>
+            <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-semibold">Save Recipe &amp; Directions</button>
+          </form>
+        `);
+      }
+      return;
+    }
+
+    if (e.target.id === 'btn-clear-rec-photo') {
+      const urlInp = document.getElementById('rec-photo-url-inp');
+      const prev = document.getElementById('rec-photo-preview');
+      if (urlInp) urlInp.value = '';
+      if (prev) { prev.src = ''; prev.classList.add('hidden'); }
+      return;
+    }
+
+    const delRecIng = e.target.closest('[data-del-rec-ing]');
+    if (delRecIng) {
+      if (!isMgmtOrHigher()) { showToast('Only Management can edit recipes', 'warn'); return; }
+      const [rid, idxStr] = delRecIng.dataset.delRecIng.split(':');
+      const r = state.recipes.find(x => x.id === rid);
+      const idx = parseInt(idxStr, 10);
+      if (r && Array.isArray(r.ingredients) && r.ingredients[idx]) {
+        const removed = r.ingredients.splice(idx, 1)[0];
+        saveState();
+        render();
+        showToast(`Removed ${removed.name}`);
       }
       return;
     }
@@ -4496,6 +4656,30 @@
   });
 
   document.addEventListener('change', (e) => {
+    if (e.target.id === 'rec-photo-file') {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxW = 720;
+          const ratio = img.width > maxW ? (maxW / img.width) : 1;
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.width * ratio);
+          c.height = Math.round(img.height * ratio);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          const dataUrl = c.toDataURL('image/jpeg', 0.78);
+          const urlInp = document.getElementById('rec-photo-url-inp');
+          const prev = document.getElementById('rec-photo-preview');
+          if (urlInp) urlInp.value = dataUrl;
+          if (prev) { prev.src = dataUrl; prev.classList.remove('hidden'); }
+        };
+        img.src = String(reader.result || '');
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
     if (e.target.id === 'po-edit-extra-sel') {
       const wrap = document.getElementById('po-edit-new-wrap');
       if (wrap) wrap.classList.toggle('hidden', e.target.value !== '__NEW__');
@@ -4978,6 +5162,7 @@
           prep_min: Number(rawRec.prep_min) || 20,
           cook_min: Number(rawRec.cook_min) || 35,
           allergens,
+          photo_url: rawRec.image || '',
           steps: Array.isArray(rawRec.steps) ? rawRec.steps : [],
           ingredients: (rawRec.ingredients || []).map(ln => parseIngredientLine(ln, baseServ))
         };
@@ -5053,7 +5238,7 @@
                 base_servings: Number(d.servings) || 4,
                 prep_min: Number(d.prepTimeMinutes) || 20,
                 cook_min: Number(d.cookTimeMinutes) || 35,
-                rawLines: Array.isArray(d.ingredients) ? d.ingredients : [],
+                photo_url: d.image || '', rawLines: Array.isArray(d.ingredients) ? d.ingredients : [],
                 steps: Array.isArray(d.instructions) ? d.instructions : []
               });
             });
@@ -5073,6 +5258,30 @@
       if (!isMgmtOrHigher()) { showToast('Only Management can import recipes', 'warn'); return; }
       const targetUrl = String(fd.get('url') || '').trim();
       importRecipeFromUrl(targetUrl, document.getElementById('btn-import-url'));
+      return;
+    }
+
+    if (e.target.id === 'form-edit-recipe') {
+      if (!isMgmtOrHigher()) { showToast('Only Management can edit recipes', 'warn'); return; }
+      const r = state.recipes.find(x => x.id === fd.get('recId'));
+      if (r) {
+        r.name = String(fd.get('name') || '').trim() || r.name;
+        r.category = String(fd.get('category') || '').trim() || 'Main Entree';
+        r.base_servings = Math.max(1, parseFloat(fd.get('baseServings')) || r.base_servings || 65);
+        r.prep_min = Math.max(0, parseInt(fd.get('prepMin'), 10) || 0);
+        r.cook_min = Math.max(0, parseInt(fd.get('cookMin'), 10) || 0);
+        r.allergens = String(fd.get('allergens') || '').split(',').map(s => s.trim()).filter(Boolean);
+        r.photo_url = String(fd.get('photoUrl') || '').trim();
+        r.notes = String(fd.get('notes') || '').trim();
+        r.steps = String(fd.get('stepsText') || '').split(/\r?\n+/).map(s => s.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+        delete r.directions;
+        (r.ingredients || []).forEach(ing => recomputeIngredientPer100(ing, r.base_servings));
+        logActivity('RECIPE UPDATED', `Updated "${r.name}"`);
+        closeModal();
+        saveState();
+        render();
+        showToast(`Saved "${r.name}"`);
+      }
       return;
     }
 
