@@ -1203,7 +1203,7 @@
   async function syncToSupabase() {
     if (!sbClient || syncStatus === 'local') return;
     try {
-      await Promise.all([
+      await Promise.allSettled([
         sbClient.from('kms_inventory_items').upsert(state.items.map(x => ({
           id: x.id, sku: x.sku, name: x.name, location: x.location, category: x.category,
           unit: x.unit, pack_label: x.pack_label, units_per_pack: x.units_per_pack || 1,
@@ -1218,7 +1218,7 @@
           photo_url: r.photo_url || '', notes: r.notes || '', updated_at: new Date().toISOString()
         })), { onConflict: 'id' }).then(res => {
           if (res && res.error) {
-            sbClient.from('kms_recipes').upsert(state.recipes.map(r => ({
+            return sbClient.from('kms_recipes').upsert(state.recipes.map(r => ({
               id: r.id, name: r.name, category: r.category, base_servings: r.base_servings,
               prep_min: r.prep_min || 20, cook_min: r.cook_min || 35, allergens: r.allergens || [],
               steps: r.steps || [], ingredients: r.ingredients || [], updated_at: new Date().toISOString()
@@ -1260,15 +1260,7 @@
           pin_salt: u.pin_salt, must_change_pin: !!u.must_change_pin, active: u.active !== false,
           onboarding_completed: !!u.onboarding_completed, completed_training_ids: u.completed_training_ids || [],
           email: u.email || ''
-        })), { onConflict: 'id' }).then(res => {
-          if (res && res.error) {
-            const nowMs = Date.now();
-            if (!window._lastUserSyncErr || nowMs - window._lastUserSyncErr > 15000) {
-              window._lastUserSyncErr = nowMs;
-              showToast('Cloud user sync failed: ' + (res.error.message || 'run updated supabase_setup.sql in Supabase'), 'error');
-            }
-          }
-        }),
+        })), { onConflict: 'id' }),
         sbClient.from('kms_announcements').upsert(state.announcements.map(a => ({
           id: a.id, priority: a.priority, title: a.title, body: a.body, alert_at: a.alert_at || '', repeat_rule: a.repeat_rule || 'none',
           repeat_days: a.repeat_days || [], expires_at: a.expires_at || '', author: a.author || '',
@@ -1307,15 +1299,18 @@
   let sbRealtimeChannel = null;
   let sbRefreshTimer = null;
   let sbRefreshing = false;
+  let sbLastSelfWriteMs = 0;
 
-  async function refreshFromCloud() {
+  async function refreshFromCloud(forceFullRender) {
     if (!sbClient || sbRefreshing) return;
     sbRefreshing = true;
     try {
       const { data: invData, error } = await sbClient.from('kms_inventory_items').select('*');
       if (error) {
-        syncStatus = 'local';
-        updateSyncUI();
+        if (syncStatus !== 'live') {
+          syncStatus = 'local';
+          updateSyncUI();
+        }
         return;
       }
       if (invData && invData.length > 0) {
@@ -1363,10 +1358,14 @@
       }
       syncStatus = 'live';
       updateSyncUI();
-      render();
+      if (forceFullRender || !document.activeElement || document.activeElement === document.body) {
+        render();
+      }
     } catch (e) {
-      syncStatus = 'local';
-      updateSyncUI();
+      if (syncStatus !== 'live') {
+        syncStatus = 'local';
+        updateSyncUI();
+      }
     } finally {
       sbRefreshing = false;
     }
@@ -1383,12 +1382,13 @@
       syncStatus = 'connecting';
       updateSyncUI();
     }
-    await refreshFromCloud();
+    await refreshFromCloud(true);
     if (!sbRealtimeChannel && sbClient) {
       sbRealtimeChannel = sbClient.channel('kms_relational_live')
         .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+          if (Date.now() - sbLastSelfWriteMs < 2500) return;
           clearTimeout(sbRefreshTimer);
-          sbRefreshTimer = setTimeout(() => { refreshFromCloud(); }, 900);
+          sbRefreshTimer = setTimeout(() => { refreshFromCloud(false); }, 1200);
         }).subscribe();
     }
   }
@@ -2835,379 +2835,19 @@
       const g = NAV_GROUPS.find(x => x.id === grpBtn.dataset.grp);
       const allowed = getAllowedTabs();
       const first = g && g.tabs.find(t => allowed.includes(t.id));
-      if (first) { state.activeTab = first.id; state.selectedSheetDate = null; saveState(); render(); }
+      if (first) {
+        state.activeTab = first.id;
+        state.selectedSheetDate = null;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (err) {}
+        render();
+      }
       return;
     }
     const tabBtn = e.target.closest('[data-tab]');
-    if (tabBtn) { state.activeTab = tabBtn.dataset.tab; state.selectedSheetDate = null; saveState(); render(); return; }
-
-    if (e.target.id === 'modal-close' || e.target.id === 'modal-backdrop') { closeModal(); return; }
-    if (e.target.closest('[data-close-modal]')) { closeModal(); if (!e.target.closest('[data-tab]')) return; }
-    if (e.target.closest('#btn-switch-user')) { showSwitchUserModal(); return; }
-    if (e.target.closest('#btn-open-chat')) { state._editingMsgId = null; showChatModal(); return; }
-    const chatTgtBtn = e.target.closest('[data-chat-target]');
-    if (chatTgtBtn) { state._chatTarget = chatTgtBtn.dataset.chatTarget; state._editingMsgId = null; showChatModal(); return; }
-    const editMsgBtn = e.target.closest('[data-edit-msg]');
-    if (editMsgBtn) {
-      state._editingMsgId = editMsgBtn.dataset.editMsg;
-      showChatModal();
-      return;
-    }
-    if (e.target.id === 'btn-cancel-edit-msg') {
-      state._editingMsgId = null;
-      showChatModal();
-      return;
-    }
-    const delMsgBtn = e.target.closest('[data-del-msg]');
-    if (delMsgBtn) {
-      const msgId = delMsgBtn.dataset.delMsg;
-      const u = getActiveUser();
-      const targetMsg = (state.messages || []).find(m => m.id === msgId);
-      if (targetMsg && (targetMsg.sender_id === u.id || isMgmtOrHigher(u))) {
-        state.messages = (state.messages || []).filter(m => m.id !== msgId);
-        if (state._editingMsgId === msgId) state._editingMsgId = null;
-        if (sbClient) sbClient.from('kms_messages').delete().eq('id', msgId).then(() => {});
-        logActivity('CHAT DELETED', `Deleted message from ${targetMsg.sender_name}`);
-        saveState();
-        updateChatBadge();
-        showChatModal();
-        showToast('Message deleted');
-      }
-      return;
-    }
-    if (e.target.id === 'btn-clear-chat-thread') {
-      if (!isMgmtOrHigher()) { showToast('Only Management can clear a chat thread', 'warn'); return; }
-      const u = getActiveUser();
-      const target = state._chatTarget || 'ALL';
-      const toDelete = (state.messages || []).filter(m => {
-        if (target === 'ALL') return m.recipient_id === 'ALL' || !m.recipient_id;
-        return (m.sender_id === u.id && m.recipient_id === target) || (m.sender_id === target && m.recipient_id === u.id);
-      }).map(m => m.id);
-      if (!toDelete.length) return;
-      state.messages = (state.messages || []).filter(m => !toDelete.includes(m.id));
-      state._editingMsgId = null;
-      if (sbClient) sbClient.from('kms_messages').delete().in('id', toDelete).then(() => {});
-      logActivity('CHAT CLEARED', `Cleared ${toDelete.length} message(s) in ${target === 'ALL' ? 'Broadcast' : 'DM'}`);
-      saveState();
-      updateChatBadge();
-      showChatModal();
-      showToast(`Cleared ${toDelete.length} message(s)`);
-      return;
-    }
-    if (e.target.closest('#btn-lock-app')) { const curU = getActiveUser(); logActivity('LOGOUT', `${curU.name} locked / signed out`); state.isLocked = true; delete state._sbAuthEmail; setSessionUnlocked(false); if (sbClient && sbClient.auth) { try { sbClient.auth.signOut(); } catch (err) {} } saveState(); render(); return; }
-    if (e.target.id === 'btn-undo' || e.target.id === 'btn-stock-undo') { doUndo(); return; }
-    if (e.target.id === 'btn-print-qr') { showQrLabelsModal(); return; }
-    if (e.target.id === 'btn-print-page') { window.print(); return; }
-    if (e.target.id === 'btn-text-size') {
-      state.textZoom = ((state.textZoom || 0) + 1) % 3;
-      document.documentElement.style.fontSize = ['100%', '112.5%', '125%'][state.textZoom];
-      saveState();
-      return;
-    }
-    if (e.target.id === 'btn-theme-toggle') {
-      state.theme = state.theme === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', state.theme);
-      saveState();
-      return;
-    }
-    if (e.target.id === 'btn-dl-json') {
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `sa-butler-kms-${localDateStr()}.json`;
-      a.click();
-      return;
-    }
-    if (e.target.id === 'btn-reset-seed') {
-      askConfirm('Reset Stock', 'Reset all inventory items back to the starting Butler PA seed list?', () => {
-        state.items = buildSeedInventory();
-        saveState();
-        render();
-        showToast('Inventory reset to starting seed');
-      });
-      return;
-    }
-
-    // Stock +/-
-    const adjBtn = e.target.closest('[data-adj]');
-    if (adjBtn) {
-      const [id, d] = adjBtn.dataset.adj.split(':');
-      const delta = Number(d);
-      const x = state.items.find(i => i.id === id);
-      if (x) {
-        snapUndo();
-        if (delta < 0) recordUsage(x, Math.min(-delta, x.on_hand));
-        x.on_hand = Math.max(0, Math.round((x.on_hand + delta) * 100) / 100);
-        logActivity('STOCK', `${delta > 0 ? '+' : ''}${delta} ${x.unit} ${x.name}`);
-        saveState();
-        render();
-      }
-      return;
-    }
-
-    if (e.target.id === 'btn-add-item-modal') {
-      openModal('Add Inventory Item', `
-        <form id="form-add-item" class="space-y-3">
-          <input name="name" required placeholder="Item name" class="kms-input w-full text-sm" />
-          <div class="grid grid-cols-2 gap-2">
-            <select name="location" class="kms-input text-sm">${LOCATIONS.map(l => `<option>${esc(l)}</option>`).join('')}</select>
-            <input name="unit" value="cases" required placeholder="Unit (cases, cans...)" class="kms-input text-sm" />
-          </div>
-          <div class="grid grid-cols-3 gap-2">
-            <input name="onHand" type="number" step="0.5" value="0" placeholder="On hand" class="kms-input text-sm" />
-            <input name="par" type="number" step="0.5" value="1" placeholder="Par" class="kms-input text-sm" />
-            <select name="cadence" class="kms-input text-sm"><option value="W">Weekly</option><option value="M">Monthly</option></select>
-          </div>
-          <button type="submit" class="kms-btn-primary w-full py-2 text-sm">Add Item</button>
-        </form>
-      `);
-      return;
-    }
-
-    // PO Actions
-    const poSelAll = e.target.closest('[data-po-sel-all]');
-    if (poSelAll) {
-      const cad = poSelAll.dataset.poSelAll;
-      const chks = Array.from(document.querySelectorAll('.po-chk-' + cad));
-      const allOn = chks.length && chks.every(c => c.checked);
-      chks.forEach(c => { c.checked = !allOn; });
-      return;
-    }
-    const poAddExtra = e.target.closest('[data-po-add-extra]');
-    if (poAddExtra) {
-      const cad = poAddExtra.dataset.poAddExtra;
-      const sel = document.getElementById('po-add-sel-' + cad);
-      const qInp = document.getElementById('po-add-qty-' + cad);
-      if (sel && sel.value) {
-        if (!state.manualPoExtra) state.manualPoExtra = {};
-        if (!state.manualPoExtra[cad]) state.manualPoExtra[cad] = {};
-        state.manualPoExtra[cad][sel.value] = Math.max(1, Math.ceil(parseFloat(qInp ? qInp.value : 1) || 1));
-        render();
-        showToast('Added item to PO suggestions');
-      }
-      return;
-    }
-    const poEditBtn = e.target.closest('[data-po-edit]');
-    if (poEditBtn) {
-      const po = (state.purchaseOrders || []).find(p => p.id === poEditBtn.dataset.poEdit);
-      if (po) {
-        if (!isMgmtOrHigher() && po.status !== 'requested') {
-          showToast('Only Management can edit approved or ordered POs', 'warn');
-          return;
-        }
-        const allItems = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
-        openModal(`Edit Purchase Order — ${po.po_number}`, `
-          <form id="form-edit-po" class="space-y-3 text-xs">
-            <input type="hidden" name="poId" value="${esc(po.id)}" />
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div><label class="block font-semibold mb-1">PO #</label><input name="poNumber" type="text" required value="${esc(po.po_number)}" class="kms-input w-full text-xs font-mono" /></div>
-              <div><label class="block font-semibold mb-1">Vendor Invoice / Conf #</label><input name="vendorConf" type="text" value="${esc(po.vendor_conf || '')}" placeholder="e.g. INV-4821" class="kms-input w-full text-xs font-mono" /></div>
-              <div><label class="block font-semibold mb-1">Expected Delivery</label><input name="expectedArrival" type="date" value="${esc(po.expected_arrival || '')}" class="kms-input w-full text-xs" /></div>
-            </div>
-            <p class="opacity-75">Update requested whole-case quantities below (set to 0 to remove an item).</p>
-            <div class="max-h-60 overflow-y-auto divide-y divide-[var(--line)] border border-[var(--line)] rounded-lg">
-              ${(po.lines || []).map(l => `
-                <div class="p-2 flex items-center justify-between gap-2">
-                  <span class="font-semibold">${esc(l.name)}</span>
-                  <div class="flex items-center gap-1">
-                    <input type="number" step="1" min="0" name="line_${esc(l.item_id)}" value="${Math.ceil(l.qty)}" class="kms-input w-20 text-xs text-center font-bold" />
-                    <span class="opacity-70">${esc(l.unit)}</span>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-            <div class="flex items-center gap-1.5 pt-1">
-              <select name="extraItemId" id="po-edit-extra-sel" class="kms-input flex-1 text-xs"><option value="">+ Add another item (optional)...</option><option value="__NEW__">+ Add NEW item (not in inventory yet)...</option>${allItems}</select>
-              <input name="extraQty" type="number" step="1" min="1" placeholder="Cases" class="kms-input w-20 text-xs text-center" />
-            </div>
-            <div id="po-edit-new-wrap" class="hidden p-2.5 rounded-lg border border-[var(--line)] bg-black/5 space-y-2">
-              <div class="font-semibold">New Item Details</div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <input name="newItemName" type="text" placeholder="Item name (e.g. Applesauce cups)" class="kms-input text-xs" />
-                <input name="newItemUnit" type="text" value="cases" placeholder="Unit (cases, bags, cans...)" class="kms-input text-xs" />
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <select name="newItemLoc" class="kms-input text-xs">${LOCATIONS.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>
-                <input name="newItemPar" type="number" step="0.01" min="0" value="1" placeholder="Par level" class="kms-input text-xs" title="Par level" />
-              </div>
-              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="addToCatalog" checked class="accent-[#b3122b]" /><span>Also add to Inventory Catalog (so receiving updates stock)</span></label>
-            </div>
-            <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-semibold">Save PO Updates</button>
-          </form>
-        `);
-      }
-      return;
-    }
-    const cpo = e.target.closest('[data-create-po]');
-    if (cpo) {
-      const cad = cpo.dataset.createPo;
-      const d7 = demandForDays(serviceDaysBetween(localDateStr(), addDays(localDateStr(), 7)));
-      const d30 = demandForDays(serviceDaysBetween(localDateStr(), addDays(localDateStr(), 30)));
-      const lines = state.items.filter(x => !x.discontinued && x.cadence === cad).map(x => ({
-        item_id: x.id, name: x.name, unit: x.unit, qty: suggestedOrderAmount(x, d7, d30), received: 0, price: x.unit_price || 0
-      })).filter(l => l.qty > 0);
-      if (!lines.length) return;
-      const po = {
-        id: uid('po'),
-        po_number: (cad === 'W' ? 'MAR-' : 'JB-') + localDateStr().replace(/-/g, '') + '-' + (state.purchaseOrders.length + 1),
-        vendor: cad === 'W' ? 'Marberger / Produce' : 'Jordan Banana',
-        cadence: cad,
-        status: 'requested',
-        requested_by: getActiveUser().name,
-        requested_date: localDateStr(),
-        lines
-      };
-      state.purchaseOrders.unshift(po);
-      logActivity('PO REQUESTED', `${po.po_number} (${lines.length} items)`);
-      saveState();
-      render();
-      showToast(`Created ${po.po_number}`);
-      return;
-    }
-    function upsertPoDeliveryReminder(po, deliveryDate) {
-      if (!po || !deliveryDate) return;
-      if (!Array.isArray(state.announcements)) state.announcements = [];
-      const annId = 'ann-po-' + po.id;
-      const title = `Delivery Expected: ${po.po_number} (${po.vendor})`;
-      const body = `Expected delivery for ${po.po_number} (${(po.lines || []).length} item(s)). Reconcile & check in under Receive & Scan when it arrives.`;
-      const idx = state.announcements.findIndex(a => a.id === annId);
-      const rec = {
-        id: annId, priority: 'reminder', title, body,
-        alert_at: deliveryDate + 'T08:00', repeat_rule: 'none', repeat_days: [],
-        expires_at: deliveryDate, author: getActiveUser().name,
-        created_at: localDateStr(), dismissed_by: {}
-      };
-      if (idx >= 0) state.announcements[idx] = { ...state.announcements[idx], ...rec };
-      else state.announcements.unshift(rec);
-    }
-
-    const decBtn = e.target.closest('[data-po-decide]');
-    if (decBtn) {
-      if (!isMgmtOrHigher()) { showToast('Only Management can approve or reject POs', 'warn'); return; }
-      const [id, st] = decBtn.dataset.poDecide.split(':');
-      const po = state.purchaseOrders.find(p => p.id === id);
-      if (po) {
-        po.status = st;
-        po.approved_by = getActiveUser().name;
-        po.approved_date = localDateStr();
-        logActivity('PO ' + st.toUpperCase(), po.po_number);
-        saveState();
-        render();
-      }
-      return;
-    }
-    const ordBtn = e.target.closest('[data-po-order]');
-    if (ordBtn) {
-      if (!isMgmtOrHigher()) { showToast('Only Management can place or mark orders as ordered', 'warn'); return; }
-      const po = state.purchaseOrders.find(p => p.id === ordBtn.dataset.poOrder);
-      if (po) {
-        po.status = 'ordered';
-        po.vendor_conf = document.getElementById('conf-' + po.id)?.value || po.vendor_conf || '';
-        const etaVal = document.getElementById('eta-' + po.id)?.value || '';
-        if (etaVal) po.expected_arrival = etaVal;
-        const makeRem = document.getElementById('rem-' + po.id)?.checked;
-        if (makeRem && po.expected_arrival) upsertPoDeliveryReminder(po, po.expected_arrival);
-        logActivity('PO ORDERED', po.po_number + (po.expected_arrival ? ' (ETA ' + po.expected_arrival + ')' : ''));
-        saveState();
-        render();
-        showToast(makeRem && po.expected_arrival ? `Marked ${po.po_number} ordered & set delivery reminder` : `Marked ${po.po_number} ordered`);
-      }
-      return;
-    }
-    const recPoBtn = e.target.closest('[data-po-reconcile]');
-    if (recPoBtn) {
-      const po = state.purchaseOrders.find(p => p.id === recPoBtn.dataset.poReconcile);
-      if (po) {
-        po.lines.forEach((ln, idx) => {
-          const v = parseFloat(document.getElementById(`rc-${po.id}-${idx}`)?.value || 0);
-          if (v <= 0) return;
-          const x = state.items.find(i => i.id === ln.item_id);
-          if (x) x.on_hand = Math.round((x.on_hand + v) * 100) / 100;
-          ln.received = (ln.received || 0) + v;
-          state.transactions.unshift({
-            id: uid('tx'), tx_date: localDateStr(), tx_type: 'RECEIVE', item_id: ln.item_id, item_name: ln.name,
-            unit: ln.unit, qty: v, source: po.vendor, cost: v * (ln.price || 0), po_number: po.po_number, staff_name: getActiveUser().name
-          });
-        });
-        po.status = 'closed';
-        logActivity('PO RECEIVED', po.po_number);
-        saveState();
-        render();
-        showToast(`Reconciled ${po.po_number} into stock`);
-      }
-      return;
-    }
-    const delPoBtn = e.target.closest('[data-po-del]');
-    if (delPoBtn) {
-      const poId = delPoBtn.dataset.poDel;
-      const targetPo = (state.purchaseOrders || []).find(p => p.id === poId);
-      if (targetPo && !isMgmtOrHigher() && targetPo.status !== 'requested') {
-        showToast('Only Management can delete approved or ordered POs', 'warn');
-        return;
-      }
-      askConfirm('Delete PO', 'Permanently delete this purchase order?', () => {
-        state.purchaseOrders = state.purchaseOrders.filter(p => p.id !== poId);
-        if (sbClient) sbClient.from('kms_purchase_orders').delete().eq('id', poId).then(() => {});
-        logActivity('PO DELETED', `Deleted PO ${poId}`);
-        saveState();
-        render();
-        showToast('Purchase order deleted');
-      });
-      return;
-    }
-
-    // Receive Clear Expiry
-    const clrExp = e.target.closest('[data-clear-exp]');
-    if (clrExp) {
-      const t = state.transactions.find(x => x.id === clrExp.dataset.clearExp);
-      if (t) { t.cleared = true; saveState(); render(); }
-      return;
-    }
-
-    // Menu Sheet & Served
-    const shBtn = e.target.closest('[data-open-sheet]');
-    if (shBtn) { state.selectedSheetDate = shBtn.dataset.openSheet; render(); return; }
-    if (e.target.id === 'btn-back-menu') { state.selectedSheetDate = null; render(); return; }
-    const srvBtn = e.target.closest('[data-mark-served]');
-    if (srvBtn) {
-      const ds = srvBtn.dataset.markServed;
-      const mp = state.menuPlan.find(m => m.service_date === ds);
-      const sv = parseFloat(document.getElementById('sv-qty-' + ds)?.value || 0);
-      if (!mp || !mp.recipe_id || sv <= 0) { showToast('Choose a recipe and enter how many were served', 'warn'); return; }
-      const rec = state.recipes.find(r => r.id === mp.recipe_id);
-      if (rec) {
-        (rec.ingredients || []).forEach(g => {
-          const x = g.inv_id ? state.items.find(i => i.id === g.inv_id) : null;
-          if (x && g.per100) {
-            const used = (g.per100 * sv) / 100;
-            recordUsage(x, Math.min(used, x.on_hand));
-            x.on_hand = Math.round(Math.max(0, x.on_hand - used) * 100) / 100;
-          }
-        });
-      }
-      mp.served_portions = sv;
-      mp.status = 'SERVED';
-      mp.note = document.getElementById('sv-note-' + ds)?.value || '';
-      mp.logged_by = getActiveUser().name;
-      const left = (mp.planned_portions || 0) - sv;
-      if (left > 0 && rec) {
-        state.storageTags.unshift({
-          id: uid('tag'), item_name: rec.name, tag_category: 'LEFTOVER', zone: 'Walk-in cooler',
-          qty_label: left + ' portions', prep_date: ds, prep_time: '12:30', use_by_date: addDays(ds, 6),
-          tagged_by: getActiveUser().name, status: 'STORED'
-        });
-      }
-      logActivity('SERVED', `${ds}: ${sv} served (${rec ? rec.name : 'Meal'})`);
-      saveState();
-      render();
-      showToast(`Logged ${sv} served & updated stock`);
-      return;
-    }
-
-    // Recipe Selection & Delete
-    const recPresetBtn = e.target.closest('[data-rec-preset]');
-    if (recPresetBtn) {
-      state.recipeScale = Number(recPresetBtn.dataset.recPreset) || 65;
+    if (tabBtn) {
+      state.activeTab = tabBtn.dataset.tab;
+      state.selectedSheetDate = null;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (err) {}
       render();
       return;
     }
