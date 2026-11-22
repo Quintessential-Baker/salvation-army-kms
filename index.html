@@ -3970,11 +3970,17 @@
 
     const delRec = e.target.closest('[data-del-rec]');
     if (delRec) {
-      askConfirm('Delete Recipe', 'Delete this recipe?', () => {
-        state.recipes = state.recipes.filter(r => r.id !== delRec.dataset.delRec);
+      if (!isMgmtOrHigher()) { showToast('Only Management can delete recipes', 'warn'); return; }
+      const recId = delRec.dataset.delRec;
+      const targetRec = (state.recipes || []).find(r => r.id === recId);
+      askConfirm('Delete Recipe', `Permanently delete "${targetRec ? targetRec.name : 'this recipe'}"?`, () => {
+        state.recipes = (state.recipes || []).filter(r => r.id !== recId);
         state.selectedRecipeId = state.recipes[0]?.id || '';
+        if (sbClient) sbClient.from('kms_recipes').delete().eq('id', recId).then(() => {});
+        if (targetRec) logActivity('RECIPE DELETED', `Deleted "${targetRec.name}"`);
         saveState();
         render();
+        showToast('Recipe deleted');
       });
       return;
     }
