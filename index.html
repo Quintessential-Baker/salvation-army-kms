@@ -5579,3 +5579,413 @@
       }
       return;
     }
+
+    if (e.target.id === 'form-add-rec-ing') {
+      if (!isMgmtOrHigher()) { showToast('Only Management can edit recipes', 'warn'); return; }
+      const r = state.recipes.find(x => x.id === e.target.dataset.recId);
+      if (r) {
+        const ingObj = {
+          name: String(fd.get('name') || '').trim(),
+          qty: parseFloat(fd.get('qty')) || 1,
+          unit: normUnit(fd.get('unit') || 'cups'),
+          inv_id: String(fd.get('inv_id') || ''),
+          stock_per_unit: parseFloat(fd.get('stock_per_unit')) || 0,
+          per100: 0
+        };
+        recomputeIngredientPer100(ingObj, r.base_servings);
+        r.ingredients = r.ingredients || [];
+        r.ingredients.push(ingObj);
+        saveState();
+        render();
+        showToast(`Added ${ingObj.name}`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-paste-recipe') {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can add recipes directly', 'warn'); return; }
+      const rec = parsePastedRecipe(fd.get('raw'));
+      state.recipes.push(rec);
+      state.selectedRecipeId = rec.id;
+      logActivity('ADD RECIPE', rec.name);
+      saveState();
+      render();
+      showToast(`Saved recipe: ${rec.name}`);
+      return;
+    }
+
+    if (e.target.id === 'form-add-tag') {
+      const days = parseInt(fd.get('days'), 10) || 7;
+      const today = localDateStr();
+      state.storageTags.unshift({
+        id: uid('tag'), item_name: fd.get('itemName').trim(), tag_category: fd.get('tagCategory'),
+        zone: fd.get('zone'), qty_label: fd.get('qtyLabel').trim(), prep_date: today,
+        prep_time: new Date().toTimeString().slice(0, 5), use_by_date: addDays(today, days - 1),
+        tagged_by: getActiveUser().name, status: 'STORED'
+      });
+      logActivity('DATE TAG', fd.get('itemName').trim());
+      saveState();
+      render();
+      showToast('Date label logged');
+      return;
+    }
+
+    if (e.target.id === 'form-log-served') {
+      const ds = fd.get('date');
+      const pl = parseInt(fd.get('planned'), 10) || 0;
+      const sv = parseInt(fd.get('served'), 10) || 0;
+      let mp = state.menuPlan.find(m => m.service_date === ds);
+      if (!mp) { mp = { id: uid('mp'), service_date: ds, custom_title: 'Community Meal', status: 'SERVED' }; state.menuPlan.push(mp); }
+      mp.planned_portions = pl;
+      mp.served_portions = sv;
+      mp.circumstance = fd.get('circumstance') || 'Normal Day';
+      mp.status = 'SERVED';
+      mp.note = fd.get('note') || '';
+      logActivity('PATRONS SERVED', `${ds}: ${sv} served`);
+      saveState();
+      render();
+      showToast(`Saved ${sv} patrons served`);
+      return;
+    }
+
+    if (e.target.id === 'form-edit-srv') {
+      const mp = state.menuPlan.find(m => m.id === fd.get('id'));
+      if (mp) {
+        mp.service_date = fd.get('date');
+        mp.planned_portions = parseInt(fd.get('planned'), 10) || 0;
+        mp.served_portions = parseInt(fd.get('served'), 10) || 0;
+        mp.circumstance = fd.get('circumstance') || 'Normal Day';
+        mp.note = fd.get('note') || '';
+        mp.status = 'SERVED';
+        logActivity('EDIT SERVED', `${mp.service_date}: ${mp.served_portions} served`);
+        saveState();
+        closeModal();
+        render();
+        showToast('Updated past service record');
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-bulk-paste') {
+      const lines = String(fd.get('csv') || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      let count = 0;
+      lines.forEach(ln => {
+        const parts = ln.split(/,|\t/).map(s => s.trim());
+        if (parts.length < 2) return;
+        const dObj = new Date(parts[0].includes('-') ? parts[0] + 'T12:00:00' : parts[0]);
+        if (isNaN(dObj.getTime())) return;
+        const ds = localDateStr(dObj);
+        const sv = parseInt(parts[1], 10);
+        if (isNaN(sv) || sv < 0) return;
+        const note = parts.slice(2).join(', ');
+        let mp = state.menuPlan.find(m => m.service_date === ds);
+        if (!mp) { mp = { id: uid('mp'), service_date: ds, custom_title: 'Community Meal', planned_portions: sv, status: 'SERVED' }; state.menuPlan.push(mp); }
+        mp.served_portions = sv;
+        mp.status = 'SERVED';
+        if (note) mp.note = note;
+        count++;
+      });
+      logActivity('BULK PASTE SERVED', `Imported ${count} past attendance record(s)`);
+      saveState();
+      closeModal();
+      render();
+      showToast(`Imported ${count} past attendance record(s)`);
+      return;
+    }
+
+    if (e.target.id === 'form-bulk-served') {
+      let count = 0;
+      for (const [k, v] of fd.entries()) {
+        if (!k.startsWith('sv_') || v === '') continue;
+        const ds = k.slice(3);
+        const sv = parseInt(v, 10);
+        if (isNaN(sv) || sv < 0) continue;
+        let mp = state.menuPlan.find(m => m.service_date === ds);
+        if (!mp) { mp = { id: uid('mp'), service_date: ds, custom_title: 'Community Meal', planned_portions: sv, status: 'SERVED' }; state.menuPlan.push(mp); }
+        mp.served_portions = sv;
+        mp.status = 'SERVED';
+        mp.note = fd.get('nt_' + ds) || mp.note || '';
+        count++;
+      }
+      logActivity('BULK SERVED', `Saved ${count} past service count(s)`);
+      saveState();
+      closeModal();
+      render();
+      showToast(`Saved ${count} past attendance record(s)`);
+      return;
+    }
+
+    if (e.target.id === 'form-waste') {
+      const x = state.items.find(i => i.id === fd.get('itemId'));
+      const q = parseFloat(fd.get('qty')) || 0;
+      if (!x || q <= 0) return;
+      x.on_hand = Math.round(Math.max(0, x.on_hand - q) * 100) / 100;
+      state.transactions.unshift({
+        id: uid('tx'), tx_date: localDateStr(), tx_type: 'WASTE', item_id: x.id, item_name: x.name,
+        unit: x.unit, qty: -q, reason: fd.get('reason'), staff_name: getActiveUser().name
+      });
+      logActivity('WASTE', `-${q} ${x.unit} ${x.name} (${fd.get('reason')})`);
+      saveState();
+      render();
+      showToast(`Logged waste for ${x.name}`, 'warn');
+      return;
+    }
+
+    if (e.target.id === 'form-edit-usr') {
+      const u = state.users.find(x => x.id === fd.get('userId'));
+      const me = getActiveUser();
+      const isSelfOwner = !!(u && u.id === 'usr-1' && me.id === 'usr-1');
+      const newRole = isSelfOwner ? 'ADMIN' : normalizeRole(fd.get('role'));
+      if (!u || (!canManageUserAccount(me, u) && !isSelfOwner) || (!isSelfOwner && !(isAdminRole(me) ? (ROLE_RANK[newRole] || 0) <= (ROLE_RANK[normalizeRole(me.role)] || 0) : (ROLE_RANK[newRole] || 0) < (ROLE_RANK[normalizeRole(me.role)] || 0)))) {
+        showToast('You can only assign roles within your permission level', 'warn');
+        return;
+      }
+      u.name = String(fd.get('name') || '').trim() || u.name;
+      u.initials = String(fd.get('initials') || '').trim().toUpperCase() || u.initials;
+      u.role = newRole;
+      u.email = String(fd.get('email') || '').trim();
+      logActivity('USER UPDATED', `${u.name} (${u.role})`);
+      closeModal();
+      saveState();
+      render();
+      showToast(`Updated ${u.name} (${u.role})`);
+      return;
+    }
+
+    if (e.target.id === 'form-add-user') {
+      const me = getActiveUser();
+      const reqRole = normalizeRole(fd.get('role'));
+      if (!isMgmtOrHigher(me) || !(isAdminRole(me) ? (ROLE_RANK[reqRole] || 0) <= (ROLE_RANK[normalizeRole(me.role)] || 0) : (ROLE_RANK[reqRole] || 0) < (ROLE_RANK[normalizeRole(me.role)] || 0))) {
+        showToast('You can only create accounts with a role lower than yours', 'warn');
+        return;
+      }
+      const u = makeUser(uid('usr'), fd.get('name').trim(), reqRole, fd.get('initials').trim().toUpperCase(), fd.get('pin'), true);
+      u.email = String(fd.get('email') || '').trim();
+      state.users.push(u);
+      logActivity('ADD USER', `${u.name} (${u.role})`);
+      saveState();
+      render();
+      showToast(`Added ${u.name}`);
+      return;
+    }
+
+    if (e.target.id === 'form-chat') {
+      const u = getActiveUser();
+      const recId = String(fd.get('recipientId') || 'ALL');
+      const recUser = recId === 'ALL' ? null : state.users.find(x => x.id === recId);
+      state.messages.push({
+        id: uid('msg'), sender_id: u.id, sender_name: u.name, sender_role: u.role,
+        recipient_id: recId, recipient_name: recUser ? recUser.name : 'Everyone',
+        priority: fd.get('urgent') ? 'urgent' : 'normal',
+        body: fd.get('body').trim(), created_at_ms: Date.now(), timestamp_label: nowStamp()
+      });
+      if (fd.get('urgent') || recId !== 'ALL') {
+        const chatRecips = recId === 'ALL'
+          ? (state.users || []).filter(x => x.active !== false && x.id !== u.id)
+          : (recUser ? [recUser] : []);
+        sendBackgroundAlert(
+          chatRecips,
+          `Salvation Army KMS ${recId === 'ALL' ? 'Urgent Alert' : 'Private DM'} from ${u.name}`,
+          `${u.name}: ${fd.get('body').trim()}`
+        ).then(sent => { if (sent) showToast('Auto-sent background Email notification!'); });
+      }
+      saveState();
+      showChatModal();
+      return;
+    }
+
+    if (e.target.id === 'form-save-announcement') {
+      const annId = String(fd.get('annId') || '').trim();
+      const title = String(fd.get('title') || '').trim();
+      const body = String(fd.get('body') || '').trim();
+      const priority = String(fd.get('priority') || 'reminder');
+      const alertAt = String(fd.get('alertAt') || '').trim();
+      const repeatRule = String(fd.get('repeat') || 'none');
+      const expiresAt = String(fd.get('expiresAt') || '').trim();
+      const repeatDays = fd.getAll('repeatDays').map(Number).filter(n => !isNaN(n));
+      if (!title || !body) return;
+      state.announcements = state.announcements || [];
+      if (annId) {
+        const idx = state.announcements.findIndex(x => x.id === annId);
+        if (idx >= 0) {
+          state.announcements[idx] = {
+            ...state.announcements[idx],
+            title, body, priority, alert_at: alertAt, repeat_rule: repeatRule,
+            repeat_days: repeatDays, expires_at: expiresAt
+          };
+          logActivity('ANNOUNCEMENT UPDATED', title);
+          showToast('Announcement updated');
+        }
+      } else {
+        state.announcements.unshift({
+          id: uid('ann'), priority, title, body, alert_at: alertAt, repeat_rule: repeatRule,
+          repeat_days: repeatDays, expires_at: expiresAt, author: getActiveUser().name,
+          created_at: localDateStr(), dismissed_by: {}
+        });
+        logActivity('ANNOUNCEMENT POSTED', title);
+        showToast('Announcement posted');
+      }
+      closeModal();
+      saveState();
+      render();
+      return;
+    }
+  });
+
+  // Sync Pill & Backup Restore Handlers
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-sync-pill')) {
+      openModal('Supabase Cloud Sync & Connection', `
+        <div class="space-y-3 text-xs">
+          <div class="p-3 rounded-lg border border-[var(--line)] flex items-center justify-between">
+            <div>
+              <div class="font-bold">Status: ${syncStatus === 'live' ? 'Connected (Live Sync)' : syncStatus === 'connecting' ? 'Connecting...' : 'Local / Offline Mode'}</div>
+              <div class="opacity-70 font-mono text-[11px] mt-0.5">${esc(SUPABASE_URL)}</div>
+            </div>
+            <span class="tag ${syncStatus === 'live' ? 'tag-OK' : 'tag-LOW'}">${syncStatus.toUpperCase()}</span>
+          </div>
+          <p class="opacity-80">Use <strong>Reconnect &amp; Pull from Cloud</strong> to refresh all devices from Supabase, or <strong>Push Local Data to Cloud</strong> if you made offline changes.</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="btn-sb-reconnect" class="kms-btn-navy flex-1 py-2 text-xs font-semibold">Reconnect &amp; Pull from Cloud</button>
+            <button type="button" id="btn-sb-push" class="kms-btn-ok flex-1 py-2 text-xs font-semibold">Push Local Data to Cloud</button>
+          </div>
+        </div>
+      `);
+      return;
+    }
+    if (e.target.id === 'btn-sb-reconnect') {
+      closeModal();
+      showToast('Reconnecting to Supabase...');
+      initSupabase();
+      return;
+    }
+    if (e.target.id === 'btn-sb-push') {
+      closeModal();
+      if (!sbClient && window.supabase && window.supabase.createClient) {
+        sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+      syncStatus = 'live';
+      updateSyncUI();
+      syncToSupabase().then(() => showToast('Pushed local data to Supabase cloud!'));
+      return;
+    }
+  });
+
+  // Upgrade Backup Modal & Records with JSON Restore
+  const origBackupClick = () => {
+    openModal('Backup & Restore Full System', `
+      <div class="space-y-4 text-xs">
+        <div class="p-3 rounded-lg border border-[var(--line)] space-y-2">
+          <div class="font-bold">1. Download Full JSON Backup</div>
+          <p class="opacity-75">Saves all Butler PA inventory, recipes, photos, menu plans, POs, users, and safety logs to a file.</p>
+          <button type="button" id="btn-dl-json" class="kms-btn-navy px-3.5 py-2 font-semibold">Download JSON Backup</button>
+        </div>
+        <div class="p-3 rounded-lg border border-[var(--line)] space-y-2">
+          <div class="font-bold">2. Restore from JSON Backup File</div>
+          <p class="opacity-75">Upload a previously saved <code>.json</code> backup file to restore locally and sync to Supabase.</p>
+          <input type="file" id="inp-restore-json" accept=".json,application/json" class="kms-input w-full text-xs" />
+        </div>
+        <div class="pt-2 border-t border-[var(--line)] flex justify-between items-center">
+          <button type="button" id="btn-reset-seed" class="kms-btn-alt px-3 py-1.5 text-xs">Reset Stock to Starting Seed</button>
+          <button type="button" data-close-modal="1" class="kms-btn-alt px-3 py-1.5 text-xs">Close</button>
+        </div>
+      </div>
+    `);
+  };
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'btn-backup' || e.target.id === 'btn-open-restore') {
+      e.stopImmediatePropagation();
+      origBackupClick();
+    }
+  }, true);
+
+  document.addEventListener('change', (e) => {
+    if (e.target && e.target.id === 'inp-restore-json') {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || '{}'));
+          if (!parsed || !Array.isArray(parsed.items)) {
+            showToast('Invalid backup JSON file', 'error');
+            return;
+          }
+          state = Object.assign(getDefaultState(), parsed);
+          if (Array.isArray(state.recipes)) state.recipes = state.recipes.map(normalizeRecipe);
+          ensureOwnerIntegrity();
+          state.isLocked = false;
+          setSessionUnlocked(true);
+          logActivity('BACKUP RESTORED', `Restored backup (${state.items.length} items, ${state.recipes.length} recipes)`);
+          closeModal();
+          saveState();
+          render();
+          showToast('Backup restored & synced to Supabase!');
+        } catch (err) {
+          showToast('Could not read JSON backup file', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+    if (e.target && e.target.id === 'ann-repeat-select') {
+      const wrap = document.getElementById('ann-repeat-days-wrap');
+      if (wrap) wrap.classList.toggle('hidden', !['weekly', 'biweekly'].includes(e.target.value));
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.id === 'scan-input' && e.key === 'Enter') {
+      e.preventDefault();
+      const q = e.target.value.trim().toLowerCase();
+      const m = state.items.find(i => i.sku.toLowerCase() === q || i.name.toLowerCase().includes(q));
+      if (m) { document.getElementById('recv-item').value = m.id; showToast('Selected ' + m.name); e.target.value = ''; }
+      else showToast('No matching SKU or item found', 'warn');
+    }
+  });
+
+  function resetInactivity() {
+    clearTimeout(inactivityTimer);
+    if (!state.autoLockMinutes || state.isLocked) return;
+    inactivityTimer = setTimeout(() => {
+      if (!state.isLocked) logActivity('AUTO LOCK', `${getActiveUser().name} auto-locked after inactivity`);
+      state.isLocked = true;
+      setSessionUnlocked(false);
+      saveState();
+      render();
+    }, state.autoLockMinutes * 60 * 1000);
+  }
+  ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, resetInactivity, { passive: true }));
+
+  function setSessionUnlocked(unlocked) {
+    try {
+      if (unlocked) sessionStorage.setItem('sa_kms_session_unlocked', '1');
+      else sessionStorage.removeItem('sa_kms_session_unlocked');
+    } catch (e) {}
+  }
+  function isSessionUnlocked() {
+    try { return sessionStorage.getItem('sa_kms_session_unlocked') === '1'; } catch (e) { return false; }
+  }
+  function lockOnExit() {
+    if (!state.isLocked) logActivity('LOGOUT', `${getActiveUser().name} session ended on exit`);
+    state.isLocked = true;
+    delete state._sbAuthEmail;
+    setSessionUnlocked(false);
+    if (sbClient && sbClient.auth) { try { sbClient.auth.signOut(); } catch (e) {} }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  window.addEventListener('pagehide', lockOnExit);
+  window.addEventListener('beforeunload', lockOnExit);
+
+  // Boot
+  ensureOwnerIntegrity();
+  if (!isSessionUnlocked()) state.isLocked = true;
+  if (state.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  document.documentElement.style.fontSize = ['100%', '112.5%', '125%'][state.textZoom || 0];
+  pruneExpiredAlerts();
+  render();
+  initSupabase();
+  setInterval(checkScheduledAlerts, 15000);
+})();
+</script>
+</body>
+</html>
