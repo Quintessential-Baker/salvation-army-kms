@@ -22,7 +22,7 @@ A unified, mobile- and tablet-ready Kitchen Management System combining living s
 ## Key Capabilities
 
 ### 1. Living Inventory, Whole-Case POs & Receiving
-- **Butler, PA Stockroom Seed**: Organized across `Walk-in cooler`, `Walk-in freezer`, and `Stockroom` with vendor cadences (`W` = Weekly Marberger & Produce; `M` = Monthly Jordan Banana).
+- **6 Storage Locations**: Organized across `Walk-in cooler`, `Walk-in freezer`, `Stockroom`, `Kitchen Cooler`, `Kitchen Freezer`, and `Kitchen Dry Goods` with inline location reassignment and vendor cadences (`W` = Weekly Marberger & Produce; `M` = Monthly Jordan Banana).
 - **8-Week Auto-Learning Pars**: Calculates `par = avg weekly use × cycle weeks × 1.25` (rounded to `0.01`) after 7+ days of usage; manual edits lock that item's par.
 - **Whole-Case Ordering & Par Guardrails**: PO suggestions only trigger when `>= 1` whole case is needed (or `on_hand <= 0` after subtracting open POs), with selectable/editable lines, custom `PO #` / `Vendor Invoice #`, and brand-new item creation inside **Edit PO / Invoice #**.
 - **Order Workflow & Delivery Reminders**: `STAFF` can request, edit, and delete `requested` POs; `ADMIN`/`MANAGER` approve, reject, mark ordered (with optional **Expected Delivery Date** and automatic 8:00 AM system reminder), and reconcile full delivery slips under **Receive & Scan**.
@@ -31,19 +31,19 @@ A unified, mobile- and tablet-ready Kitchen Management System combining living s
 ### 2. Standardized Recipes (40–80 Portions) & Menu Planning
 - **Kitchen-Friendly Measurements & Background Stock Accuracy**: Recipes display culinary units (`cups`, `tbsp`, `tsp`, `fl oz`, `oz`, `lbs`, `quarts`, `gallons`, `pieces`, `to taste`) with fractions (`¼`, `½`, `¾`, etc.) while automatically converting to inventory stock units (`cases`, `cans`, `boxes`, `packs`) in the background (`1 stock unit = X recipe units`).
 - **40–80 Portion Scaling & Quick-Scan Table**: Interactive slider, `40–80` presets, `Predicted` turnout button, and a 5-column `40/50/60/70/80` Quick-Scan Table.
-- **Web Search, URL Import & Photo Support**: Search recipes across Budget Bytes, Skinnytaste, Sally's Baking Addiction, TheMealDB, and DummyJSON; import from any recipe URL (with automatic Jina Reader fallback for `403`-protected sites); paste raw text; or upload/link recipe photos.
-- **Staff Suggestions & Menu Deduction**: `STAFF` submit recipe and menu suggestions for `ADMIN`/`MANAGER` approval; marking a scheduled meal **Served** deducts mapped ingredients from Living Stock and logs leftovers.
+- **Web Search, URL Import, Bulk Add/Edit & Photo Support**: Search recipes across Budget Bytes, Skinnytaste, Sally's Baking Addiction, TheMealDB, and DummyJSON; import from any recipe URL (with automatic Jina Reader fallback for `403`-protected sites); bulk-edit or bulk-import multiple recipes/URLs at once; or upload/link recipe photos.
+- **Staff Suggestions & Pre-Approval Editing**: `STAFF` submit recipe URLs or text for approval; `ADMIN`/`MANAGER` can **Review & Edit** all fields before approving into the recipe book. Marking a scheduled meal **Served** deducts mapped ingredients from Living Stock and logs leftovers.
 
-### 3. Food Safety, Forecasting, Chat & Automated Alerts
+### 3. Food Safety, Day-by-Day Forecasting, Chat & Automated Alerts
 - **6-Point Temperature & 7-Point Cleaning Logs**: Daily pass/fail checks (`≤41°F` coolers, `≤0°F` freezers, `≥135°F` hot hold/steam table) with printable single-page safety logs.
 - **Date Labels (>24 Hours) & Operational Checklists**: FIFO tracking for cooked leftovers (`7d`) and Daily Salad Bar (`3d`/`4d`), plus Daily/Weekly/Monthly checklists with Priority Carryover.
 - **Federal Holiday & Order Schedule Alerts**: Automatic 14-day lookahead for all 11 US federal holidays + Thanksgiving Friday, shifting Friday order deadlines to the preceding open business day when a holiday falls on or near Friday.
-- **Multi-Factor Patron Forecasting**: Predicts turnout across Days, Weeks, Months, and Years using weekday, meal popularity, and holiday/weather factors with a What-If simulator.
-- **Team Chat & Email Alerts**: Real-time **Alert All (Broadcast)** and **Private DMs** with unread badges, automated background emails via Resend (`notify-alert`), and `mailto:` fallback on PO submissions and urgent messages.
+- **Day-by-Day Patron Forecasting**: Predicts individual service-day turnout across **Next 7 Days**, **Next 4 Weeks (Daily)**, **Next 3 Months (Daily)**, and **Next 12 Months (Daily)** using weekday, seasonal, meal popularity, and holiday/weather factors with a What-If simulator.
+- **Team Chat & Email Alerts**: Real-time **Alert All (Broadcast)** and **Private DMs** with **Edit**, **Update**, **Delete**, and **Clear Thread** controls, unread badges, automated background emails via Resend (`notify-alert`), and `mailto:` fallback.
 
 ### 4. Role-Based Access Control (RBAC), Accountability & Printing
 - **4 Strict Roles**: `ADMIN`, `MANAGER`, `STAFF`, and `VOLUNTEER` with salted SHA-256 PINs, mandatory first-login PIN change, role-specific onboarding training, **Interactive Guided Tour**, and auto-lock on idle or tab close/reopen.
-- **User Hierarchy**: `ADMIN` can create, edit, promote (up to `ADMIN`), deactivate, and delete accounts; `MANAGER` can manage `STAFF` and `VOLUNTEER` accounts.
+- **Cloud Sync & Full JSON Backup/Restore**: Clickable Supabase status pill to reconnect/pull or push local changes anytime, plus full JSON backup download and file upload restore.
 - **Cloud-Synced Accountability Feed**: Tracks sign-ins, failed PINs, manual/auto logouts, stock/PO updates, recipe edits, and safety logs in `kms_activity_logs` with category and keyword filters.
 - **Standardized Letter-Size Printing**: Clean `@media print` pagination (`0.45in` Letter margins, `break-inside: avoid`, repeated table headers) for Daily Sheets, Recipe + QR cards, Next-Day Prep lists, Safety Logs, Shelf QR Labels, and Executive Monthly Reports.
 

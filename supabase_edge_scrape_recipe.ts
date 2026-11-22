@@ -297,14 +297,14 @@ serve(async (req) => {
     try {
       parsedUrl = new URL(target);
     } catch {
-      return new Response(JSON.stringify({ error: "Invalid URL" }), {
-        status: 400,
+      return new Response(JSON.stringify({ ok: false, error: "Invalid URL" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-      return new Response(JSON.stringify({ error: "Only http/https URLs are supported" }), {
-        status: 400,
+      return new Response(JSON.stringify({ ok: false, error: "Only http/https URLs are supported" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -323,8 +323,8 @@ serve(async (req) => {
       const msg = res.status === 403
         ? `${parsedUrl.hostname} blocks automated imports (HTTP 403). Copy & paste the recipe text into "Add / Paste a Recipe" below.`
         : `${parsedUrl.hostname} returned HTTP ${res.status}`;
-      return new Response(JSON.stringify({ error: msg }), {
-        status: res.status === 403 ? 403 : 502,
+      return new Response(JSON.stringify({ ok: false, error: msg }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -350,8 +350,8 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "No structured Recipe data found on that page. Copy and paste the recipe text instead." }), {
-        status: 422,
+      return new Response(JSON.stringify({ ok: false, error: "No structured Recipe data found on that page. Copy and paste the recipe text instead." }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -385,8 +385,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
+    return new Response(JSON.stringify({ ok: false, error: String(err) }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
