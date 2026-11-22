@@ -2546,7 +2546,8 @@
                       </div>
                     ` : `<p class="text-[11px] opacity-85 whitespace-pre-line">${esc(s.raw)}</p>`}
                     ${isMgmtOrHigher() ? `
-                      <div class="flex gap-1.5 pt-1">
+                      <div class="flex flex-wrap gap-1.5 pt-1">
+                        <button type="button" data-review-recsug="${s.id}" class="kms-btn-navy px-2.5 py-1 text-[11px]">Review &amp; Edit</button>
                         <button type="button" data-approve-recsug="${s.id}" class="kms-btn-ok px-2.5 py-1 text-[11px]">Approve &amp; Add</button>
                         <button type="button" data-reject-recsug="${s.id}" class="kms-btn-alt px-2.5 py-1 text-[11px]">Reject</button>
                       </div>
@@ -3564,9 +3565,49 @@
   }
 
   function invokeScrapeRecipe(payload) {
+    const fallbackClientFetch = async (url) => {
+      if (!url) throw new Error('Edge Function unavailable');
+      const r = await fetch('https://r.jina.ai/' + url, { headers: { 'Accept': 'text/plain' } });
+      if (!r.ok) throw new Error('Could not fetch recipe from URL (HTTP ' + r.status + '). Try copying and pasting the recipe text below.');
+      const md = await r.text();
+      const lines = md.split(/\r?\n/).map(l => l.trim());
+      let name = '', baseServings = 4, mode = 'none';
+      const ingredients = [], steps = [];
+      for (const raw of lines) {
+        if (!raw) continue;
+        const tm = raw.match(/^Title:\s*(.+)$/i);
+        if (tm && !name) { name = tm[1].replace(/\s*[-|].*(Allrecipes|Food Network|Recipe).*$/i, '').trim(); continue; }
+        if (!name && /^#\s+/.test(raw)) { name = raw.replace(/^#+\s*/, '').trim(); continue; }
+        const ym = raw.match(/^(?:Yield|Servings|Serves)\s*:?\s*(\d+)/i);
+        if (ym) { baseServings = Math.max(1, Number(ym[1])); continue; }
+        if (/^#{1,4}\s*Ingredients\b|^Ingredients\s*:?$/i.test(raw)) { mode = 'ing'; continue; }
+        if (/^#{1,4}\s*(?:Directions|Instructions|Method|Steps)\b|^(?:Directions|Instructions|Method)\s*:?$/i.test(raw)) { mode = 'step'; continue; }
+        if (/^#{1,4}\s*(?:Nutrition|Reviews|Shop|Related|More|Video|Cook's Note|Notes)\b/i.test(raw)) { if (ingredients.length && steps.length) break; mode = 'none'; continue; }
+        const clean = raw.replace(/^[-*•\[\]xX\s]+(?=[A-Za-z0-9¼½¾⅓⅔⅛])/, '').replace(/^\*+|\*+$/g, '').trim();
+        if (!clean || /^!\[|^\[.*\]\(http/.test(raw)) continue;
+        if (mode === 'ing' && clean.length < 180) ingredients.push(clean);
+        else if (mode === 'step') { const st = clean.replace(/^\d+[\.\)]\s*/, '').trim(); if (st.length > 8) steps.push(st); }
+      }
+      if (!ingredients.length) throw new Error('No recipe ingredients found on that page. Copy and paste the recipe text below instead.');
+      return { ok: true, recipe: { name: name || 'Imported Recipe', category: 'Main Entree', base_servings: baseServings, prep_min: 20, cook_min: 35, ingredients, steps, source_url: url } };
+    };
+
     if (sbClient && sbClient.functions) {
-      return sbClient.functions.invoke('scrape-recipe', { body: payload }).then(({ data, error }) => {
-        if (error) throw new Error(error.message || 'Edge Function error');
+      return sbClient.functions.invoke('scrape-recipe', { body: payload }).then(async ({ data, error }) => {
+        if (data && data.ok === false && data.error) throw new Error(data.error);
+        if (error) {
+          let detail = '';
+          try {
+            if (error.context && typeof error.context.json === 'function') {
+              const errJson = await error.context.json();
+              if (errJson && errJson.error) detail = errJson.error;
+            }
+          } catch (e) {}
+          if (payload && payload.url) {
+            return await fallbackClientFetch(payload.url);
+          }
+          throw new Error(detail || error.message || 'Edge Function error');
+        }
         return data;
       });
     }
@@ -4444,6 +4485,49 @@
         saveState();
         render();
         showToast(`Approved & added "${parsed.name}" to Recipe Book!`);
+      }
+      return;
+    }
+    const revSug = e.target.closest('[data-review-recsug]');
+    if (revSug) {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can review recipe suggestions', 'warn'); return; }
+      const s = (state.recipeSuggestions || []).find(x => x.id === revSug.dataset.reviewRecsug);
+      if (s) {
+        const pr = s.parsed_recipe
+          ? normalizeRecipe(s.parsed_recipe)
+          : parsePastedRecipe(s.title + '\nServings: ' + (s.servings || 65) + '\n' + s.raw);
+        const ingLines = (pr.ingredients || []).map(g => `${g.unit === 'to taste' ? '' : formatKitchenFraction(g.qty) + ' ' + g.unit + ' '}${g.name}`.trim()).join('\n');
+        const stepLines = (pr.steps || []).join('\n');
+        openModal(`Review & Edit Suggestion — ${s.title}`, `
+          <form id="form-review-recsug" class="space-y-3 text-xs">
+            <input type="hidden" name="sugId" value="${esc(s.id)}" />
+            <div><label class="block font-semibold mb-1">Recipe Title</label><input name="title" type="text" required value="${esc(s.title)}" class="kms-input w-full text-sm" /></div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div><label class="block font-semibold mb-1">Category</label><input name="category" type="text" value="${esc(pr.category || 'Main Entree')}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Base Servings</label><input name="servings" type="number" min="1" value="${Number(s.servings) || pr.base_servings || 65}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Prep (min)</label><input name="prepMin" type="number" min="0" value="${pr.prep_min || 20}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Cook (min)</label><input name="cookMin" type="number" min="0" value="${pr.cook_min || 35}" class="kms-input w-full text-xs" /></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div><label class="block font-semibold mb-1">Target Menu Date (Optional)</label><input name="targetDate" type="date" value="${esc(s.target_date || '')}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Allergens (comma-separated)</label><input name="allergens" type="text" value="${esc((pr.allergens || []).join(', '))}" placeholder="milk, wheat, soy..." class="kms-input w-full text-xs" /></div>
+            </div>
+            <div><label class="block font-semibold mb-1">Photo URL (Optional)</label><input name="photoUrl" type="text" value="${esc(pr.photo_url || '')}" placeholder="https://..." class="kms-input w-full text-xs" /></div>
+            <div><label class="block font-semibold mb-1">Notes (Optional)</label><input name="notes" type="text" value="${esc(pr.notes || '')}" placeholder="Prep or serving notes..." class="kms-input w-full text-xs" /></div>
+            <div>
+              <label class="block font-semibold mb-1">Ingredients (one per line, e.g. 4 lbs Ground beef)</label>
+              <textarea name="ingText" rows="5" required class="kms-input w-full text-xs leading-relaxed">${esc(ingLines)}</textarea>
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Directions (one step per line)</label>
+              <textarea name="stepsText" rows="5" class="kms-input w-full text-xs leading-relaxed">${esc(stepLines)}</textarea>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button type="submit" name="action" value="save" class="kms-btn-alt flex-1 py-2 text-xs font-semibold">Save Draft Changes</button>
+              <button type="submit" name="action" value="approve" class="kms-btn-ok flex-1 py-2 text-xs font-semibold">Approve &amp; Add to Recipes</button>
+            </div>
+          </form>
+        `);
       }
       return;
     }
@@ -5443,320 +5527,55 @@
       return;
     }
 
-    if (e.target.id === 'form-add-rec-ing') {
-      if (!isMgmtOrHigher()) { showToast('Only Management can edit recipes', 'warn'); return; }
-      const r = state.recipes.find(x => x.id === e.target.dataset.recId);
-      if (r) {
-        const ingObj = {
-          name: String(fd.get('name') || '').trim(),
-          qty: parseFloat(fd.get('qty')) || 1,
-          unit: normUnit(fd.get('unit') || 'cups'),
-          inv_id: String(fd.get('inv_id') || ''),
-          stock_per_unit: parseFloat(fd.get('stock_per_unit')) || 0,
-          per100: 0
-        };
-        recomputeIngredientPer100(ingObj, r.base_servings);
-        r.ingredients = r.ingredients || [];
-        r.ingredients.push(ingObj);
-        saveState();
-        render();
-        showToast(`Added ${ingObj.name}`);
-      }
-      return;
-    }
+    if (e.target.id === 'form-review-recsug') {
+      if (!isMgmtOrHigher()) { showToast('Only Management can edit suggestions', 'warn'); return; }
+      const s = (state.recipeSuggestions || []).find(x => x.id === fd.get('sugId'));
+      if (s) {
+        const action = (e.submitter && e.submitter.value) || 'approve';
+        const title = String(fd.get('title') || '').trim() || s.title;
+        const serv = Math.max(1, parseFloat(fd.get('servings')) || 65);
+        const ingText = String(fd.get('ingText') || '').trim();
+        const stepsText = String(fd.get('stepsText') || '').trim();
+        const targetDate = String(fd.get('targetDate') || '').trim();
+        const rawCombined = `Ingredients:\n${ingText}\n\nDirections:\n${stepsText}`;
+        const parsed = parsePastedRecipe(`${title}\nServings: ${serv}\n${rawCombined}`);
+        parsed.name = title;
+        parsed.category = String(fd.get('category') || '').trim() || 'Main Entree';
+        parsed.base_servings = serv;
+        parsed.prep_min = Math.max(0, parseInt(fd.get('prepMin'), 10) || 0);
+        parsed.cook_min = Math.max(0, parseInt(fd.get('cookMin'), 10) || 0);
+        parsed.allergens = String(fd.get('allergens') || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+        parsed.photo_url = String(fd.get('photoUrl') || '').trim();
+        parsed.notes = String(fd.get('notes') || '').trim();
 
-    if (e.target.id === 'form-paste-recipe') {
-      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can add recipes directly', 'warn'); return; }
-      const rec = parsePastedRecipe(fd.get('raw'));
-      state.recipes.push(rec);
-      state.selectedRecipeId = rec.id;
-      logActivity('ADD RECIPE', rec.name);
-      saveState();
-      render();
-      showToast(`Saved recipe: ${rec.name}`);
-      return;
-    }
+        s.title = title;
+        s.servings = serv;
+        s.target_date = targetDate;
+        s.raw = rawCombined;
+        s.parsed_recipe = parsed;
 
-    if (e.target.id === 'form-add-tag') {
-      const days = parseInt(fd.get('days'), 10) || 7;
-      const today = localDateStr();
-      state.storageTags.unshift({
-        id: uid('tag'), item_name: fd.get('itemName').trim(), tag_category: fd.get('tagCategory'),
-        zone: fd.get('zone'), qty_label: fd.get('qtyLabel').trim(), prep_date: today,
-        prep_time: new Date().toTimeString().slice(0, 5), use_by_date: addDays(today, days - 1),
-        tagged_by: getActiveUser().name, status: 'STORED'
-      });
-      logActivity('DATE TAG', fd.get('itemName').trim());
-      saveState();
-      render();
-      showToast('Date label logged');
-      return;
-    }
-
-    if (e.target.id === 'form-log-served') {
-      const ds = fd.get('date');
-      const pl = parseInt(fd.get('planned'), 10) || 0;
-      const sv = parseInt(fd.get('served'), 10) || 0;
-      let mp = state.menuPlan.find(m => m.service_date === ds);
-      if (!mp) { mp = { id: uid('mp'), service_date: ds, custom_title: 'Community Meal', status: 'SERVED' }; state.menuPlan.push(mp); }
-      mp.planned_portions = pl;
-      mp.served_portions = sv;
-      mp.circumstance = fd.get('circumstance') || 'Normal Day';
-      mp.status = 'SERVED';
-      mp.note = fd.get('note') || '';
-      logActivity('PATRONS SERVED', `${ds}: ${sv} served`);
-      saveState();
-      render();
-      showToast(`Saved ${sv} patrons served`);
-      return;
-    }
-    if (e.target.id === 'form-edit-srv') {
-      const mp = state.menuPlan.find(m => m.id === fd.get('id'));
-      if (mp) {
-        mp.service_date = fd.get('date');
-        mp.planned_portions = parseInt(fd.get('planned'), 10) || 0;
-        mp.served_portions = parseInt(fd.get('served'), 10) || 0;
-        mp.circumstance = fd.get('circumstance') || 'Normal Day';
-        mp.note = fd.get('note') || '';
-        mp.status = 'SERVED';
-        logActivity('EDIT SERVED', `${mp.service_date}: ${mp.served_portions} served`);
-        saveState();
-        closeModal();
-        render();
-        showToast('Updated past service record');
-      }
-      return;
-    }
-    if (e.target.id === 'form-bulk-paste') {
-      const lines = String(fd.get('csv') || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      let count = 0;
-      lines.forEach(ln => {
-        const parts = ln.split(/,|\t/).map(s => s.trim());
-        if (parts.length < 2) return;
-        const dObj = new Date(parts[0].includes('-') ? parts[0] + 'T12:00:00' : parts[0]);
-        if (isNaN(dObj.getTime())) return;
-        const ds = localDateStr(dObj);
-        const sv = parseInt(parts[1], 10);
-        if (isNaN(sv) || sv < 0) return;
-        const note = parts.slice(2).join(', ');
-        let mp = state.menuPlan.find(m => m.service_date === ds);
-        if (!mp) { mp = { id: uid('mp'), service_date: ds, custom_title: 'Community Meal', planned_portions: sv, status: 'SERVED' }; state.menuPlan.push(mp); }
-        mp.served_portions = sv;
-        mp.status = 'SERVED';
-        if (note) mp.note = note;
-        count++;
-      });
-      logActivity('BULK PASTE SERVED', `Imported ${count} past attendance record(s)`);
-      saveState();
-      closeModal();
-      render();
-      showToast(`Imported ${count} past attendance record(s)`);
-      return;
-    }
-    if (e.target.id === 'form-bulk-served') {
-      let count = 0;
-      for (const [k, v] of fd.entries()) {
-        if (!k.startsWith('sv_') || v === '') continue;
-        const ds = k.slice(3);
-        const sv = parseInt(v, 10);
-        if (isNaN(sv) || sv < 0) continue;
-        let mp = state.menuPlan.find(m => m.service_date === ds);
-        if (!mp) { mp = { id: uid('mp'), service_date: ds, custom_title: 'Community Meal', planned_portions: sv, status: 'SERVED' }; state.menuPlan.push(mp); }
-        mp.served_portions = sv;
-        mp.status = 'SERVED';
-        mp.note = fd.get('nt_' + ds) || mp.note || '';
-        count++;
-      }
-      logActivity('BULK SERVED', `Saved ${count} past service count(s)`);
-      saveState();
-      closeModal();
-      render();
-      showToast(`Saved ${count} past attendance record(s)`);
-      return;
-    }
-
-    if (e.target.id === 'form-waste') {
-      const x = state.items.find(i => i.id === fd.get('itemId'));
-      const q = parseFloat(fd.get('qty')) || 0;
-      if (!x || q <= 0) return;
-      x.on_hand = Math.round(Math.max(0, x.on_hand - q) * 100) / 100;
-      state.transactions.unshift({
-        id: uid('tx'), tx_date: localDateStr(), tx_type: 'WASTE', item_id: x.id, item_name: x.name,
-        unit: x.unit, qty: -q, reason: fd.get('reason'), staff_name: getActiveUser().name
-      });
-      logActivity('WASTE', `-${q} ${x.unit} ${x.name} (${fd.get('reason')})`);
-      saveState();
-      render();
-      showToast(`Logged waste for ${x.name}`, 'warn');
-      return;
-    }
-
-    if (e.target.id === 'form-edit-usr') {
-      const u = state.users.find(x => x.id === fd.get('userId'));
-      const me = getActiveUser();
-      const isSelfOwner = !!(u && u.id === 'usr-1' && me.id === 'usr-1');
-      const newRole = isSelfOwner ? 'ADMIN' : normalizeRole(fd.get('role'));
-      if (!u || (!canManageUserAccount(me, u) && !isSelfOwner) || (!isSelfOwner && !(isAdminRole(me) ? (ROLE_RANK[newRole] || 0) <= (ROLE_RANK[normalizeRole(me.role)] || 0) : (ROLE_RANK[newRole] || 0) < (ROLE_RANK[normalizeRole(me.role)] || 0)))) {
-        showToast('You can only assign roles within your permission level', 'warn');
-        return;
-      }
-      u.name = String(fd.get('name') || '').trim() || u.name;
-      u.initials = String(fd.get('initials') || '').trim().toUpperCase() || u.initials;
-      u.role = newRole;
-      u.email = String(fd.get('email') || '').trim();
-      logActivity('USER UPDATED', `${u.name} (${u.role})`);
-      closeModal();
-      saveState();
-      render();
-      showToast(`Updated ${u.name} (${u.role})`);
-      return;
-    }
-
-    if (e.target.id === 'form-add-user') {
-      const me = getActiveUser();
-      const reqRole = normalizeRole(fd.get('role'));
-      if (!isMgmtOrHigher(me) || !(isAdminRole(me) ? (ROLE_RANK[reqRole] || 0) <= (ROLE_RANK[normalizeRole(me.role)] || 0) : (ROLE_RANK[reqRole] || 0) < (ROLE_RANK[normalizeRole(me.role)] || 0))) {
-        showToast('You can only create accounts with a role lower than yours', 'warn');
-        return;
-      }
-      const u = makeUser(uid('usr'), fd.get('name').trim(), reqRole, fd.get('initials').trim().toUpperCase(), fd.get('pin'), true);
-      u.email = String(fd.get('email') || '').trim();
-      state.users.push(u);
-      logActivity('ADD USER', `${u.name} (${u.role})`);
-      saveState();
-      render();
-      showToast(`Added ${u.name}`);
-      return;
-    }
-
-    if (e.target.id === 'form-chat') {
-      const u = getActiveUser();
-      const recId = String(fd.get('recipientId') || 'ALL');
-      const recUser = recId === 'ALL' ? null : state.users.find(x => x.id === recId);
-      state.messages.push({
-        id: uid('msg'), sender_id: u.id, sender_name: u.name, sender_role: u.role,
-        recipient_id: recId, recipient_name: recUser ? recUser.name : 'Everyone',
-        priority: fd.get('urgent') ? 'urgent' : 'normal',
-        body: fd.get('body').trim(), created_at_ms: Date.now(), timestamp_label: nowStamp()
-      });
-      if (fd.get('urgent') || recId !== 'ALL') {
-        const chatRecips = recId === 'ALL'
-          ? (state.users || []).filter(x => x.active !== false && x.id !== u.id)
-          : (recUser ? [recUser] : []);
-        sendBackgroundAlert(
-          chatRecips,
-          `Salvation Army KMS ${recId === 'ALL' ? 'Urgent Alert' : 'Private DM'} from ${u.name}`,
-          `${u.name}: ${fd.get('body').trim()}`
-        ).then(sent => { if (sent) showToast('Auto-sent background Email notification!'); });
-      }
-      saveState();
-      showChatModal();
-      return;
-    }
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.target && e.target.id === 'scan-input' && e.key === 'Enter') {
-      e.preventDefault();
-      const q = e.target.value.trim().toLowerCase();
-      const m = state.items.find(i => i.sku.toLowerCase() === q || i.name.toLowerCase().includes(q));
-      if (m) { document.getElementById('recv-item').value = m.id; showToast('Selected ' + m.name); e.target.value = ''; }
-      else showToast('No matching SKU or item found', 'warn');
-    }
-  });
-
-  function resetInactivity() {
-    clearTimeout(inactivityTimer);
-    if (!state.autoLockMinutes || state.isLocked) return;
-    inactivityTimer = setTimeout(() => {
-      if (!state.isLocked) logActivity('AUTO LOCK', `${getActiveUser().name} auto-locked after inactivity`);
-      state.isLocked = true;
-      setSessionUnlocked(false);
-      saveState();
-      render();
-    }, state.autoLockMinutes * 60 * 1000);
-  }
-  ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, resetInactivity, { passive: true }));
-
-  document.addEventListener('change', (e) => {
-    if (state.isLocked) return;
-    if (e.target && e.target.id === 'ann-repeat-select') {
-      const wrap = document.getElementById('ann-repeat-days-wrap');
-      if (wrap) wrap.classList.toggle('hidden', !['weekly', 'biweekly'].includes(e.target.value));
-    }
-  });
-
-  document.addEventListener('submit', (e) => {
-    if (state.isLocked && !['form-unlock', 'form-sb-auth'].includes(e.target.id)) return;
-    if (e.target && e.target.id === 'form-save-announcement') {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const annId = String(fd.get('annId') || '').trim();
-      const title = String(fd.get('title') || '').trim();
-      const body = String(fd.get('body') || '').trim();
-      const priority = String(fd.get('priority') || 'reminder');
-      const alertAt = String(fd.get('alertAt') || '').trim();
-      const repeatRule = String(fd.get('repeat') || 'none');
-      const expiresAt = String(fd.get('expiresAt') || '').trim();
-      const repeatDays = fd.getAll('repeatDays').map(Number).filter(n => !isNaN(n));
-      if (!title || !body) return;
-      state.announcements = state.announcements || [];
-      if (annId) {
-        const idx = state.announcements.findIndex(x => x.id === annId);
-        if (idx >= 0) {
-          state.announcements[idx] = {
-            ...state.announcements[idx],
-            title, body, priority, alert_at: alertAt, repeat_rule: repeatRule,
-            repeat_days: repeatDays, expires_at: expiresAt
-          };
-          logActivity('ANNOUNCEMENT UPDATED', title);
-          showToast('Announcement updated');
+        if (action === 'approve') {
+          parsed.id = uid('rec');
+          state.recipes.unshift(parsed);
+          state.selectedRecipeId = parsed.id;
+          if (targetDate) {
+            const ex = state.menuPlan.find(m => m.service_date === targetDate);
+            if (ex) { ex.recipe_id = parsed.id; ex.custom_title = parsed.name; }
+            else state.menuPlan.push({ id: uid('mp'), service_date: targetDate, recipe_id: parsed.id, custom_title: parsed.name, planned_portions: forecastWeekday(targetDate, parsed.id), status: 'PLANNED' });
+          }
+          s.status = 'APPROVED';
+          logActivity('RECIPE APPROVED', `Reviewed & approved "${parsed.name}" (suggested by ${s.suggested_by})`);
+          closeModal();
+          saveState();
+          render();
+          showToast(`Approved & added "${parsed.name}" to Recipe Book!`);
+        } else {
+          logActivity('SUGGESTION EDITED', `Edited pending suggestion "${title}"`);
+          closeModal();
+          saveState();
+          render();
+          showToast(`Saved edits to pending suggestion "${title}"`);
         }
-      } else {
-        state.announcements.unshift({
-          id: uid('ann'), priority, title, body, alert_at: alertAt, repeat_rule: repeatRule,
-          repeat_days: repeatDays, expires_at: expiresAt, author: getActiveUser().name,
-          created_at: localDateStr(), dismissed_by: {}
-        });
-        logActivity('ANNOUNCEMENT POSTED', title);
-        showToast('Announcement posted');
       }
-      closeModal();
-      saveState();
-      render();
+      return;
     }
-  });
-
-  function setSessionUnlocked(unlocked) {
-    try {
-      if (unlocked) sessionStorage.setItem('sa_kms_session_unlocked', '1');
-      else sessionStorage.removeItem('sa_kms_session_unlocked');
-    } catch (e) {}
-  }
-  function isSessionUnlocked() {
-    try { return sessionStorage.getItem('sa_kms_session_unlocked') === '1'; } catch (e) { return false; }
-  }
-  function lockOnExit() {
-    if (!state.isLocked) logActivity('LOGOUT', `${getActiveUser().name} session ended on exit`);
-    state.isLocked = true;
-    delete state._sbAuthEmail;
-    setSessionUnlocked(false);
-    if (sbClient && sbClient.auth) { try { sbClient.auth.signOut(); } catch (e) {} }
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
-  }
-  window.addEventListener('pagehide', lockOnExit);
-  window.addEventListener('beforeunload', lockOnExit);
-
-  // Boot
-  ensureOwnerIntegrity();
-  if (!isSessionUnlocked()) state.isLocked = true;
-  if (state.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-  document.documentElement.style.fontSize = ['100%', '112.5%', '125%'][state.textZoom || 0];
-  pruneExpiredAlerts();
-  render();
-  initSupabase();
-  setInterval(checkScheduledAlerts, 15000);
-})();
-</script>
-</body>
-</html>
