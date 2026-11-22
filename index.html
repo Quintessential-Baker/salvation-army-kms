@@ -1843,6 +1843,1218 @@
     `;
   }
 
+  // 2. STOCK (6 Locations + Inline Location Switcher + Search/Filter/Add)
+  function renderStock(main) {
+    const q = (state._stockSearch || '').toLowerCase();
+    const locFilter = state._stockLoc || 'ALL';
+    main.innerHTML = `
+      <div class="space-y-4">
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold">Living Stock (Butler, PA)</h2>
+              <p class="text-xs opacity-75">${learnMessage()}</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="btn-stock-undo" class="kms-btn-alt px-3 py-1.5 text-xs">Undo − / +</button>
+              <button type="button" id="btn-add-item-modal" class="kms-btn-primary px-3 py-1.5 text-xs">+ Add Item</button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <input id="stock-search" type="text" value="${esc(state._stockSearch || '')}" placeholder="Search item name or SKU..." class="kms-input flex-1 min-w-[180px] text-sm" />
+            <select id="stock-loc" class="kms-input text-sm">
+              <option value="ALL">All Locations</option>
+              ${LOCATIONS.map(l => `<option value="${esc(l)}" ${locFilter === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        ${LOCATIONS.filter(L => locFilter === 'ALL' || locFilter === L).map(L => {
+          const list = state.items.filter(x => !x.discontinued && x.location === L && (!q || x.name.toLowerCase().includes(q) || x.sku.toLowerCase().includes(q)));
+          if (!list.length) return '';
+          return `
+            <div class="space-y-2">
+              <h3 class="text-sm font-bold uppercase tracking-wide pb-1 border-b-2 border-[#b3122b]">${esc(L)} (${list.length})</h3>
+              ${list.map(x => {
+                const st = itemStatus(x);
+                return `
+                  <div class="kms-card p-3 flex flex-wrap items-center justify-between gap-2">
+                    <div class="min-w-[200px] flex-1">
+                      <div class="font-bold text-sm">${esc(x.name)} <span class="text-[11px] font-mono opacity-60">${esc(x.sku)}</span></div>
+                      <div class="text-xs opacity-75 flex flex-wrap items-center gap-1.5 mt-1">
+                        <span class="tag tag-${st}">${st}</span>
+                        <span>Par${x.par_learned ? ' (learned)' : ''}:</span>
+                        <input type="number" step="0.5" min="0" value="${x.par}" data-item-field="${x.id}:par" class="kms-input w-16 text-xs text-center font-bold" />
+                        <span>${esc(x.unit)} · $</span>
+                        <input type="number" step="0.01" min="0" value="${x.unit_price || ''}" placeholder="0.00" data-item-field="${x.id}:unit_price" class="kms-input w-16 text-xs text-center" />
+                        <select data-item-field="${x.id}:cadence" class="kms-input text-xs">
+                          <option value="W" ${x.cadence === 'W' ? 'selected' : ''}>Weekly</option>
+                          <option value="M" ${x.cadence === 'M' ? 'selected' : ''}>Monthly</option>
+                        </select>
+                        <select data-item-field="${x.id}:location" class="kms-input text-xs" title="Storage location">
+                          ${LOCATIONS.map(loc => `<option value="${esc(loc)}" ${x.location === loc ? 'selected' : ''}>${esc(loc)}</option>`).join('')}
+                        </select>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <button type="button" data-adj="${x.id}:-1" class="w-10 h-10 rounded-lg border border-[var(--line)] bg-[var(--bg)] font-bold text-lg">−</button>
+                      <input type="number" step="0.5" min="0" value="${x.on_hand}" data-item-field="${x.id}:on_hand" class="kms-input w-16 text-center font-bold text-sm" />
+                      <button type="button" data-adj="${x.id}:1" class="w-10 h-10 rounded-lg border border-[var(--line)] bg-[var(--bg)] font-bold text-lg">+</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // 3. ORDERS & PURCHASE ORDERS
+  function renderOrders(main) {
+    const hz = Number(state._orderHorizon || 7);
+    const days = serviceDaysBetween(localDateStr(), addDays(localDateStr(), hz === 1 ? 4 : hz));
+    const useDays = hz === 1 ? days.slice(0, 1) : days;
+    const d7 = demandForDays(serviceDaysBetween(localDateStr(), addDays(localDateStr(), 7)));
+    const d30 = demandForDays(serviceDaysBetween(localDateStr(), addDays(localDateStr(), 30)));
+    const dd = demandForDays(useDays);
+    const shortItems = state.items.filter(x => (dd[x.id] || 0) > x.on_hand);
+    const u = getActiveUser();
+    const isMgr = isMgmtOrHigher(u);
+
+    const openPOs = (state.purchaseOrders || []).filter(p => p.status !== 'closed');
+    const closedPOs = (state.purchaseOrders || []).filter(p => p.status === 'closed').slice(0, 3);
+
+    main.innerHTML = `
+      <div class="space-y-4">
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold">Meal Forecast &amp; Shortages</h2>
+              <p class="text-xs opacity-75">Checks upcoming planned recipes against current stock.</p>
+            </div>
+            <select id="order-hz" class="kms-input text-xs font-semibold">
+              <option value="1" ${hz === 1 ? 'selected' : ''}>Next Service Day</option>
+              <option value="7" ${hz === 7 ? 'selected' : ''}>Next 7 Days</option>
+              <option value="30" ${hz === 30 ? 'selected' : ''}>Next 30 Days</option>
+            </select>
+          </div>
+          ${!shortItems.length ? '<p class="text-xs opacity-70">No ingredient shortages for planned meals in this window.</p>' : `
+            <div class="space-y-1.5">
+              ${shortItems.map(x => `<div class="p-2 rounded-lg border border-amber-300 bg-amber-50/50 text-xs flex justify-between"><strong>${esc(x.name)}</strong><span>Need ${fmtNum(dd[x.id])}, Have ${x.on_hand} ${esc(x.unit)}</span></div>`).join('')}
+            </div>
+          `}
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          ${['W', 'M'].map(cad => {
+            const manual = (state.manualPoExtra && state.manualPoExtra[cad]) || {};
+            const list = state.items.filter(x => !x.discontinued && x.cadence === cad).map(x => {
+              const sug = suggestedOrderAmount(x, d7, d30);
+              const manQ = Number(manual[x.id] || 0);
+              const qty = manQ > 0 ? manQ : sug;
+              return { item: x, qty, isManual: manQ > 0 };
+            }).filter(o => o.qty > 0);
+            const est = list.reduce((s, o) => s + o.qty * (o.item.unit_price || 0), 0);
+            const addOpts = state.items.filter(x => !x.discontinued && x.cadence === cad).map(x => `<option value="${x.id}">${esc(x.name)} (${esc(x.unit)})</option>`).join('');
+            return `
+              <form class="form-create-po kms-card p-4 space-y-2.5" data-cad="${cad}">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
+                  <div>
+                    <h3 class="text-sm font-bold">${VENDORS[cad]}</h3>
+                    <span class="text-xs opacity-70">${list.length} item(s) · Whole cases only${est ? ` · est. $${est.toFixed(2)}` : ''}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    ${list.length ? `<button type="button" data-po-sel-all="${cad}" class="kms-btn-alt px-2 py-1 text-xs">Toggle All</button><button type="submit" class="kms-btn-primary px-3 py-1.5 text-xs">Request Selected PO</button>` : ''}
+                  </div>
+                </div>
+                ${!list.length ? '<p class="text-xs opacity-70 py-2">Nothing below par. Add an item below to start a custom PO.</p>' : `
+                  <div class="max-h-72 overflow-y-auto space-y-1.5">
+                    ${list.map(o => `
+                      <div class="p-2 rounded border border-[var(--line)] text-xs flex flex-wrap items-center justify-between gap-2">
+                        <label class="flex items-center gap-2 cursor-pointer flex-1 min-w-[160px]">
+                          <input type="checkbox" name="inc_${o.item.id}" checked class="po-chk-${cad} accent-[#b3122b]" />
+                          <span><strong>${esc(o.item.name)}</strong> <span class="opacity-65">(Have ${o.item.on_hand}, Par ${o.item.par})</span></span>
+                        </label>
+                        <div class="flex items-center gap-1 shrink-0">
+                          <input type="number" step="1" min="1" name="qty_${o.item.id}" value="${Math.max(1, Math.ceil(o.qty))}" class="kms-input w-16 text-xs text-center font-bold text-[#b3122b]" />
+                          <span class="opacity-75">${esc(o.item.unit)}</span>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+                <div class="grid grid-cols-2 gap-1.5 pt-1 text-xs">
+                  <input type="text" name="customPoNum" value="${(cad === 'W' ? 'MAR-' : 'JB-') + localDateStr().replace(/-/g, '') + '-' + ((state.purchaseOrders || []).length + 1)}" placeholder="PO #" class="kms-input text-xs font-mono" title="PO Number" />
+                  <input type="text" name="customInvNum" placeholder="Vendor Invoice / Ref # (opt.)" class="kms-input text-xs font-mono" title="Vendor Invoice or Ref #" />
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[var(--line)] text-xs">
+                  <select id="po-add-sel-${cad}" class="kms-input flex-1 min-w-[140px] text-xs">${addOpts}</select>
+                  <input id="po-add-qty-${cad}" type="number" step="1" min="1" value="1" class="kms-input w-16 text-xs text-center font-bold" />
+                  <button type="button" data-po-add-extra="${cad}" class="kms-btn-alt px-2.5 py-1 text-xs">+ Add Item</button>
+                </div>
+              </form>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="kms-card p-4 space-y-3">
+          <h3 class="text-sm font-bold">Purchase Orders in Progress (${openPOs.length})</h3>
+          ${!openPOs.length ? '<p class="text-xs opacity-70">No open purchase orders.</p>' : openPOs.map(po => `
+            <div class="p-3 rounded-xl border border-[var(--line)] space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span class="font-mono font-bold text-xs">${esc(po.po_number)}</span> · <strong class="text-sm">${esc(po.vendor)}</strong>
+                  <span class="tag ${po.status === 'rejected' ? 'tag-OUT' : po.status === 'approved' || po.status === 'ordered' ? 'tag-OK' : 'tag-LOW'} ml-1">${po.status.toUpperCase()}</span>
+                  <div class="text-xs opacity-70">Requested ${esc(po.requested_date)} by ${esc(po.requested_by)}${po.approved_by ? ` · Approved by ${esc(po.approved_by)}` : ''}${po.expected_arrival ? ` · Expected ${esc(po.expected_arrival)}` : ''}${po.vendor_conf ? ` · Conf #${esc(po.vendor_conf)}` : ''}</div>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5 no-print">
+                  ${(isMgr || po.status === 'requested') && ['requested', 'approved', 'ordered'].includes(po.status) ? `<button type="button" data-po-edit="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit PO / Invoice #</button>` : ''}
+                  ${po.status === 'requested' && isMgr ? `<button type="button" data-po-decide="${po.id}:approved" class="kms-btn-ok px-2.5 py-1 text-xs">Approve</button><button type="button" data-po-decide="${po.id}:rejected" class="kms-btn-alt px-2.5 py-1 text-xs">Reject</button>` : ''}
+                  ${po.status === 'approved' && isMgr ? `<input id="conf-${po.id}" value="${esc(po.vendor_conf || '')}" placeholder="Vendor conf #" class="kms-input text-xs w-28" /><input id="eta-${po.id}" type="date" value="${esc(po.expected_arrival || '')}" title="Expected Delivery Date" class="kms-input text-xs" /><label class="flex items-center gap-1 text-[11px] opacity-80 cursor-pointer"><input type="checkbox" id="rem-${po.id}" checked class="accent-[#b3122b]" /><span>Remind</span></label><button type="button" data-po-order="${po.id}" class="kms-btn-navy px-2.5 py-1 text-xs">Mark Ordered</button>` : ''}
+                  ${po.status === 'ordered' ? `<button type="button" data-po-reconcile="${po.id}" class="kms-btn-ok px-2.5 py-1 text-xs">Reconcile &amp; Receive</button>` : ''}
+                  ${(isMgr || po.status === 'requested') ? `<button type="button" data-po-del="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Delete</button>` : ''}
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+                ${(po.lines || []).map((ln, idx) => `
+                  <div class="p-2 rounded bg-black/5 flex items-center justify-between gap-2">
+                    <span>${esc(ln.name)}</span>
+                    ${po.status === 'ordered'
+                      ? `<span class="flex items-center gap-1">Ord ${ln.qty} · Recv <input type="number" step="0.5" min="0" id="rc-${po.id}-${idx}" value="${Math.max(0, ln.qty - (ln.received || 0))}" class="kms-input w-14 text-xs text-center" /></span>`
+                      : `<span class="font-bold">${ln.qty} ${esc(ln.unit)}</span>`}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+          ${closedPOs.length ? `<div class="text-xs opacity-70 pt-2">Recently closed: ${closedPOs.map(p => esc(p.po_number)).join(', ')}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // 4. RECEIVE & FAST SCAN TERMINAL
+  function renderReceive(main) {
+    const today = localDateStr();
+    const dated = state.transactions.filter(t => t.tx_type === 'RECEIVE' && t.exp_date && !t.cleared).sort((a, b) => a.exp_date.localeCompare(b.exp_date));
+    const recent = state.transactions.filter(t => t.tx_type === 'RECEIVE').slice(0, 10);
+    const opts = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.sku)} — ${esc(i.name)} (${esc(i.unit)})</option>`).join('');
+
+    main.innerHTML = `
+      <div class="space-y-4">
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold">Fast Scan Terminal (QR / Barcode / USB Scanner)</h2>
+              <p class="text-xs opacity-75">Scan a shelf QR label or type a SKU (e.g. STK-101) and press Enter to select the item below.</p>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" id="btn-start-cam" class="kms-btn-navy px-3 py-1.5 text-xs">Start Camera Scan</button>
+              <button type="button" id="btn-stop-cam" class="kms-btn-primary px-3 py-1.5 text-xs hidden">Stop Camera</button>
+            </div>
+          </div>
+          <input id="scan-input" type="text" placeholder="Focus here for barcode scanner or type SKU + Enter..." class="kms-input w-full text-sm" />
+          <div id="cam-wrap" class="hidden max-w-sm mx-auto p-2 border border-[var(--line)] rounded-lg"><div id="cam-reader"></div></div>
+        </div>
+
+        ${(() => {
+          const expectedPos = (state.purchaseOrders || []).filter(p => ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(p.status));
+          if (!expectedPos.length) return '';
+          return `
+            <div class="kms-card p-4 border-l-4 border-l-blue-600 space-y-3">
+              <div>
+                <h3 class="text-sm font-bold">Expected PO Deliveries (Reconcile from Delivery Slip)</h3>
+                <p class="text-xs opacity-75">Verify actual quantities received and match the vendor Invoice / PO # before updating Living Stock.</p>
+              </div>
+              ${expectedPos.map(po => `
+                <form class="form-reconcile-po p-3 rounded-lg border border-[var(--line)] bg-black/5 space-y-2.5" data-po-id="${esc(po.id)}">
+                  <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <input type="text" name="recPoNum" value="${esc(po.po_number)}" placeholder="PO #" class="kms-input text-xs font-mono font-bold w-32" />
+                      <span>&middot; <strong>${esc(po.vendor)}</strong></span>
+                      <span class="tag ${po.status === 'requested' ? 'tag-LOW' : 'tag-OK'}">${esc(po.status.toUpperCase())}</span>
+                      <input type="text" name="recInvNum" value="${esc(po.vendor_conf || '')}" placeholder="Vendor Invoice #" class="kms-input text-xs font-mono w-32" />
+                    </div>
+                    <button type="submit" class="kms-btn-ok px-3 py-1.5 text-xs">Reconcile &amp; Check In PO</button>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                      <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1 pr-2">Item</th><th class="py-1 pr-2">Ordered</th><th class="py-1">Actually Received</th></tr></thead>
+                      <tbody class="divide-y divide-[var(--line)]">
+                        ${(po.lines || []).filter(l => (l.qty || 0) > 0).map(ln => `
+                          <tr>
+                            <td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td>
+                            <td class="py-1.5 pr-2">${ln.qty} ${esc(ln.unit || '')}</td>
+                            <td class="py-1.5"><input type="number" step="1" min="0" name="rec_${esc(ln.item_id)}" value="${Math.max(0, Math.ceil(ln.qty - (ln.received || 0)))}" class="kms-input w-20 text-xs font-bold text-center" /></td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </form>
+              `).join('')}
+            </div>
+          `;
+        })()}
+
+        <form id="form-delivery-slip" class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold">Enter Full Delivery Slip / Invoice (Batch Check-In)</h3>
+              <p class="text-xs opacity-75">Enter all received quantities from a delivery slip at once to update Living Stock.</p>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" data-slip-preset="Marberger" class="kms-btn-alt px-2.5 py-1 text-xs">Load Marberger</button>
+              <button type="button" data-slip-preset="Jordan Banana" class="kms-btn-alt px-2.5 py-1 text-xs">Load Jordan Banana</button>
+              <button type="button" data-slip-preset="LOW" class="kms-btn-alt px-2.5 py-1 text-xs">Load Low-Stock</button>
+              <button type="button" id="btn-add-slip-row" class="kms-btn-navy px-2.5 py-1 text-xs">+ Add Line</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div>
+              <label class="block font-semibold mb-1">Vendor / Source</label>
+              <select name="slipSource" class="kms-input w-full text-xs">
+                <option>Purchased – Marberger</option>
+                <option>Purchased – Jordan Banana</option>
+                <option>Donation</option>
+                <option>Food bank</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Delivery Date</label>
+              <input name="slipDate" type="date" value="${today}" required class="kms-input w-full text-xs" />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Delivery Slip / Invoice # (Optional)</label>
+              <input name="slipRef" type="text" placeholder="e.g. INV-4821" class="kms-input w-full text-xs" />
+            </div>
+          </div>
+          <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                  <th class="p-2">Item</th>
+                  <th class="p-2 w-28">Qty Received</th>
+                  <th class="p-2 w-36">Exp Date (Opt.)</th>
+                  <th class="p-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody id="slip-rows-body" class="divide-y divide-[var(--line)]">
+                ${(() => {
+                  const rows = state._slipPresetItems && state._slipPresetItems.length
+                    ? state._slipPresetItems
+                    : state.items.filter(i => !i.discontinued).slice(0, 4).map(i => i.id);
+                  return rows.map(rid => `
+                    <tr class="slip-row">
+                      <td class="p-1.5">
+                        <select name="slipItemId" class="kms-input w-full text-xs">
+                          <option value="">-- Select Item --</option>
+                          ${state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}" ${i.id === rid ? 'selected' : ''}>${esc(i.name)} (${esc(i.unit)})</option>`).join('')}
+                        </select>
+                      </td>
+                      <td class="p-1.5"><input name="slipQty" type="number" step="0.5" min="0" placeholder="0" class="kms-input w-full text-xs text-center font-bold" /></td>
+                      <td class="p-1.5"><input name="slipExp" type="date" class="kms-input w-full text-xs" /></td>
+                      <td class="p-1.5 text-center"><button type="button" class="btn-rm-slip-row text-rose-600 font-bold text-sm">&times;</button></td>
+                    </tr>
+                  `).join('');
+                })()}
+              </tbody>
+            </table>
+          </div>
+          <button type="submit" class="kms-btn-ok px-4 py-2 text-sm">Post Delivery Slip &amp; Update Inventory</button>
+        </form>
+
+        <form id="form-receive" class="kms-card p-4 space-y-3">
+          <h3 class="text-sm font-bold">Quick Single-Item Check-In</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <select id="recv-item" name="itemId" required class="kms-input text-sm">${opts}</select>
+            <input name="qty" type="number" step="0.5" min="0.5" required placeholder="Qty received" class="kms-input text-sm" />
+            <select name="source" class="kms-input text-sm">
+              <option>Purchased – Marberger</option>
+              <option>Purchased – Jordan Banana</option>
+              <option>Donation</option>
+              <option>Food bank</option>
+            </select>
+            <input name="expDate" type="date" class="kms-input text-sm" title="Expiration date (optional)" />
+          </div>
+          <button type="submit" class="kms-btn-ok px-4 py-2 text-sm">Add to Stock</button>
+        </form>
+
+        <div class="kms-card p-4 space-y-2">
+          <h3 class="text-sm font-bold">Use First (Expiration Dates)</h3>
+          ${!dated.length ? '<p class="text-xs opacity-70">No dated deliveries logged.</p>' : dated.map(r => {
+            const diff = Math.round((new Date(r.exp_date + 'T12:00:00') - new Date(today + 'T12:00:00')) / 86400000);
+            const cls = diff < 0 ? 'OUT' : diff <= 14 ? 'LOW' : 'OK';
+            return `
+              <div class="p-2.5 rounded-lg border border-[var(--line)] flex items-center justify-between gap-2 text-xs">
+                <div><strong>${esc(r.item_name)}</strong> – ${r.qty} ${esc(r.unit)} <span class="opacity-70">· Expires ${dLabel(r.exp_date)}</span> <span class="tag tag-${cls}">${diff < 0 ? 'EXPIRED – REMOVE' : diff + ' day(s)'}</span></div>
+                <button type="button" data-clear-exp="${r.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Used up / removed</button>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="kms-card p-4 space-y-2">
+          <h3 class="text-sm font-bold">Recent Deliveries</h3>
+          ${!recent.length ? '<p class="text-xs opacity-70">No deliveries logged yet.</p>' : recent.map(r => `
+            <div class="p-2 rounded border border-[var(--line)] text-xs flex justify-between">
+              <span><strong>${esc(r.item_name)}</strong> +${r.qty} ${esc(r.unit)} (${esc(r.source)})</span>
+              <span class="opacity-70">${esc(r.tx_date)} · ${esc(r.staff_name)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // 5. MENU & PRINTABLE DAILY SHEET
+  function renderMenu(main) {
+    if (state.selectedSheetDate) {
+      renderDailySheet(main, state.selectedSheetDate);
+      return;
+    }
+    const today = localDateStr();
+    const days = [];
+    for (let i = -3; i <= 21; i++) {
+      const ds = addDays(today, i);
+      const dow = new Date(ds + 'T12:00:00').getDay();
+      if ([1, 2, 3, 5].includes(dow)) days.push(ds);
+    }
+    const recOpts = state.recipes.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+
+    main.innerHTML = `
+      <div class="space-y-4">
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold">Menu Planner (Mon / Tue / Wed / Fri)</h2>
+              <p class="text-xs opacity-75">Portion predictions factor in <strong>weekday, meal popularity, &amp; holiday trends</strong>. Tap <strong>Served</strong> after lunch to deduct stock &amp; log leftovers.</p>
+            </div>
+          </div>
+          ${(() => {
+            const next1 = serviceDaysBetween(today, addDays(today, 7)).slice(0, 1);
+            const next7 = serviceDaysBetween(today, addDays(today, 14)).slice(0, 4);
+            const next30 = serviceDaysBetween(today, addDays(today, 30));
+            const p1 = next1.reduce((s, d) => s + forecastWeekday(d), 0);
+            const p7 = next7.reduce((s, d) => s + forecastWeekday(d), 0);
+            const p30 = next30.reduce((s, d) => s + forecastWeekday(d), 0);
+            return `
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div class="p-2.5 rounded-lg bg-black/5 border border-[var(--line)]"><strong>Daily (Next Service):</strong> <span class="text-[#b3122b] font-bold">${p1} portions</span></div>
+                <div class="p-2.5 rounded-lg bg-black/5 border border-[var(--line)]"><strong>Weekly (Next 4 Services):</strong> <span class="text-[#b3122b] font-bold">${p7} portions</span></div>
+                <div class="p-2.5 rounded-lg bg-black/5 border border-[var(--line)]"><strong>Monthly (Next 30 Days):</strong> <span class="text-[#b3122b] font-bold">${p30} portions</span></div>
+              </div>
+            `;
+          })()}
+          ${isMgmtOrHigher() ? `
+            <form id="form-bulk-menu" class="flex flex-wrap gap-2 items-center pt-1">
+              <select name="recipeId" class="kms-input text-xs flex-1 min-w-[200px]">${recOpts}</select>
+              <select name="days" class="kms-input text-xs"><option value="7">Fill empty next 7 days</option><option value="30">Fill empty next 30 days</option></select>
+              <button type="submit" class="kms-btn-navy px-3 py-1.5 text-xs">Fill Empty Days</button>
+            </form>
+          ` : `
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+              <span class="opacity-75">Menu schedule changes require <strong>ADMIN</strong> or <strong>MANAGER</strong> approval.</span>
+              ${isStaffOrHigher() ? `<button type="button" id="btn-suggest-menu" class="kms-btn-primary px-3 py-1.5 text-xs">+ Suggest Recipe / Menu Change</button>` : ''}
+            </div>
+          `}
+        </div>
+
+        <div class="space-y-2">
+          ${days.map(ds => {
+            const hol = getFederalHoliday(ds);
+            const mp = state.menuPlan.find(m => m.service_date === ds) || { service_date: ds, recipe_id: '', planned_portions: forecastWeekday(ds), status: hol ? 'CLOSED' : 'PLANNED' };
+            return `
+              <div class="kms-card p-3 flex flex-wrap items-center justify-between gap-2">
+                <div class="space-y-1 flex-1 min-w-[220px]">
+                  <div class="font-bold text-sm">${dLabel(ds)} ${ds === today ? '<span class="tag tag-OK">TODAY</span>' : ''} ${hol ? `<span class="tag tag-OUT">${esc(hol)}</span>` : ''}</div>
+                  <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <select data-menu-rec="${ds}" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input text-xs">
+                      <option value="">Choose recipe...</option>
+                      ${state.recipes.map(r => `<option value="${r.id}" ${mp.recipe_id === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}
+                    </select>
+                    <span>Planned:</span>
+                    <input type="number" min="0" value="${mp.planned_portions || 65}" data-menu-plan="${ds}" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input w-16 text-xs text-center font-bold" />
+                    ${mp.recipe_id ? `<button type="button" data-open-sheet="${ds}" class="text-[#1b365d] font-bold underline">Daily Sheet</button>` : ''}
+                  </div>
+                </div>
+                <div>
+                  ${mp.status === 'SERVED'
+                    ? `<span class="tag tag-OK">Served ${mp.served_portions}</span>`
+                    : `<div class="flex items-center gap-1.5"><input id="sv-note-${ds}" placeholder="Weather/event note" class="kms-input text-xs w-32" /><input id="sv-qty-${ds}" type="number" min="0" placeholder="Served" class="kms-input text-xs w-20" /><button type="button" data-mark-served="${ds}" class="kms-btn-ok px-3 py-1.5 text-xs">Served</button></div>`}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderDailySheet(main, dateStr) {
+    const mp = state.menuPlan.find(m => m.service_date === dateStr) || {};
+    const rec = state.recipes.find(r => r.id === mp.recipe_id);
+    if (!rec) { state.selectedSheetDate = null; renderMenu(main); return; }
+    const n = mp.planned_portions || rec.base_servings || 65;
+    const f = n / (rec.base_servings || 65);
+
+    const byLoc = {};
+    (rec.ingredients || []).forEach(g => {
+      const x = g.inv_id ? state.items.find(i => i.id === g.inv_id) : null;
+      if (x && g.per100) {
+        (byLoc[x.location] = byLoc[x.location] || []).push({ item: x, amt: (g.per100 * n) / 100 });
+      }
+    });
+
+    main.innerHTML = `
+      <div class="kms-card print-flow p-5 space-y-4">
+        <div class="flex flex-wrap gap-2 justify-between items-center no-print">
+          <button type="button" id="btn-back-menu" class="kms-btn-alt px-3 py-1.5 text-xs">&larr; Back to Menu</button>
+          <button type="button" onclick="window.print()" class="kms-btn-primary px-4 py-1.5 text-xs">Print Daily Sheet</button>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold">${dLabel(dateStr)} — ${esc(rec.name)}</h2>
+          ${(rec.allergens || []).length ? `<p class="text-xs font-bold text-[#b3122b]">ALLERGENS: ${esc(rec.allergens.join(', '))}</p>` : ''}
+          <p class="text-xs mt-1"><strong>Portions Planned: ${n}</strong> &nbsp;|&nbsp; Served: _______ &nbsp;|&nbsp; Cook: ______________</p>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold border-b border-[var(--line)] pb-1 mb-2">Scaled Ingredients</h3>
+          <table class="w-full text-xs">
+            ${(rec.ingredients || []).map(g => `<tr class="border-b border-[var(--line)]"><td class="py-1.5">&#9744; ${esc(g.name)}</td><td class="py-1.5 text-right font-bold">${esc(formatKitchenAmt((g.qty || 0) * f, g.unit))}</td></tr>`).join('')}
+          </table>
+        </div>
+        ${(rec.steps || []).length ? `<div><h3 class="text-sm font-bold mb-1">Directions</h3><ol class="list-decimal pl-5 text-xs space-y-1">${rec.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>` : ''}
+        ${Object.keys(byLoc).length ? `
+          <div>
+            <h3 class="text-sm font-bold border-b border-[var(--line)] pb-1 mb-2">Pull from Storage</h3>
+            ${Object.keys(byLoc).map(L => `<div class="mb-2"><div class="text-xs font-bold">${esc(L)}</div>${byLoc[L].map(a => `<div class="text-xs flex justify-between border-b border-[var(--line)] py-1"><span>&#9744; ${esc(a.item.name)}</span><span><strong>${fmtNum(a.amt)} ${esc(a.item.unit)}</strong> (have ${a.item.on_hand})</span></div>`).join('')}</div>`).join('')}
+          </div>
+        ` : ''}
+        <div>
+          <h3 class="text-sm font-bold mb-1">Temperature Log</h3>
+          <table class="w-full text-xs border-collapse">
+            <tr class="border-b border-[var(--line)] font-bold"><td class="py-1">Check</td><td>Limit</td><td>Temp °F</td><td>Initials</td></tr>
+            ${TEMP_CHECKS.map(c => `<tr class="border-b border-[var(--line)]"><td class="py-1.5">${esc(c[0])}</td><td>${c[1] === 'max' ? '≤' : '≥'} ${c[2]}°F</td><td>________</td><td>______</td></tr>`).join('')}
+          </table>
+        </div>
+        <p class="text-xs"><strong>Leftover Labels:</strong> Use cooked leftovers by <strong>${dLabel(addDays(dateStr, 6))}</strong> (7-day ServSafe rule).</p>
+      </div>
+    `;
+  }
+
+  // 6. NEXT-DAY PREP
+  function renderPrep(main) {
+    const today = localDateStr();
+    const nextMeal = state.menuPlan.filter(m => m.service_date > today && m.status !== 'CLOSED' && m.recipe_id).sort((a, b) => a.service_date.localeCompare(b.service_date))[0];
+    const rec = nextMeal ? state.recipes.find(r => r.id === nextMeal.recipe_id) : null;
+    const byLoc = {};
+    LOCATIONS.forEach(l => { byLoc[l] = []; });
+    if (nextMeal && rec) {
+      const n = nextMeal.planned_portions || 65;
+      (rec.ingredients || []).forEach(g => {
+        const x = g.inv_id ? state.items.find(i => i.id === g.inv_id) : null;
+        if (x && g.per100) {
+          (byLoc[x.location] = byLoc[x.location] || []).push({ item: x, amt: (g.per100 * n) / 100 });
+        }
+      });
+    }
+    const lefts = state.storageTags.filter(t => t.status === 'STORED' && t.tag_category !== 'SALAD_BAR').sort((a, b) => a.use_by_date.localeCompare(b.use_by_date));
+
+    main.innerHTML = `
+      <div class="space-y-4">
+        <div class="kms-card p-4 flex flex-wrap justify-between items-center gap-2">
+          <div>
+            <h2 class="text-base font-bold">Next-Day Prep Pulls</h2>
+            <p class="text-xs opacity-75">${nextMeal && rec ? `Next service (${dLabel(nextMeal.service_date)}): <strong>${esc(rec.name)}</strong> (${nextMeal.planned_portions} portions)` : 'Schedule a recipe on the Menu tab to generate tomorrow’s prep pulls.'}</p>
+          </div>
+          <button type="button" onclick="window.print()" class="kms-btn-alt px-3 py-1.5 text-xs no-print">Print Prep Sheet</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          ${LOCATIONS.map(L => `
+            <div class="kms-card p-4 space-y-2">
+              <h3 class="text-sm font-bold border-b border-[var(--line)] pb-1">${esc(L)}</h3>
+              ${!(byLoc[L] || []).length ? '<p class="text-xs opacity-60">No pulls needed.</p>' : byLoc[L].map(p => `
+                <label class="flex items-start gap-2 text-xs cursor-pointer">
+                  <input type="checkbox" data-prep-chk="${nextMeal.id}:${p.item.id}" ${(nextMeal.prep_checked_items || {})[p.item.id] ? 'checked' : ''} />
+                  <span><strong>${esc(p.item.name)}</strong> — ${fmtNum(p.amt)} ${esc(p.item.unit)} <span class="opacity-60">(have ${p.item.on_hand})</span></span>
+                </label>
+              `).join('')}
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="kms-card p-4 space-y-2">
+          <h3 class="text-sm font-bold">Stored Meal Leftovers Ready to Use (FIFO: ${lefts.length})</h3>
+          ${!lefts.length ? '<p class="text-xs opacity-70">No stored leftovers in coolers/freezers.</p>' : lefts.map(t => `
+            <div class="p-2 rounded border border-[var(--line)] text-xs flex justify-between">
+              <span><strong>${esc(t.item_name)}</strong> (${esc(t.zone)})</span>
+              <span class="font-bold">Use by ${dLabel(t.use_by_date)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // 7. RECIPES (Parse, Bulk Add/Edit, Pre-Approval Edit, Scaling & QR)
+  function parsePastedRecipe(raw) {
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const name = lines[0] || 'Imported Recipe';
+    let servings = 4;
+    const srvMatch = raw.match(/servings?\s*[:\-]?\s*(\d+)/i) || raw.match(/makes?\s*(\d+)/i);
+    if (srvMatch) servings = Math.max(1, parseInt(srvMatch[1], 10));
+
+    const allergenKeywords = {
+      milk: /milk|butter|cheese|cream|yogurt|cheddar|mozzarella|parmesan/i,
+      eggs: /\beggs?\b/i,
+      wheat: /flour|pasta|spaghetti|penne|noodles|macaroni|bread|biscuit|cracker|wheat/i,
+      soy: /\bsoy\b|tofu/i,
+      peanuts: /peanut/i,
+      'tree nuts': /almond|walnut|pecan|cashew/i,
+      fish: /tuna|salmon|fish|cod/i,
+      shellfish: /shrimp|crab|lobster/i,
+      sesame: /sesame|tahini/i
+    };
+    const allergens = Object.keys(allergenKeywords).filter(a => allergenKeywords[a].test(raw));
+
+    const ingredients = [];
+    const steps = [];
+    let mode = 'ing';
+    lines.slice(1).forEach(ln => {
+      if (/^(directions|instructions|steps|method)/i.test(ln)) { mode = 'step'; return; }
+      if (/^(ingredients)/i.test(ln)) { mode = 'ing'; return; }
+      if (mode === 'step' || /^\d+[\.\)]\s/.test(ln)) {
+        steps.push(ln.replace(/^\d+[\.\)]\s*/, ''));
+      } else {
+        ingredients.push(parseIngredientLine(ln, servings));
+      }
+    });
+    return normalizeRecipe({ id: uid('rec'), name, category: 'Main Entree', base_servings: servings, prep_min: 20, cook_min: 35, allergens, steps, ingredients });
+  }
+
+  function renderRecipes(main) {
+    const rec = state.recipes.find(r => r.id === state.selectedRecipeId) || state.recipes[0];
+    const scale = Number(state.recipeScale || (rec ? rec.base_servings : 65));
+    const factor = rec ? scale / (rec.base_servings || 65) : 1;
+    const predToday = Math.min(80, Math.max(40, forecastWeekday(localDateStr()) || 65));
+    const recQ = (state._recSearch || '').toLowerCase();
+    const filteredRecs = state.recipes.filter(r => !recQ || (r.name || '').toLowerCase().includes(recQ) || (r.category || '').toLowerCase().includes(recQ));
+    const showMatrix = !!state._showRecMatrix;
+
+    main.innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="space-y-3 no-print">
+          ${isMgmtOrHigher() ? `
+            <div class="kms-card p-4 space-y-2.5">
+              <h2 class="text-sm font-bold">Search or Import Online Recipes</h2>
+              <form id="form-search-web-recipes" class="flex gap-1.5">
+                <input name="q" type="text" required value="${esc(state._webRecQuery || '')}" placeholder="Search online recipes (e.g. Lasagna, Chili)..." class="kms-input flex-1 text-xs" />
+                <button type="submit" id="btn-search-web-rec" class="kms-btn-alt px-3 py-1.5 text-xs shrink-0">Search</button>
+              </form>
+              ${state._webRecQuery ? `
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between text-[11px] opacity-75">
+                    <span>Results for "${esc(state._webRecQuery)}"</span>
+                    <a href="https://www.google.com/search?q=${encodeURIComponent(state._webRecQuery + ' recipe (site:allrecipes.com OR site:budgetbytes.com OR site:simplyrecipes.com)')}" target="_blank" rel="noopener noreferrer" class="underline font-semibold text-[#b3122b]">Search Recipe Sites ↗</a>
+                  </div>
+                  ${!(state._webRecResults || []).length ? '<p class="text-[11px] opacity-70">No direct matches found — try Search Recipe Sites ↗ and paste the URL below.</p>' : `<div class="max-h-56 overflow-y-auto space-y-1.5 pr-0.5">${(state._webRecResults || []).slice(0, 20).map(m => `
+                    <div class="p-2 rounded border border-[var(--line)] flex items-center justify-between gap-2 text-xs">
+                      <div class="min-w-0">
+                        <div class="font-bold truncate">${esc(m.title)}</div>
+                        <div class="text-[10px] opacity-65">${esc(m.subtitle || 'Main')}</div>
+                      </div>
+                      <button type="button" data-import-mealdb="${esc(m.uid)}" class="kms-btn-ok px-2.5 py-1 text-[11px] shrink-0">Import</button>
+                    </div>
+                  `).join('')}</div>`}
+                </div>
+              ` : ''}
+              <form id="form-import-recipe-url" class="flex gap-1.5 pt-2 border-t border-[var(--line)]/60">
+                <input name="url" type="url" required placeholder="Or paste any recipe URL (https://...)" class="kms-input flex-1 text-xs" />
+                <button type="submit" id="btn-import-url" class="kms-btn-navy px-3 py-1.5 text-xs shrink-0">Import URL</button>
+              </form>
+            </div>
+            <form id="form-paste-recipe" class="kms-card p-4 space-y-2.5">
+              <h2 class="text-sm font-bold">Add / Paste a Recipe</h2>
+              <textarea name="raw" rows="4" required placeholder="Title on line 1&#10;Servings: 50&#10;4 boxes Spaghetti&#10;1 cases Spaghetti sauce&#10;Directions:&#10;1. Boil pasta..." class="kms-input w-full text-xs"></textarea>
+              <button type="submit" class="kms-btn-ok w-full py-2 text-xs">Read &amp; Save Recipe</button>
+            </form>
+          ` : `
+            <form id="form-suggest-recipe" class="kms-card p-4 space-y-2.5">
+              <h2 class="text-sm font-bold">Suggest a New Recipe</h2>
+              <p class="text-[11px] opacity-75">Paste a recipe URL or recipe text—we'll format it cleanly and notify Management for approval.</p>
+              <div class="flex gap-1.5">
+                <input id="sug-url-inp" name="url" type="url" placeholder="Paste recipe URL (optional)..." class="kms-input flex-1 text-xs" />
+                <button type="button" id="btn-sug-fetch-url" class="kms-btn-navy px-2.5 py-1.5 text-xs shrink-0">Fetch URL</button>
+              </div>
+              <input id="sug-photo-inp" name="photoUrl" type="hidden" value="" />
+              <input id="sug-title-inp" name="title" type="text" placeholder="Recipe title (auto-filled from URL or type here)" class="kms-input w-full text-xs" />
+              <div class="grid grid-cols-2 gap-1.5">
+                <input id="sug-serv-inp" name="servings" type="number" min="1" max="250" value="65" class="kms-input text-xs" title="Base servings" />
+                <input name="targetDate" type="date" class="kms-input text-xs" title="Optional target menu date" />
+              </div>
+              <textarea id="sug-raw-inp" name="raw" rows="4" placeholder="Paste ingredients &amp; directions (or use Fetch URL above)..." class="kms-input w-full text-xs"></textarea>
+              <button type="submit" id="btn-submit-sug" class="kms-btn-primary w-full py-2 text-xs">Submit &amp; Notify Management</button>
+            </form>
+          `}
+
+          ${(() => {
+            const pendSug = (state.recipeSuggestions || []).filter(s => s.status === 'PENDING');
+            if (!pendSug.length) return '';
+            return `
+              <div class="kms-card p-4 space-y-2 border-l-4 border-l-amber-500">
+                <h3 class="text-xs font-bold uppercase">Pending Recipe Suggestions (${pendSug.length})</h3>
+                ${pendSug.map(s => {
+                  const pr = s.parsed_recipe ? normalizeRecipe(s.parsed_recipe) : null;
+                  return `
+                  <div class="p-2.5 rounded border border-[var(--line)] text-xs space-y-1.5">
+                    <div class="flex items-start gap-2">
+                      ${pr && pr.photo_url ? `<img src="${esc(pr.photo_url)}" alt="${esc(s.title)}" class="w-10 h-10 rounded object-cover border border-[var(--line)] shrink-0" />` : ''}
+                      <div>
+                        <div class="font-bold">${esc(s.title)} <span class="opacity-65 font-normal">(Base ${s.servings || 65}${s.target_date ? ' · ' + esc(s.target_date) : ''})</span></div>
+                        <div class="text-[11px] opacity-75">Suggested by ${esc(s.suggested_by)}${s.source_url ? ' · From URL' : ''}</div>
+                      </div>
+                    </div>
+                    ${pr && (pr.ingredients || []).length ? `
+                      <div class="p-2 rounded bg-black/5 space-y-1 text-[11px]">
+                        <div class="font-bold uppercase opacity-65">Ingredients (${pr.ingredients.length})</div>
+                        <ul class="space-y-0.5">${pr.ingredients.slice(0, 8).map(g => `<li>• <strong>${esc(formatKitchenAmt(g.qty, g.unit))}</strong> ${esc(g.name)}</li>`).join('')}${pr.ingredients.length > 8 ? `<li class="opacity-65">+ ${pr.ingredients.length - 8} more...</li>` : ''}</ul>
+                        ${(pr.steps || []).length ? `<div class="opacity-75 pt-0.5">${pr.steps.length} step(s) included</div>` : ''}
+                      </div>
+                    ` : `<p class="text-[11px] opacity-85 whitespace-pre-line">${esc(s.raw)}</p>`}
+                    ${isMgmtOrHigher() ? `
+                      <div class="flex flex-wrap gap-1.5 pt-1">
+                        <button type="button" data-review-recsug="${s.id}" class="kms-btn-navy px-2.5 py-1 text-[11px]">Review &amp; Edit</button>
+                        <button type="button" data-approve-recsug="${s.id}" class="kms-btn-ok px-2.5 py-1 text-[11px]">Approve &amp; Add</button>
+                        <button type="button" data-reject-recsug="${s.id}" class="kms-btn-alt px-2.5 py-1 text-[11px]">Reject</button>
+                      </div>
+                    ` : '<span class="tag tag-LOW">Awaiting Management Approval</span>'}
+                  </div>
+                `; }).join('')}
+              </div>
+            `;
+          })()}
+
+          <div class="kms-card p-4 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-bold">Saved Recipes (${state.recipes.length})</h3>
+              <div class="flex gap-1.5">
+                ${isMgmtOrHigher() ? `<button type="button" id="btn-bulk-recipes" class="kms-btn-alt px-2.5 py-1 text-xs">Bulk Add / Edit</button>` : ''}
+                <button type="button" id="btn-scan-recipe-qr" class="kms-btn-navy px-2.5 py-1 text-xs">Scan QR</button>
+              </div>
+            </div>
+            <input id="rec-search-inp" type="text" value="${esc(state._recSearch || '')}" placeholder="Search or scan recipe code..." class="kms-input w-full text-xs" />
+            <div id="rec-qr-wrap" class="hidden border border-[var(--line)] rounded-lg p-2 bg-black/5">
+              <div id="rec-qr-reader" class="w-full"></div>
+              <button type="button" id="btn-stop-recipe-qr" class="kms-btn-alt w-full py-1 text-xs mt-1.5">Stop Camera</button>
+            </div>
+            <div class="space-y-1.5 max-h-96 overflow-y-auto">
+              ${!filteredRecs.length ? '<p class="text-xs opacity-65 py-2 text-center">No matching recipes.</p>' : filteredRecs.map(r => `
+                <button type="button" data-sel-rec="${r.id}" class="w-full text-left p-2.5 rounded-lg border text-xs ${rec && r.id === rec.id ? 'border-[#b3122b] bg-[#b3122b]/10 font-bold' : 'border-[var(--line)] hover:bg-black/5'}">
+                  <div>${esc(r.name)}</div>
+                  <div class="opacity-65 font-normal">${esc(r.category)} · Base ${r.base_servings} servings</div>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 kms-card p-4 space-y-4">
+          ${!rec ? '<p class="text-sm opacity-70">Select or add a recipe.</p>' : `
+            <div class="flex flex-wrap justify-between items-start gap-2 border-b border-[var(--line)] pb-3">
+              <div class="flex items-start gap-3">
+                ${rec.photo_url ? `<img src="${esc(rec.photo_url)}" alt="${esc(rec.name)}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border border-[var(--line)] shrink-0" />` : ''}
+                <div>
+                  <div class="text-[11px] font-bold uppercase opacity-60">${esc(rec.category || 'Main')} &bull; Prep ${rec.prep_min || 20}m &bull; Cook ${rec.cook_min || 35}m &bull; ID: ${esc(rec.id)}</div>
+                  <h2 class="text-lg font-bold">${esc(rec.name)}</h2>
+                  ${(rec.allergens || []).length ? `<p class="text-xs font-bold text-[#b3122b]">Contains: ${esc(rec.allergens.join(', '))}</p>` : ''}
+                  ${rec.notes ? `<p class="text-xs opacity-75 mt-0.5">${esc(rec.notes)}</p>` : ''}
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-1.5 no-print">
+                <button type="button" id="btn-toggle-rec-matrix" class="kms-btn-alt px-3 py-1 text-xs">${showMatrix ? 'Single Scale View' : '40–80 Quick-Scan Table'}</button>
+                <button type="button" id="btn-print-recipe-sheet" class="kms-btn-navy px-3 py-1 text-xs">Print Recipe + QR</button>
+                ${isMgmtOrHigher() ? `<button type="button" data-edit-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Edit Details &amp; Directions</button><button type="button" data-del-rec="${rec.id}" class="kms-btn-alt px-3 py-1 text-xs">Delete</button>` : ''}
+              </div>
+            </div>
+
+            <div class="bg-black/5 p-3.5 rounded-xl space-y-2.5 text-xs">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center gap-3">
+                  <label class="font-bold">Portions (40–80): <input id="rec-scale-inp" type="number" min="1" max="250" value="${scale}" class="kms-input w-20 text-center font-bold ml-1" /></label>
+                  <label class="font-bold opacity-80">Recipe Base: <input id="rec-base-inp" type="number" min="1" value="${rec.base_servings}" data-rec-base="${rec.id}" ${!isMgmtOrHigher() ? 'disabled' : ''} class="kms-input w-16 text-center font-bold ml-1" /></label>
+                </div>
+                <div class="flex flex-wrap gap-1">
+                  <button type="button" data-rec-preset="${predToday}" class="px-2.5 py-1 rounded-md font-bold ${scale === predToday ? 'bg-emerald-700 text-white' : 'bg-emerald-50 border border-emerald-300 text-emerald-800'}">Predicted (${predToday})</button>
+                  ${[40, 45, 50, 55, 60, 65, 70, 75, 80].map(p => `
+                    <button type="button" data-rec-preset="${p}" class="px-2 py-1 rounded-md font-semibold border ${scale === p ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}">${p}</button>
+                  `).join('')}
+                </div>
+              </div>
+              <input id="rec-scale-slider" type="range" min="40" max="80" step="1" value="${Math.min(80, Math.max(40, scale))}" class="w-full accent-[#b3122b]" />
+              <div class="flex justify-between text-[10px] opacity-60 font-semibold">
+                <span>40 portions</span><span>50</span><span>60</span><span>70</span><span>80 portions</span>
+              </div>
+            </div>
+
+            ${showMatrix ? `
+              <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                      <th class="p-2">Ingredient</th>
+                      ${[40, 50, 60, 70, 80].map(p => `<th class="p-2 text-center ${scale === p ? 'text-[#b3122b] font-bold' : ''}">${p} Port.</th>`).join('')}
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-[var(--line)]">
+                    ${(rec.ingredients || []).map(g => `
+                      <tr>
+                        <td class="p-2 font-bold">${esc(g.name)}</td>
+                        ${[40, 50, 60, 70, 80].map(p => {
+                          const f = p / (rec.base_servings || 65);
+                          return `<td class="p-2 text-center font-semibold ${scale === p ? 'bg-[#b3122b]/10 text-[#b3122b]' : ''}">${esc(formatKitchenAmt((g.qty || 0) * f, g.unit))}</td>`;
+                        }).join('')}
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : `
+              <div class="space-y-2">
+                ${(rec.ingredients || []).map((g, i) => {
+                  const invItem = g.inv_id ? state.items.find(x => x.id === g.inv_id) : null;
+                  const deductAtScale = invItem && g.per100 ? fmtNum((g.per100 * scale) / 100) : null;
+                  const unitOpts = Array.from(new Set([...KITCHEN_UNITS, normUnit(g.unit)]));
+                  return `
+                  <div class="p-2.5 rounded-lg border border-[var(--line)] text-xs space-y-1.5">
+                    <div class="flex justify-between items-center gap-2 font-bold">
+                      <span>${esc(g.name)}${g.inv_id && onOrderQty(g.inv_id) > 0 ? ` <span class="tag tag-LOW ml-1">On PO: ${onOrderQty(g.inv_id)}</span>` : ''}</span>
+                      <span class="text-sm text-[#b3122b]">${esc(formatKitchenAmt((g.qty || 0) * factor, g.unit))}</span>
+                    </div>
+                    ${invItem && deductAtScale ? `<div class="text-[11px] opacity-65">Background inventory: deducts ~${deductAtScale} ${esc(invItem.unit)} of ${esc(invItem.name)} at ${scale} portions</div>` : ''}
+                    ${isMgmtOrHigher() ? `
+                      <div class="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[var(--line)]/60 opacity-85 no-print">
+                        <input type="text" value="${esc(g.name)}" data-rec-ing="${rec.id}:${i}:name" class="kms-input w-36 text-xs font-semibold" title="Ingredient name" /><span class="font-semibold">Base (${rec.base_servings}):</span>
+                        <input type="number" step="0.25" min="0" value="${g.qty || 0}" data-rec-ing="${rec.id}:${i}:qty" class="kms-input w-16 text-xs text-center" />
+                        <select data-rec-ing="${rec.id}:${i}:unit" class="kms-input text-xs">${unitOpts.map(u => `<option value="${esc(u)}" ${normUnit(g.unit) === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
+                        <span>→ Stock:</span>
+                        <select data-rec-ing="${rec.id}:${i}:inv_id" class="kms-input text-xs max-w-[170px]">
+                          <option value="">(not tracked)</option>
+                          ${state.items.map(x => `<option value="${x.id}" ${g.inv_id === x.id ? 'selected' : ''}>${esc(x.name)} (${esc(x.unit)})</option>`).join('')}
+                        </select>
+                        ${invItem ? `
+                          <span>1 ${esc(invItem.unit)} =</span>
+                          <input type="number" step="0.5" min="0" value="${g.stock_per_unit || ''}" placeholder="auto" data-rec-ing="${rec.id}:${i}:stock_per_unit" class="kms-input w-16 text-xs text-center" />
+                          <span>${esc(normUnit(g.unit))}</span>
+                        ` : ''}
+                        <button type="button" data-del-rec-ing="${rec.id}:${i}" class="ml-auto text-red-600 hover:underline font-semibold">Remove</button>
+                      </div>
+                    ` : ''}
+                  </div>
+                `; }).join('')}
+                ${isMgmtOrHigher() ? `
+                  <form id="form-add-rec-ing" data-rec-id="${esc(rec.id)}" class="p-2.5 rounded-lg border border-dashed border-[var(--line)] flex flex-wrap items-center gap-1.5 text-xs no-print">
+                    <input name="name" type="text" required placeholder="+ Add ingredient (e.g. Garlic powder)" class="kms-input flex-1 min-w-[150px] text-xs" />
+                    <input name="qty" type="number" step="0.25" min="0.1" required placeholder="Qty" class="kms-input w-16 text-xs text-center" />
+                    <select name="unit" class="kms-input text-xs">${KITCHEN_UNITS.map(u => `<option value="${esc(u)}" ${u === 'cups' ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
+                    <select name="inv_id" class="kms-input text-xs max-w-[160px]">
+                      <option value="">Stock link (opt.)</option>
+                      ${state.items.map(x => `<option value="${x.id}">${esc(x.name)} (${esc(x.unit)})</option>`).join('')}
+                    </select>
+                    <input name="stock_per_unit" type="number" step="0.5" min="0" placeholder="per stock unit" class="kms-input w-24 text-xs text-center" />
+                    <button type="submit" class="kms-btn-alt px-2.5 py-1 text-xs font-semibold">+ Add</button>
+                  </form>
+                ` : ''}
+              </div>
+            `}
+
+            ${(rec.directions || (rec.steps && rec.steps.length)) ? `
+              <div class="p-3 rounded-lg bg-black/5 text-xs space-y-1">
+                <div class="font-bold uppercase opacity-65">Directions</div>
+                ${rec.steps && rec.steps.length
+                  ? `<ol class="list-decimal list-inside space-y-1 leading-relaxed">${rec.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>`
+                  : `<p class="whitespace-pre-line leading-relaxed">${esc(rec.directions)}</p>`}
+              </div>
+            ` : ''}
+          `}
+        </div>
+      </div>
+    `;
+  }
+
+  // 8. SAFETY
+  function renderSafety(main) {
+    const today = localDateStr();
+    const log = state.safetyLogs[today] || { temps: {}, cleaning: {} };
+    main.innerHTML = `
+      <div class="space-y-4">
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold">Daily Temperature Log — ${dLabel(today)}</h2>
+              <p class="text-xs opacity-75">Coolers: ≤41°F · Freezers: ≤0°F · Hot Hold: ≥135°F</p>
+            </div>
+            <button type="button" onclick="window.print()" class="kms-btn-navy px-3 py-1.5 text-xs no-print">Print Daily Safety Log</button>
+          </div>
+          <div class="space-y-2">
+            ${TEMP_CHECKS.map((c, i) => {
+              const v = (log.temps || {})[i];
+              const has = v !== undefined && v !== null && v !== '';
+              const pass = has ? (c[1] === 'max' ? Number(v) <= c[2] : Number(v) >= c[2]) : null;
+              return `
+                <div class="p-2.5 rounded-lg border border-[var(--line)] flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
+                  <div><strong>${esc(c[0])}</strong> <span class="opacity-70 text-xs">(${c[1] === 'max' ? 'at or below ' : 'at or above '}${c[2]}°F)</span></div>
+                  <div class="flex items-center gap-2">
+                    ${pass === null ? '' : `<span class="tag tag-${pass ? 'OK' : 'OUT'}">${pass ? 'PASS' : 'FIX NOW'}</span>`}
+                    <input type="number" step="0.1" value="${has ? v : ''}" data-temp-idx="${i}" placeholder="°F" class="kms-input w-20 text-center font-bold" />
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="kms-card p-4 space-y-2">
+          <h3 class="text-sm font-bold">Daily Cleaning Checklist</h3>
+          ${CLEANING_TASKS.map((t, i) => `
+            <label class="flex items-center gap-2.5 p-2 rounded border border-[var(--line)] text-xs sm:text-sm cursor-pointer">
+              <input type="checkbox" data-clean-idx="${i}" ${(log.cleaning || {})[i] ? 'checked' : ''} />
+              <span>${esc(t)}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // 9. STORAGE & DATE LABELS
+  function renderStorage(main) {
+    const today = localDateStr();
+    const activeLeft = state.storageTags.filter(t => t.status === 'STORED' && t.tag_category !== 'SALAD_BAR').sort((a, b) => a.use_by_date.localeCompare(b.use_by_date));
+    const activeSalad = state.storageTags.filter(t => t.status === 'STORED' && t.tag_category === 'SALAD_BAR').sort((a, b) => a.use_by_date.localeCompare(b.use_by_date));
+
+    const tagCard = (t) => {
+      const diff = Math.round((new Date(t.use_by_date + 'T12:00:00') - new Date(today + 'T12:00:00')) / 86400000);
+      const cls = diff < 0 ? 'OUT' : diff <= 1 ? 'LOW' : 'OK';
+      return `
+        <div class="p-3 rounded-lg border border-[var(--line)] flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <div class="font-bold text-sm">${esc(t.item_name)} ${t.qty_label ? `— ${esc(t.qty_label)}` : ''}</div>
+            <div class="opacity-75">${esc(t.zone)} · Prepped ${dLabel(t.prep_date)} · Use by <strong>${dLabel(t.use_by_date)}</strong> <span class="tag tag-${cls}">${diff < 0 ? 'PAST – THROW OUT' : diff === 0 ? 'USE TODAY' : diff + ' day(s) left'}</span></div>
+          </div>
+          <div class="flex gap-1.5">
+            <button type="button" data-tag-act="${t.id}:USED" class="kms-btn-ok px-2.5 py-1 text-xs">Used</button>
+            <button type="button" data-tag-act="${t.id}:DISCARDED" class="kms-btn-alt px-2.5 py-1 text-xs">Toss</button>
+          </div>
+        </div>
+      `;
+    };
+
+    main.innerHTML = `
+      <div class="space-y-4">
+        <form id="form-add-tag" class="kms-card p-4 space-y-3">
+          <h2 class="text-base font-bold">Date-Label Leftovers &amp; Salad Bar (&gt;24 Hours)</h2>
+          <div class="flex flex-wrap gap-1.5">
+            ${SHELF_PRESETS.map((p, idx) => `<button type="button" data-tag-preset="${idx}" class="kms-btn-alt px-2.5 py-1 text-xs">${esc(p.label)}</button>`).join('')}
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+            <input name="itemName" required placeholder="What is it?" class="kms-input text-sm lg:col-span-2" />
+            <input name="qtyLabel" placeholder="Amount (e.g. 2 pans)" class="kms-input text-sm" />
+            <select name="tagCategory" class="kms-input text-sm">
+              <option value="LEFTOVER">Meal Leftover</option>
+              <option value="SALAD_BAR">Daily Salad Bar</option>
+            </select>
+            <select name="days" class="kms-input text-sm">
+              <option value="7">Cooked Entree (7 days)</option>
+              <option value="4">Dairy / Deli Salad (4 days)</option>
+              <option value="3">Cut Greens / Fruit (3 days)</option>
+              <option value="90">Freezer (90 days)</option>
+            </select>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <select name="zone" class="kms-input text-sm">${LOCATIONS.map(l => `<option>${esc(l)}</option>`).join('')}</select>
+            <button type="submit" class="kms-btn-primary px-4 py-2 text-sm">Add &amp; Date-Label</button>
+          </div>
+        </form>
+
+        <div class="kms-card p-4 space-y-2">
+          <h3 class="text-sm font-bold">Meal Leftovers FIFO (${activeLeft.length})</h3>
+          ${!activeLeft.length ? '<p class="text-xs opacity-70">No meal leftovers logged.</p>' : activeLeft.map(tagCard).join('')}
+        </div>
+
+        <div class="kms-card p-4 space-y-2">
+          <h3 class="text-sm font-bold">Daily Salad Bar &amp; Cold Prep FIFO (${activeSalad.length})</h3>
+          ${!activeSalad.length ? '<p class="text-xs opacity-70">No Salad Bar items logged.</p>' : activeSalad.map(tagCard).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // 10. CHECKLISTS
+  function renderChecklists(main) {
+    const freq = state.checklistFreq || 'daily';
+    const list = state.checklists.filter(c => c.freq === freq);
+    const doneCount = list.filter(c => c.done).length;
+
+    main.innerHTML = `
+      <div class="space-y-4">
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <div>
+              <h2 class="text-base font-bold">Operational Checklists (${doneCount}/${list.length})</h2>
+              <p class="text-xs opacity-75">Ticks stamp your name &amp; time automatically.</p>
+            </div>
+            <div class="flex gap-1.5">
+              ${['daily', 'weekly', 'monthly'].map(f => `<button type="button" data-chk-freq="${f}" class="px-3 py-1.5 rounded-lg text-xs font-bold ${freq === f ? 'bg-[#b3122b] text-white' : 'kms-btn-alt'}">${f.toUpperCase()}</button>`).join('')}
+            </div>
+          </div>
+          <div class="space-y-2">
+            ${list.map(c => `
+              <label class="p-3 rounded-lg border border-[var(--line)] flex items-center justify-between gap-2 cursor-pointer">
+                <div class="flex items-center gap-2.5">
+                  <input type="checkbox" data-chk-id="${c.id}" ${c.done ? 'checked' : ''} />
+                  <div>
+                    <div class="text-sm font-semibold ${c.done ? 'line-through opacity-55' : ''}">${esc(c.title)}</div>
+                    ${c.done ? `<div class="text-xs text-[#1f7a3d]">Done by ${esc(c.done_by)} @ ${esc(c.done_at)}</div>` : ''}
+                  </div>
+                </div>
+                ${c.priority_carryover && !c.done ? '<span class="tag tag-OUT">CARRYOVER</span>' : ''}
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 11. FORECASTING & SERVED (Day-by-Day across all horizons)
+  function renderForecasting(main) {
+    const today = localDateStr();
+    const fc = getForecastMetrics();
+    const hz = state.horizon || 'days';
+    let rows = [];
+
+    const whatIfMeal = state._fcMealFilter || '';
+    const whatIfCirc = state._fcCircFilter || 'Normal Day';
+
+    const spanDays = hz === 'days' ? 14 : hz === 'weeks' ? 28 : hz === 'months' ? 92 : 365;
+    const maxBars = hz === 'days' ? 7 : hz === 'weeks' ? 16 : hz === 'months' ? 52 : 210;
+    const serviceDates = serviceDaysBetween(today, addDays(today, spanDays)).slice(0, maxBars);
+    const totalWindowPred = serviceDates.reduce((s, d) => s + forecastWeekday(d, whatIfMeal, whatIfCirc), 0);
+    const avgWindowPred = serviceDates.length ? Math.round(totalWindowPred / serviceDates.length) : 0;
+
+    rows = serviceDates.map(d => {
+      const pred = forecastWeekday(d, whatIfMeal, whatIfCirc);
+      const mp = (state.menuPlan || []).find(m => m.service_date === d);
+      const mealName = whatIfMeal
+        ? (state.recipes.find(r => r.id === whatIfMeal)?.name || whatIfMeal)
+        : (mp ? (state.recipes.find(r => r.id === mp.recipe_id)?.name || mp.custom_title || '') : '');
+      const nearHol = isNearFederalHoliday(d);
+      const noteParts = [];
+      if (mealName) noteParts.push(mealName);
+      if (whatIfCirc !== 'Normal Day') noteParts.push(whatIfCirc);
+      else if (mp && mp.circumstance && mp.circumstance !== 'Normal Day') noteParts.push(mp.circumstance);
+      if (nearHol) noteParts.push(`Near ${nearHol}`);
+      return {
+        label: hz === 'years' ? d.slice(5) : dLabel(d),
+        fullDate: dLabel(d) + ' (' + d + ')',
+        predicted: pred,
+        prep: pred > 0 ? Math.max(10, Math.ceil(pred / 5) * 5) : 0,
+        detail: noteParts.join(' · ') || 'Regular service day'
+      };
+    });
+
+    const history = (state.menuPlan || [])
+      .filter(m => m.status === 'SERVED' || (m.served_portions !== null && m.served_portions !== undefined))
+      .sort((a, b) => b.service_date.localeCompare(a.service_date));
+
+    main.innerHTML = `
+      <div class="space-y-4">
+        <form id="form-log-served" class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-base font-bold">Add or Update Patrons Served</h2>
+              <p class="text-xs opacity-75">Enter any past or today's date to add or update attendance and refine weekday &amp; seasonal trends.</p>
+            </div>
+            <button type="button" id="btn-bulk-served" class="kms-btn-alt px-3 py-1.5 text-xs">+ Bulk Enter Past Dates</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+            <input name="date" type="date" value="${today}" required class="kms-input text-sm" />
+            <input name="planned" type="number" min="0" value="65" required placeholder="Planned" class="kms-input text-sm" />
+            <input name="served" type="number" min="0" required placeholder="Actual served" class="kms-input text-sm" />
+            <select name="circumstance" class="kms-input text-sm">
+              <option>Normal Day</option>
+              <option>Closed / Federal Holiday</option>
+              <option>Snow / Cold Snap</option>
+              <option>Heavy Rain / Storm</option>
+              <option>Local Event / Drive</option>
+              <option>Holiday Week</option>
+            </select>
+            <input name="note" placeholder="Notes (for next year)" class="kms-input text-sm" />
+          </div>
+          <button type="submit" class="kms-btn-primary px-4 py-2 text-sm">Save &amp; Update Forecast</button>
+        </form>
+
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <div>
+              <h3 class="text-sm font-bold">Day-by-Day Attendance Forecast (${rows.length} Service Days)</h3>
+              <p class="text-xs opacity-75">${fc.openCount ? `Based on ${fc.openCount} open service(s) · Window avg: <strong>${avgWindowPred}</strong>/day (${totalWindowPred.toLocaleString()} total across ${rows.length} open days)` : 'No past attendance logged yet — using 65 baseline.'}</p>
+              <div class="flex flex-wrap gap-1.5 mt-1.5">
+                ${['Mon','Tue','Wed','Fri'].map(d => {
+                  const pct = Math.round(((fc.dowFactor[d] || 1) - 1) * 100);
+                  return `<span class="tag ${pct >= 5 ? 'tag-OUT' : pct <= -5 ? 'tag-LOW' : 'tag-OK'}">${d}: ${pct >= 0 ? '+' : ''}${pct}%</span>`;
+                }).join('')}
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-1">
+              ${[['days','Next 7 Days'],['weeks','Next 4 Weeks (Daily)'],['months','Next 3 Months (Daily)'],['years','Next 12 Months (Daily)']].map(([k, l]) => `<button type="button" data-hz="${k}" class="px-2.5 py-1 rounded text-xs font-bold ${hz === k ? 'bg-[#b3122b] text-white' : 'kms-btn-alt'}">${l}</button>`).join('')}
+            </div>
+          </div>
+          <div class="relative h-72"><canvas id="fc-canvas"></canvas></div>
+          <div class="overflow-x-auto max-h-96 overflow-y-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="sticky top-0 bg-[var(--card)]"><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1.5 pr-2">Service Date</th><th class="py-1.5 pr-2">Predicted Served</th><th class="py-1.5 pr-2">Recommended Prep</th><th class="py-1.5">Meal &amp; Trend Factors</th></tr></thead>
+              <tbody>${rows.map(r => `<tr class="border-b border-[var(--line)]"><td class="py-1.5 pr-2 font-semibold whitespace-nowrap">${esc(r.fullDate)}</td><td class="py-1.5 pr-2 font-bold text-[#b3122b]">${r.predicted}</td><td class="py-1.5 pr-2">${r.prep} portions</td><td class="py-1.5 opacity-75">${esc(r.detail)}</td></tr>`).join('')}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold">Tracked Attendance Trends &amp; Meal / Holiday Planner</h3>
+              <p class="text-xs opacity-75">Simulate how specific meals, holidays, or weather shift daily attendance.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <select id="fc-whatif-meal" class="kms-input text-xs">
+                <option value="">Scheduled / Average Meal</option>
+                ${state.recipes.map(r => `<option value="${r.id}" ${state._fcMealFilter === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}
+              </select>
+              <select id="fc-whatif-circ" class="kms-input text-xs">
+                ${['Normal Day', 'Holiday Week', 'Local Event / Drive', 'Snow / Cold Snap', 'Heavy Rain / Storm'].map(c => `<option ${state._fcCircFilter === c ? 'selected' : ''}>${c}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div class="p-3 rounded-lg border border-[var(--line)] space-y-1.5">
+              <div class="font-bold uppercase opacity-70">By Day of Week</div>
+              ${['Mon', 'Tue', 'Wed', 'Fri'].map(d => {
+                const pct = Math.round(((fc.dowFactor[d] || 1) - 1) * 100);
+                return `<div class="flex justify-between"><span>${d}</span><span class="font-bold ${pct >= 5 ? 'text-emerald-700' : pct <= -5 ? 'text-[#b3122b]' : ''}">${pct >= 0 ? '+' : ''}${pct}%</span></div>`;
+              }).join('')}
+            </div>
+            <div class="p-3 rounded-lg border border-[var(--line)] space-y-1.5">
+              <div class="font-bold uppercase opacity-70">By Meal Popularity</div>
+              ${!fc.mealStats.length ? '<p class="opacity-65">Log more served meals to rank dishes.</p>' : fc.mealStats.slice(0, 5).map(ms => `
+                <div class="flex justify-between gap-2"><span class="truncate">${esc(ms.title)}</span><span class="font-bold shrink-0 ${ms.pct >= 5 ? 'text-emerald-700' : ms.pct <= -5 ? 'text-[#b3122b]' : ''}">${ms.pct >= 0 ? '+' : ''}${ms.pct}% (${Math.round(ms.avg)})</span></div>
+              `).join('')}
+            </div>
+            <div class="p-3 rounded-lg border border-[var(--line)] space-y-1.5">
+              <div class="font-bold uppercase opacity-70">Holiday &amp; Weather Impact</div>
+              <div class="flex justify-between"><span>Near Federal Holiday (&plusmn;3d)</span><span class="font-bold">${Math.round((fc.nearHolFactor - 1) * 100) >= 0 ? '+' : ''}${Math.round((fc.nearHolFactor - 1) * 100)}%</span></div>
+              ${fc.circStats.filter(c => c.name !== 'Normal Day').map(cs => `
+                <div class="flex justify-between"><span>${esc(cs.name)}</span><span class="font-bold ${cs.pct < 0 ? 'text-[#b3122b]' : 'text-emerald-700'}">${cs.pct >= 0 ? '+' : ''}${cs.pct}% (${cs.count}x)</span></div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="kms-card p-4 space-y-2">
+          <h3 class="text-sm font-bold">Past Patrons Served History (${history.length})</h3>
+          ${!history.length ? '<p class="text-xs opacity-70">No past service records yet. Add one above or use Bulk Enter Past Dates.</p>' : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1.5">Date</th><th class="py-1.5">Planned</th><th class="py-1.5">Served</th><th class="py-1.5">Circumstance</th><th class="py-1.5">Notes</th><th class="py-1.5 text-right">Actions</th></tr></thead>
+                <tbody>
+                  ${history.map(m => `
+                    <tr class="border-b border-[var(--line)]">
+                      <td class="py-2 font-mono">${esc(m.service_date)}</td>
+                      <td class="py-2">${m.planned_portions || 0}</td>
+                      <td class="py-2 font-bold">${m.served_portions ?? 0}</td>
+                      <td class="py-2">${esc(m.circumstance || 'Normal Day')}</td>
+                      <td class="py-2 opacity-80">${esc(m.note || '—')}</td>
+                      <td class="py-2 text-right space-x-1 whitespace-nowrap">
+                        <button type="button" data-edit-srv="${m.id}" class="kms-btn-alt px-2 py-1 text-xs">Edit</button>
+                        <button type="button" data-del-srv="${m.id}" class="kms-btn-alt px-2 py-1 text-xs">Delete</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+
+    const ctx = document.getElementById('fc-canvas');
+    if (ctx && window.Chart) {
+      forecastChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: rows.map(r => r.label),
+          datasets: [
+            { label: 'Predicted Served', data: rows.map(r => r.predicted), backgroundColor: '#b3122b', borderRadius: 6 },
+            { label: 'Recommended Prep', data: rows.map(r => r.prep), backgroundColor: '#1b365d', borderRadius: 6 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+      });
+    }
+  }
+
+  // 12. RECORDS: WASTE, BLIND PHYSICAL COUNT & BACKUPS
+  function renderRecords(main) {
+    const opts = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
+    const draft = state.blindDraft || { zone: 'ALL', counts: {} };
+    const lastAudit = state.blindAudits[0];
+
+    main.innerHTML = `
+      <div class="space-y-4">
+        <form id="form-waste" class="kms-card p-4 space-y-3">
+          <h2 class="text-base font-bold">Log Waste</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <select name="itemId" class="kms-input text-sm">${opts}</select>
+            <input name="qty" type="number" step="0.5" min="0.5" required placeholder="Amount wasted" class="kms-input text-sm" />
+            <select name="reason" class="kms-input text-sm"><option>Expired</option><option>Spoiled</option><option>Dropped or damaged</option><option>Overcooked or burned</option><option>Other</option></select>
+          </div>
+          <button type="submit" class="kms-btn-primary px-4 py-2 text-sm">Remove from Stock</button>
+        </form>
+
+        <div class="kms-card p-4 space-y-3">
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <div>
+              <h3 class="text-sm font-bold">Blind Physical Count</h3>
+              <p class="text-xs opacity-75">System counts are hidden so the shelf count stays honest. Leave items blank to skip.</p>
+            </div>
+            <button type="button" id="btn-save-blind" class="kms-btn-ok px-4 py-2 text-xs">Save Physical Count</button>
+          </div>
+          <details>
+            <summary class="text-xs font-bold cursor-pointer">Open Count Sheet (${state.items.length} items)</summary>
+            <div class="mt-3 space-y-2 max-h-96 overflow-y-auto">
+              ${state.items.filter(i => !i.discontinued).map(x => `
+                <div class="p-2 rounded border border-[var(--line)] flex items-center justify-between text-xs">
+                  <span><strong>${esc(x.name)}</strong> (${esc(x.location)} · ${esc(x.unit)})</span>
+                  <input type="number" step="0.5" min="0" data-blind-id="${x.id}" value="${draft.counts[x.id] !== undefined ? draft.counts[x.id] : ''}" placeholder="count" class="kms-input w-20 text-center font-bold" />
+                </div>
+              `).join('')}
+            </div>
+          </details>
+          ${lastAudit ? `<div class="text-xs opacity-80 pt-2">Last count: ${dLabel(lastAudit.audit_date)} by ${esc(lastAudit.auditor)} (${lastAudit.rows.filter(r => r.sys !== r.phys).length} variance(s))</div>` : ''}
+        </div>
+
+        <div class="kms-card p-4 flex flex-wrap gap-2">
+          <button type="button" id="btn-exp-csv" class="kms-btn-alt px-3.5 py-2 text-xs">Download Stock CSV</button>
+          <button type="button" id="btn-exp-json" class="kms-btn-alt px-3.5 py-2 text-xs">Download Full JSON Backup</button>
+          <button type="button" id="btn-open-restore" class="kms-btn-navy px-3.5 py-2 text-xs">Restore from JSON Backup</button>
+        </div>
+      </div>
+    `;
+  }
+
   // 13. COMPREHENSIVE KITCHEN REPORTS CENTER
   function renderReport(main) {
     if (!isMgmtOrHigher()) {
