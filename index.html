@@ -203,7 +203,14 @@
     ["Block butter","Walk-in cooler","pieces",2,2,"W"],["Shredded cheese","Walk-in cooler","bags",3,4,"W"],["Parmesan cheese","Walk-in cooler","bags",2,2,"W"],["Feta cheese","Walk-in cooler","tubs",1,1,"W"],["Chopped garlic","Walk-in cooler","jars",4,4,"W"],["Vegetable stock","Walk-in cooler","jars",5,5,"W"],["Yogurt","Walk-in cooler","pieces",4,5,"W"],["Cottage cheese","Walk-in cooler","pieces",2,2,"W"],["Lemonade","Walk-in cooler","crates",2,2,"W"],["Iced tea","Walk-in cooler","crates",1,2,"W"],["Milk","Walk-in cooler","crates",1,2.5,"W"]
   ];
 
-  const LOCATIONS = ["Walk-in cooler", "Walk-in freezer", "Stockroom"];
+  const LOCATIONS = [
+    "Walk-in cooler",
+    "Walk-in freezer",
+    "Stockroom",
+    "Kitchen Cooler",
+    "Kitchen Freezer",
+    "Kitchen Dry Goods"
+  ];
   const VENDORS = {
     W: "Weekly order – Marberger (dairy) & produce",
     M: "Monthly order – Jordan Banana (dry goods & frozen)"
@@ -234,7 +241,7 @@
     { label: "Freezer Backup (90d)", cat: "LEFTOVER", days: 90, zone: "Walk-in freezer" }
   ];
 
-  // Salted SHA-256 PIN Hashing (from index.html)
+  // Salted SHA-256 PIN Hashing
   const WEAK_PINS = ['0000','1111','2222','9999','1234','12345','123456','000000'];
   function sha256hex(str) {
     const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
@@ -573,7 +580,6 @@
   }
 
   function adjustOrderDateForHoliday(targetDateStr) {
-    // If order date falls on a holiday OR within +/- 1 day of a federal holiday, move to preceding open MTWF/business day
     let d = targetDateStr;
     const holOn = isHolidayOrClosedDay(d);
     const holPrev = getFederalHoliday(addDays(d, -1));
@@ -595,7 +601,6 @@
     const today = todayStr || localDateStr();
     const list = [];
 
-    // 1. Upcoming Federal Holiday Closings (next 14 days, grouped if consecutive like Thanksgiving Thu+Fri)
     const holHits = [];
     for (let i = 0; i <= 14; i++) {
       const ds = addDays(today, i);
@@ -616,7 +621,6 @@
       });
     }
 
-    // 2. Weekly Order (Marberger Dairy & Produce — Fridays, adjusted if on/near holiday)
     const todayDow = new Date(today + 'T12:00:00').getDay();
     const daysToFri = (5 - todayDow + 7) % 7;
     const nextFri = addDays(today, daysToFri);
@@ -638,7 +642,6 @@
       });
     }
 
-    // 3. Monthly Order (Jordan Banana Dry & Frozen — 3rd Friday, adjusted if on/near holiday)
     const nowD = new Date(today + 'T12:00:00');
     let m3Fri = getThirdFriday(nowD.getFullYear(), nowD.getMonth());
     if (addDays(m3Fri, 1) < today) {
@@ -940,7 +943,7 @@
     showToast('Undid last stock change');
   }
 
-  // Auto-Learning Par Levels (preserved from Community Meals Inventory-2.html)
+  // Auto-Learning Par Levels
   function recordUsage(item, amount) {
     if (amount <= 0) return;
     item.usage_log = item.usage_log || [];
@@ -1028,7 +1031,6 @@
       bucketFactor[k] = avgRecent > 0 ? Math.min(1.25, Math.max(0.8, bAvg / avgRecent)) : 1;
     });
 
-    // By-Meal / Dish Popularity Trends
     const mealMap = {};
     open.forEach(m => {
       const r = m.recipe_id ? state.recipes.find(x => x.id === m.recipe_id) : null;
@@ -1053,7 +1055,6 @@
       return hit ? hit.mult : 1;
     }
 
-    // By-Holiday & Circumstance Trends
     const circMap = {};
     open.forEach(m => {
       const c = (m.circumstance || 'Normal Day').trim();
@@ -1295,6 +1296,11 @@
           timestamp_label: a.timestamp_label || '', created_at_ms: Math.round(Number(a.created_at_ms) || Date.now())
         })), { onConflict: 'id' });
       }
+      await sbClient.from('kms_settings').upsert({
+        key: 'suggestions',
+        value: { recipeSuggestions: (state.recipeSuggestions || []).slice(0, 50), menuSuggestions: (state.menuSuggestions || []).slice(0, 50) },
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
     } catch (e) {}
   }
 
@@ -1313,7 +1319,7 @@
         return;
       }
       if (invData && invData.length > 0) {
-        const [recR, mpR, poR, txR, tagR, chkR, usrR, annR, msgR, safR, actR] = await Promise.all([
+        const [recR, mpR, poR, txR, tagR, chkR, usrR, annR, msgR, safR, actR, setR] = await Promise.all([
           sbClient.from('kms_recipes').select('*'),
           sbClient.from('kms_menu_plan').select('*'),
           sbClient.from('kms_purchase_orders').select('*'),
@@ -1324,7 +1330,8 @@
           sbClient.from('kms_announcements').select('*'),
           sbClient.from('kms_messages').select('*').order('created_at_ms', { ascending: true }).limit(50),
           sbClient.from('kms_safety_logs').select('*'),
-          sbClient.from('kms_activity_logs').select('*').order('created_at_ms', { ascending: false }).limit(150)
+          sbClient.from('kms_activity_logs').select('*').order('created_at_ms', { ascending: false }).limit(150),
+          sbClient.from('kms_settings').select('*').eq('key', 'suggestions')
         ]);
         state.items = invData;
         if (recR.data && recR.data.length) state.recipes = recR.data.map(normalizeRecipe);
@@ -1340,6 +1347,11 @@
           const byId = new Map();
           [...(state.activityLogs || []), ...actR.data].forEach(a => { if (a && a.id) byId.set(a.id, a); });
           state.activityLogs = Array.from(byId.values()).sort((a, b) => (Number(b.created_at_ms) || 0) - (Number(a.created_at_ms) || 0)).slice(0, 200);
+        }
+        if (setR && setR.data && setR.data[0] && setR.data[0].value) {
+          const sv = setR.data[0].value;
+          if (Array.isArray(sv.recipeSuggestions)) state.recipeSuggestions = sv.recipeSuggestions;
+          if (Array.isArray(sv.menuSuggestions)) state.menuSuggestions = sv.menuSuggestions;
         }
         if (safR.data) {
           safR.data.forEach(s => { state.safetyLogs[s.log_date] = s; });
@@ -1851,7 +1863,7 @@
     `;
   }
 
-  // 2. STOCK (Community Meals Inventory-2.html core + Search/Filter/Add/QR)
+  // 2. STOCK
   function renderStock(main) {
     const q = (state._stockSearch || '').toLowerCase();
     const locFilter = state._stockLoc || 'ALL';
@@ -1899,6 +1911,9 @@
                           <option value="W" ${x.cadence === 'W' ? 'selected' : ''}>Weekly</option>
                           <option value="M" ${x.cadence === 'M' ? 'selected' : ''}>Monthly</option>
                         </select>
+                        <select data-item-field="${x.id}:location" class="kms-input text-xs" title="Storage location">
+                          ${Array.from(new Set([...LOCATIONS, x.location])).map(loc => `<option value="${esc(loc)}" ${x.location === loc ? 'selected' : ''}>${esc(loc)}</option>`).join('')}
+                        </select>
                       </div>
                     </div>
                     <div class="flex items-center gap-1.5">
@@ -1916,7 +1931,7 @@
     `;
   }
 
-  // 3. ORDERS & PURCHASE ORDERS (Weekly Marberger / Monthly Jordan Banana + Approval Flow)
+  // 3. ORDERS & PURCHASE ORDERS
   function renderOrders(main) {
     const hz = Number(state._orderHorizon || 7);
     const days = serviceDaysBetween(localDateStr(), addDays(localDateStr(), hz === 1 ? 4 : hz));
@@ -2040,7 +2055,7 @@
     `;
   }
 
-  // 4. RECEIVE & FAST SCAN TERMINAL (Camera QR + USB/Bluetooth SKU + Expiration Tracking)
+  // 4. RECEIVE & FAST SCAN TERMINAL
   function renderReceive(main) {
     const today = localDateStr();
     const dated = state.transactions.filter(t => t.tx_type === 'RECEIVE' && t.exp_date && !t.cleared).sort((a, b) => a.exp_date.localeCompare(b.exp_date));
@@ -2350,7 +2365,7 @@
     `;
   }
 
-  // 6. NEXT-DAY PREP (pulls grouped by location + FIFO leftovers)
+  // 6. NEXT-DAY PREP
   function renderPrep(main) {
     const today = localDateStr();
     const nextMeal = state.menuPlan.filter(m => m.service_date > today && m.status !== 'CLOSED' && m.recipe_id).sort((a, b) => a.service_date.localeCompare(b.service_date))[0];
@@ -2405,7 +2420,7 @@
     `;
   }
 
-  // 7. RECIPES (Smart Offline Paste Parser + Scaling + Allergens + Stock Linkage)
+  // 7. RECIPES
   function parsePastedRecipe(raw) {
     const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const name = lines[0] || 'Imported Recipe';
@@ -2490,14 +2505,19 @@
           ` : `
             <form id="form-suggest-recipe" class="kms-card p-4 space-y-2.5">
               <h2 class="text-sm font-bold">Suggest a New Recipe</h2>
-              <p class="text-[11px] opacity-75">Submit a recipe idea for ADMIN / MANAGER approval and future menus.</p>
-              <input name="title" type="text" required placeholder="Recipe title (e.g. Baked Ziti)" class="kms-input w-full text-xs" />
+              <p class="text-[11px] opacity-75">Paste a recipe URL or recipe text—we'll format it cleanly and notify Management for approval.</p>
+              <div class="flex gap-1.5">
+                <input id="sug-url-inp" name="url" type="url" placeholder="Paste recipe URL (optional)..." class="kms-input flex-1 text-xs" />
+                <button type="button" id="btn-sug-fetch-url" class="kms-btn-navy px-2.5 py-1.5 text-xs shrink-0">Fetch URL</button>
+              </div>
+              <input id="sug-photo-inp" name="photoUrl" type="hidden" value="" />
+              <input id="sug-title-inp" name="title" type="text" placeholder="Recipe title (auto-filled from URL or type here)" class="kms-input w-full text-xs" />
               <div class="grid grid-cols-2 gap-1.5">
-                <input name="servings" type="number" min="40" max="80" value="65" class="kms-input text-xs" title="Base servings" />
+                <input id="sug-serv-inp" name="servings" type="number" min="1" max="250" value="65" class="kms-input text-xs" title="Base servings" />
                 <input name="targetDate" type="date" class="kms-input text-xs" title="Optional target menu date" />
               </div>
-              <textarea name="raw" rows="3" required placeholder="Ingredients &amp; directions..." class="kms-input w-full text-xs"></textarea>
-              <button type="submit" class="kms-btn-primary w-full py-2 text-xs">Submit Recipe Suggestion</button>
+              <textarea id="sug-raw-inp" name="raw" rows="4" placeholder="Paste ingredients &amp; directions (or use Fetch URL above)..." class="kms-input w-full text-xs"></textarea>
+              <button type="submit" id="btn-submit-sug" class="kms-btn-primary w-full py-2 text-xs">Submit &amp; Notify Management</button>
             </form>
           `}
 
@@ -2507,19 +2527,32 @@
             return `
               <div class="kms-card p-4 space-y-2 border-l-4 border-l-amber-500">
                 <h3 class="text-xs font-bold uppercase">Pending Recipe Suggestions (${pendSug.length})</h3>
-                ${pendSug.map(s => `
-                  <div class="p-2.5 rounded border border-[var(--line)] text-xs space-y-1">
-                    <div class="font-bold">${esc(s.title)} <span class="opacity-65 font-normal">(${s.servings || 65} serv.${s.target_date ? ' · ' + esc(s.target_date) : ''})</span></div>
-                    <div class="text-[11px] opacity-75">By ${esc(s.suggested_by)}</div>
-                    <p class="text-[11px] opacity-85 whitespace-pre-line">${esc(s.raw)}</p>
+                ${pendSug.map(s => {
+                  const pr = s.parsed_recipe ? normalizeRecipe(s.parsed_recipe) : null;
+                  return `
+                  <div class="p-2.5 rounded border border-[var(--line)] text-xs space-y-1.5">
+                    <div class="flex items-start gap-2">
+                      ${pr && pr.photo_url ? `<img src="${esc(pr.photo_url)}" alt="${esc(s.title)}" class="w-10 h-10 rounded object-cover border border-[var(--line)] shrink-0" />` : ''}
+                      <div>
+                        <div class="font-bold">${esc(s.title)} <span class="opacity-65 font-normal">(Base ${s.servings || 65}${s.target_date ? ' · ' + esc(s.target_date) : ''})</span></div>
+                        <div class="text-[11px] opacity-75">Suggested by ${esc(s.suggested_by)}${s.source_url ? ' · From URL' : ''}</div>
+                      </div>
+                    </div>
+                    ${pr && (pr.ingredients || []).length ? `
+                      <div class="p-2 rounded bg-black/5 space-y-1 text-[11px]">
+                        <div class="font-bold uppercase opacity-65">Ingredients (${pr.ingredients.length})</div>
+                        <ul class="space-y-0.5">${pr.ingredients.slice(0, 8).map(g => `<li>• <strong>${esc(formatKitchenAmt(g.qty, g.unit))}</strong> ${esc(g.name)}</li>`).join('')}${pr.ingredients.length > 8 ? `<li class="opacity-65">+ ${pr.ingredients.length - 8} more...</li>` : ''}</ul>
+                        ${(pr.steps || []).length ? `<div class="opacity-75 pt-0.5">${pr.steps.length} step(s) included</div>` : ''}
+                      </div>
+                    ` : `<p class="text-[11px] opacity-85 whitespace-pre-line">${esc(s.raw)}</p>`}
                     ${isMgmtOrHigher() ? `
                       <div class="flex gap-1.5 pt-1">
                         <button type="button" data-approve-recsug="${s.id}" class="kms-btn-ok px-2.5 py-1 text-[11px]">Approve &amp; Add</button>
                         <button type="button" data-reject-recsug="${s.id}" class="kms-btn-alt px-2.5 py-1 text-[11px]">Reject</button>
                       </div>
-                    ` : '<span class="tag tag-LOW">Awaiting Approval</span>'}
+                    ` : '<span class="tag tag-LOW">Awaiting Management Approval</span>'}
                   </div>
-                `).join('')}
+                `; }).join('')}
               </div>
             `;
           })()}
@@ -2669,7 +2702,7 @@
     `;
   }
 
-  // 8. SAFETY (6-Point Temps + 7-Point Cleaning)
+  // 8. SAFETY
   function renderSafety(main) {
     const today = localDateStr();
     const log = state.safetyLogs[today] || { temps: {}, cleaning: {} };
@@ -2714,7 +2747,7 @@
     `;
   }
 
-  // 9. STORAGE & DATE LABELS (1-Tap Presets + Separate Leftovers & Salad Bar FIFO)
+  // 9. STORAGE & DATE LABELS
   function renderStorage(main) {
     const today = localDateStr();
     const activeLeft = state.storageTags.filter(t => t.status === 'STORED' && t.tag_category !== 'SALAD_BAR').sort((a, b) => a.use_by_date.localeCompare(b.use_by_date));
@@ -2777,7 +2810,7 @@
     `;
   }
 
-  // 10. CHECKLISTS (Daily / Weekly / Monthly + Carryover)
+  // 10. CHECKLISTS
   function renderChecklists(main) {
     const freq = state.checklistFreq || 'daily';
     const list = state.checklists.filter(c => c.freq === freq);
@@ -2814,11 +2847,10 @@
     `;
   }
 
-  // 11. FORECASTING & SERVED (Add / Edit / Bulk Past Patrons + Multi-Horizon Chart)
+  // 11. FORECASTING & SERVED
   function renderForecasting(main) {
     const today = localDateStr();
     const fc = getForecastMetrics();
-    const avg = suggestPortionsOverall();
     const hz = state.horizon || 'days';
     let rows = [];
 
@@ -2909,7 +2941,6 @@
           </div>
         </div>
 
-        <!-- Trend Breakdown & What-If Meal / Holiday Planner -->
         <div class="kms-card p-4 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -3042,7 +3073,7 @@
     `;
   }
 
-  // 13. MONTHLY REPORT (from Community Meals Inventory-2.html)
+  // 13. MONTHLY REPORT
   function renderReport(main) {
     if (!isMgmtOrHigher()) {
       main.innerHTML = `
@@ -3057,7 +3088,7 @@
 
     const today = localDateStr();
     const rm = state.reportMonth || today.slice(0, 7);
-    const rangeMode = state.reportRange || 'month'; // 'month' | '30d' | '90d' | 'ytd' | '365d'
+    const rangeMode = state.reportRange || 'month';
     const months = [];
     for (let i = 0; i < 12; i++) {
       const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
@@ -3074,7 +3105,6 @@
 
     const inPeriod = (ds) => { const s = String(ds || '').slice(0, 10); return s >= startStr && s <= endStr; };
 
-    // 1. Current Stats
     const servedDays = state.menuPlan.filter(m => m.status === 'SERVED' && inPeriod(m.service_date));
     const meals = servedDays.reduce((s, m) => s + (m.served_portions || 0), 0);
     const avgPerDay = servedDays.length ? (meals / servedDays.length) : 0;
@@ -3103,7 +3133,6 @@
     });
     const safetyPct = checks ? Math.round(((checks - fails) / checks) * 100) : null;
 
-    // 2. Inventory Valuation & Restock Gap
     const activeItems = state.items.filter(x => !x.discontinued);
     const stockValue = activeItems.reduce((s, x) => s + (x.on_hand || 0) * (x.unit_price || 0), 0);
     const lowItems = activeItems.filter(x => itemStatus(x) !== 'OK').map(x => {
@@ -3114,12 +3143,11 @@
     const restockCost = lowItems.reduce((s, r) => s + r.estCost, 0);
     const parHealthPct = activeItems.length ? Math.round(((activeItems.length - lowItems.length) / activeItems.length) * 100) : 100;
 
-    // 3. Forecasts & Budget Projections
     const fc = getForecastMetrics();
     const proj30Meals = Math.round(fc.avgRecent * 17);
     const proj90Meals = Math.round(fc.avgRecent * 51);
     const proj365Meals = Math.round(fc.avgRecent * 204);
-    const benchPerMeal = costPerMeal > 0 ? costPerMeal : 3.25; // fallback estimate if unit prices aren't all filled
+    const benchPerMeal = costPerMeal > 0 ? costPerMeal : 3.25;
     const usingBench = costPerMeal <= 0;
     const proj30Budget = Math.round(proj30Meals * benchPerMeal);
     const proj90Budget = Math.round(proj90Meals * benchPerMeal);
@@ -3128,7 +3156,6 @@
     const next7Meals = next7Days.reduce((s, d) => s + forecastWeekday(d), 0);
     const peakDow = Object.entries(fc.dowMult || {}).sort((a, b) => b[1] - a[1])[0];
 
-    // 4. Dynamic Executive & Funding Suggestions
     const suggestions = [];
     if (lowItems.length > 0) {
       suggestions.push(`<strong>Restock Funding / Purchase Request:</strong> ${lowItems.length} staple item(s) are below Par (${lowItems.reduce((s, r) => s + r.needCases, 0)} whole cases needed${restockCost > 0 ? ', est. $' + restockCost.toFixed(2) : ''}). Prioritize: ${lowItems.slice(0, 4).map(r => esc(r.item.name) + ' (' + r.needCases + ' cs)').join(', ')}.`);
@@ -3161,7 +3188,6 @@
 
     main.innerHTML = `
       <div class="space-y-4">
-        <!-- Header & Dynamic Range Controls -->
         <div class="kms-card p-4 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -3185,7 +3211,6 @@
           </div>
         </div>
 
-        <!-- KPI Row -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
           <div class="kms-card p-4">
             <div class="text-xs uppercase opacity-65 font-semibold">Meals Served</div>
@@ -3209,7 +3234,6 @@
           </div>
         </div>
 
-        <!-- Forecasts & Budget Predictions -->
         <div class="kms-card p-4 space-y-3">
           <div class="flex flex-wrap justify-between items-center gap-2">
             <div>
@@ -3241,7 +3265,6 @@
           </div>
         </div>
 
-        <!-- Executive Suggestions & Copyable Funding Brief -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div class="kms-card p-4 space-y-2.5">
             <h3 class="text-sm font-bold">Executive Suggestions &amp; Action Plan</h3>
@@ -3259,7 +3282,6 @@
           </div>
         </div>
 
-        <!-- Priority Donation & Restock Needs Table -->
         <div class="kms-card p-4 space-y-2.5">
           <h3 class="text-sm font-bold">Priority Restock &amp; In-Kind Donation Needs (${lowItems.length} Items Below Par)</h3>
           ${!lowItems.length ? '<p class="text-xs opacity-70">All active items are at or above Par Level.</p>' : `
@@ -3421,7 +3443,7 @@
     `;
   }
 
-  // Modals: Switch User, Add Item, Chat, QR Labels, Backup
+  // Modals: Switch User, Announcement, Chat, QR Labels
   function showSwitchUserModal() {
     const active = sortUsersByRoleAndName(state.users.filter(u => u.active !== false));
     openModal('Switch User (PIN Required)', `
@@ -3539,6 +3561,24 @@
     } catch (e) {
       return false;
     }
+  }
+
+  function invokeScrapeRecipe(payload) {
+    if (sbClient && sbClient.functions) {
+      return sbClient.functions.invoke('scrape-recipe', { body: payload }).then(({ data, error }) => {
+        if (error) throw new Error(error.message || 'Edge Function error');
+        return data;
+      });
+    }
+    return fetch(SUPABASE_URL + '/functions/v1/scrape-recipe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify(payload)
+    }).then(r => r.json());
   }
 
   function showChatModal() {
@@ -4167,6 +4207,36 @@
       return;
     }
 
+    if (e.target.id === 'btn-sug-fetch-url') {
+      const urlInp = document.getElementById('sug-url-inp');
+      const targetUrl = String(urlInp ? urlInp.value : '').trim();
+      if (!targetUrl) { showToast('Paste a recipe URL first', 'warn'); return; }
+      const btn = e.target;
+      btn.disabled = true; btn.textContent = 'Fetching...';
+      invokeScrapeRecipe({ url: targetUrl }).then(data => {
+        if (!data || !data.ok || !data.recipe) throw new Error((data && data.error) || 'Could not fetch recipe from URL');
+        const rec = data.recipe;
+        const tInp = document.getElementById('sug-title-inp');
+        const sInp = document.getElementById('sug-serv-inp');
+        const rInp = document.getElementById('sug-raw-inp');
+        const pInp = document.getElementById('sug-photo-inp');
+        if (tInp) tInp.value = rec.name || '';
+        if (sInp) sInp.value = rec.base_servings || 8;
+        if (pInp) pInp.value = rec.image || '';
+        if (rInp) {
+          const lines = ['Ingredients:', ...(rec.ingredients || [])];
+          if (rec.steps && rec.steps.length) lines.push('', 'Directions:', ...rec.steps.map((st, idx) => `${idx + 1}. ${st}`));
+          rInp.value = lines.join('\n');
+        }
+        showToast(`Fetched "${rec.name}" — review & submit for approval!`);
+      }).catch(err => {
+        showToast(String(err.message || err), 'warn');
+      }).finally(() => {
+        btn.disabled = false; btn.textContent = 'Fetch URL';
+      });
+      return;
+    }
+
     const delRec = e.target.closest('[data-del-rec]');
     if (delRec) {
       if (!isMgmtOrHigher()) { showToast('Only Management can delete recipes', 'warn'); return; }
@@ -4307,7 +4377,11 @@
       const activeItems = state.items.filter(x => !x.discontinued && itemNeed(x) > 0);
       const rows = [['Item', 'Vendor', 'On Hand', 'Par', 'Unit', 'Whole Cases Needed', 'Unit Price']];
       activeItems.forEach(x => rows.push([x.name, x.vendor || '', x.on_hand, x.par, x.unit, Math.max(1, Math.ceil(itemNeed(x))), x.unit_price || 0]));
-      download('executive_restock_needs.csv', rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
+      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = `executive_restock_needs-${localDateStr()}.csv`;
+      a.click();
       return;
     }
     if (e.target.id === 'btn-rec-pending-pos') {
@@ -4353,10 +4427,12 @@
       if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can approve recipe suggestions', 'warn'); return; }
       const s = (state.recipeSuggestions || []).find(x => x.id === appSug.dataset.approveRecsug);
       if (s) {
-        const parsed = parsePastedRecipe(s.title + '\nServings: ' + (s.servings || 65) + '\n' + s.raw);
+        const parsed = s.parsed_recipe
+          ? normalizeRecipe({ ...s.parsed_recipe, id: uid('rec'), name: s.title, base_servings: Number(s.servings) || s.parsed_recipe.base_servings || 65 })
+          : parsePastedRecipe(s.title + '\nServings: ' + (s.servings || 65) + '\n' + s.raw);
         parsed.name = s.title;
-        parsed.base_servings = Number(s.servings) || 65;
-        state.recipes.push(parsed);
+        parsed.base_servings = Number(s.servings) || parsed.base_servings || 65;
+        state.recipes.unshift(parsed);
         state.selectedRecipeId = parsed.id;
         if (s.target_date) {
           const ex = state.menuPlan.find(m => m.service_date === s.target_date);
@@ -4470,7 +4546,7 @@
     if (delAnnBtn) {
       const targetId = delAnnBtn.dataset.delAnnouncement;
       const targetAnn = (state.announcements || []).find(a => a.id === targetId);
-      askConfirm(`Globally delete "${targetAnn ? targetAnn.title : 'this announcement'}"?`, () => {
+      askConfirm('Delete Announcement', `Globally delete "${targetAnn ? targetAnn.title : 'this announcement'}"?`, () => {
         state.announcements = (state.announcements || []).filter(a => a.id !== targetId);
         if (targetAnn) logActivity('ANNOUNCEMENT DELETED', `Deleted "${targetAnn.title}"`);
         if (sbClient) sbClient.from('kms_announcements').delete().eq('id', targetId).then(() => {});
@@ -4739,6 +4815,7 @@
       if (x) {
         snapUndo();
         if (f === 'cadence') { x.cadence = e.target.value; x.vendor = x.cadence === 'W' ? 'Marberger / Produce' : 'Jordan Banana'; }
+        else if (f === 'location') { x.location = e.target.value; }
         else {
           const v = Math.max(0, parseFloat(e.target.value) || 0);
           if (f === 'on_hand' && v < x.on_hand) recordUsage(x, x.on_hand - v);
@@ -4806,9 +4883,8 @@
       const today = localDateStr();
       const log = state.safetyLogs[today] = state.safetyLogs[today] || { temps: {}, cleaning: {} };
       log.temps[e.target.dataset.tempIdx] = e.target.value === '' ? null : parseFloat(e.target.value);
-      logActivity('SAFETY TEMP', `${TEMP_CHECKS[e.target.dataset.tempIdx]?.[0] || 'Temp'}: ${e.target.value || 'cleared'}°F`);
       log.logged_by = getActiveUser().name;
-      logActivity('TEMP', `${TEMP_CHECKS[e.target.dataset.tempIdx][0]}: ${e.target.value}°F`);
+      logActivity('SAFETY TEMP', `${TEMP_CHECKS[e.target.dataset.tempIdx]?.[0] || 'Temp'}: ${e.target.value || 'cleared'}°F`);
       saveState();
       render();
       return;
@@ -4818,7 +4894,6 @@
       const log = state.safetyLogs[today] = state.safetyLogs[today] || { temps: {}, cleaning: {} };
       log.cleaning[e.target.dataset.cleanIdx] = e.target.checked;
       logActivity('CLEANING LOG', `${CLEANING_TASKS[e.target.dataset.cleanIdx] || 'Task'}: ${e.target.checked ? 'Done' : 'Unchecked'}`);
-      logActivity('CLEANING', CLEANING_TASKS[e.target.dataset.cleanIdx]);
       saveState();
       render();
       return;
@@ -4906,9 +4981,11 @@
     }
 
     if (e.target.id === 'form-add-item') {
+      const loc = String(fd.get('location') || LOCATIONS[0]);
+      const prefix = /freezer/i.test(loc) ? 'FRZ' : /cooler/i.test(loc) ? 'CLR' : /kitchen dry/i.test(loc) ? 'KDG' : 'STK';
       const item = {
-        id: uid('item'), sku: 'NEW-' + String(state.items.length + 101), name: fd.get('name').trim(),
-        location: fd.get('location'), category: 'General', unit: fd.get('unit').trim() || 'cases',
+        id: uid('item'), sku: prefix + '-' + String(state.items.length + 101), name: fd.get('name').trim(),
+        location: loc, category: 'General', unit: fd.get('unit').trim() || 'cases',
         pack_label: fd.get('unit').trim() || 'cases', units_per_pack: 1,
         on_hand: parseFloat(fd.get('onHand')) || 0, par: parseFloat(fd.get('par')) || 1,
         par_manual: false, par_learned: false, cadence: fd.get('cadence'),
@@ -4916,7 +4993,7 @@
         unit_price: null, usage_log: [], discontinued: false
       };
       state.items.push(item);
-      logActivity('ADD ITEM', item.name);
+      logActivity('ADD ITEM', `${item.name} (${loc})`);
       saveState();
       closeModal();
       render();
@@ -5000,7 +5077,7 @@
           if (!newName) { showToast('Enter a name for the new item', 'warn'); return; }
           if (exQ <= 0) { showToast('Enter at least 1 case for the new item', 'warn'); return; }
           if (fd.get('addToCatalog')) {
-            const prefix = newLoc.includes('freezer') ? 'FRZ' : newLoc.includes('cooler') ? 'CLR' : 'STK';
+            const prefix = /freezer/i.test(newLoc) ? 'FRZ' : /cooler/i.test(newLoc) ? 'CLR' : /kitchen dry/i.test(newLoc) ? 'KDG' : 'STK';
             const sku = prefix + '-' + (100 + state.items.length + 1);
             const newItem = {
               id: uid('itm'), sku, name: newName, location: newLoc, category: 'General',
@@ -5147,42 +5224,87 @@
     }
 
     if (e.target.id === 'form-suggest-recipe') {
-      const title = String(fd.get('title') || '').trim();
-      const raw = String(fd.get('raw') || '').trim();
-      if (!title || !raw) return;
-      state.recipeSuggestions = state.recipeSuggestions || [];
-      state.recipeSuggestions.unshift({
-        id: uid('rsug'),
-        title,
-        servings: Number(fd.get('servings')) || 65,
-        target_date: String(fd.get('targetDate') || '').trim(),
-        raw,
-        suggested_by: getActiveUser().name,
-        status: 'PENDING',
-        created_at: localDateStr()
-      });
-      logActivity('RECIPE SUGGESTED', `Suggested "${title}"`);
-      closeModal();
-      saveState();
-      render();
-      showToast(`Submitted "${title}" for ADMIN / MANAGER approval!`);
+      let title = String(fd.get('title') || '').trim();
+      let raw = String(fd.get('raw') || '').trim();
+      let serv = Number(fd.get('servings')) || 65;
+      let photoUrl = String(fd.get('photoUrl') || '').trim();
+      const sourceUrl = String(fd.get('url') || '').trim();
+      const targetDate = String(fd.get('targetDate') || '').trim();
+
+      const finalizeSuggestion = (finalTitle, finalServ, finalRaw, finalPhoto) => {
+        const parsedRec = parsePastedRecipe(finalTitle + '\nServings: ' + finalServ + '\n' + finalRaw);
+        parsedRec.name = finalTitle;
+        parsedRec.base_servings = finalServ;
+        if (finalPhoto) parsedRec.photo_url = finalPhoto;
+        state.recipeSuggestions = state.recipeSuggestions || [];
+        state.recipeSuggestions.unshift({
+          id: uid('rsug'),
+          title: finalTitle,
+          servings: finalServ,
+          target_date: targetDate,
+          raw: finalRaw,
+          source_url: sourceUrl,
+          parsed_recipe: parsedRec,
+          suggested_by: getActiveUser().name,
+          status: 'PENDING',
+          created_at: localDateStr()
+        });
+        const mgrs = (state.users || []).filter(u => u.active !== false && ['ADMIN', 'MANAGER'].includes(normalizeRole(u.role)));
+        const summary = `${finalTitle} (Base ${finalServ}${targetDate ? ', target ' + targetDate : ''}, ${(parsedRec.ingredients || []).length} ingredients) suggested by ${getActiveUser().name}`;
+        state.messages = state.messages || [];
+        state.messages.push({
+          id: uid('msg'), sender_id: getActiveUser().id, sender_name: getActiveUser().name, sender_role: getActiveUser().role,
+          recipient_id: 'ALL', recipient_name: 'Everyone', priority: 'urgent',
+          body: `Recipe Suggestion for Approval — ${summary}`,
+          created_at_ms: Date.now(), timestamp_label: nowStamp()
+        });
+        logActivity('RECIPE SUGGESTED', `Suggested "${finalTitle}"`);
+        saveState();
+        render();
+        sendBackgroundAlert(mgrs, `Recipe Approval Needed: ${finalTitle}`, `Please review and approve ${summary} in Kitchen & Menu → Recipes.`).then(sent => {
+          if (sent) showToast('Auto-sent background Email alert to Management!');
+        });
+        const links = buildNotifyLinks(mgrs, `Recipe Approval Needed: ${finalTitle}`, `Please review and approve ${summary} in Kitchen & Menu → Recipes.`);
+        openModal('Recipe Suggestion Submitted — Notify Management', `
+          <div class="space-y-3 text-xs">
+            <p><strong>${esc(finalTitle)}</strong> has been formatted and sent to Management for approval.</p>
+            <div class="p-2.5 rounded bg-black/5">${esc(summary)}</div>
+            <div class="flex flex-wrap gap-2">
+              <a href="${links.mailHref}" class="kms-btn-navy flex-1 py-2 text-center font-semibold">Email Management</a>
+              <button type="button" data-close-modal="1" class="kms-btn-alt px-4 py-2 font-semibold">Done</button>
+            </div>
+          </div>
+        `);
+      };
+
+      if (sourceUrl && !raw) {
+        const btn = document.getElementById('btn-submit-sug');
+        if (btn) { btn.disabled = true; btn.textContent = 'Fetching & Submitting...'; }
+        invokeScrapeRecipe({ url: sourceUrl }).then(data => {
+          if (!data || !data.ok || !data.recipe) throw new Error((data && data.error) || 'Could not fetch URL');
+          const rec = data.recipe;
+          const lines = ['Ingredients:', ...(rec.ingredients || [])];
+          if (rec.steps && rec.steps.length) lines.push('', 'Directions:', ...rec.steps.map((st, idx) => `${idx + 1}. ${st}`));
+          finalizeSuggestion(title || rec.name || 'Suggested Recipe', Number(rec.base_servings) || serv, lines.join('\n'), photoUrl || rec.image || '');
+        }).catch(err => {
+          showToast(String(err.message || err), 'warn');
+        }).finally(() => {
+          if (btn) { btn.disabled = false; btn.textContent = 'Submit & Notify Management'; }
+        });
+        return;
+      }
+
+      if (!title || !raw) { showToast('Enter a recipe URL or title + ingredients/directions', 'warn'); return; }
+      finalizeSuggestion(title, serv, raw, photoUrl);
       return;
     }
+
     function importRecipeFromUrl(targetUrl, btn) {
       const origTxt = btn ? btn.textContent : 'Import';
       if (btn) { btn.disabled = true; btn.textContent = 'Importing...'; }
-      fetch(SUPABASE_URL + '/functions/v1/scrape-recipe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-        },
-        body: JSON.stringify({ url: targetUrl })
-      }).then(async res => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok || !data.recipe) {
-          throw new Error(data.error || ('Import failed (HTTP ' + res.status + ')'));
+      invokeScrapeRecipe({ url: targetUrl }).then(data => {
+        if (!data || !data.ok || !data.recipe) {
+          throw new Error((data && data.error) || 'Import failed');
         }
         const rawRec = data.recipe;
         const baseServ = Math.max(1, Number(rawRec.base_servings) || 8);
@@ -5231,17 +5353,8 @@
       state._webRecQuery = q;
       const btn = document.getElementById('btn-search-web-rec');
       if (btn) { btn.disabled = true; btn.textContent = 'Searching...'; }
-      fetch(SUPABASE_URL + '/functions/v1/scrape-recipe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-        },
-        body: JSON.stringify({ query: q })
-      }).then(async res => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok || !Array.isArray(data.results)) throw new Error('fallback');
+      invokeScrapeRecipe({ query: q }).then(data => {
+        if (!data || !data.ok || !Array.isArray(data.results)) throw new Error('fallback');
         state._webRecResults = data.results;
         render();
       }).catch(() => {
