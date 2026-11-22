@@ -1,5 +1,8 @@
 // Supabase Edge Function: scrape-recipe
 // Deploy in Supabase Dashboard -> Edge Functions -> Create a new function named "scrape-recipe"
+// Supports both:
+//   1) POST { "query": "meatloaf" } -> searches Budget Bytes, Skinnytaste, Sally's Baking Addiction, TheMealDB, and DummyJSON
+//   2) POST { "url": "https://..." } -> scrapes Schema.org Recipe JSON-LD from a recipe page
 // Free tier: included in Supabase Free plan (up to 500,000 invocations/month, no extra API keys needed).
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -9,13 +12,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const BROWSER_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
 function decodeEntities(str: string): string {
   return String(str || "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&#39;|&apos;|&#8217;/g, "'")
+    .replace(/&#8211;/g, "-")
     .replace(/&nbsp;/g, " ")
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
     .replace(/<[^>]+>/g, " ")
@@ -82,14 +92,129 @@ function findRecipeNode(node: unknown): Record<string, unknown> | null {
   return null;
 }
 
+async function fetchJsonSafe(url: string) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const res = await fetch(url, { headers: BROWSER_HEADERS, signal: ctrl.signal });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function searchAllRecipeSources(query: string) {
+  const q = encodeURIComponent(query);
+  const wpSites = [
+    { name: "Budget Bytes", base: "https://www.budgetbytes.com/wp-json/wp/v2/posts?per_page=8&search=" },
+    { name: "Skinnytaste", base: "https://www.skinnytaste.com/wp-json/wp/v2/posts?per_page=6&search=" },
+    { name: "Sally's Baking", base: "https://sallysbakingaddiction.com/wp-json/wp/v2/posts?per_page=6&search=" },
+  ];
+
+  const [mdb, dj, ...wpResults] = await Promise.all([
+    fetchJsonSafe(`https://www.themealdb.com/api/json/v1/1/search.php?s=${q}`),
+    fetchJsonSafe(`https://dummyjson.com/recipes/search?q=${q}`),
+    ...wpSites.map((s) => fetchJsonSafe(s.base + q)),
+  ]);
+
+  const results: Array<Record<string, unknown>> = [];
+  const seen = new Set<string>();
+
+  // 1. WordPress Recipe Sites (Budget Bytes, Skinnytaste, Sally's Baking)
+  wpSites.forEach((site, idx) => {
+    const posts = wpResults[idx];
+    if (!Array.isArray(posts)) return;
+    posts.forEach((p: Record<string, unknown>) => {
+      const titleObj = p.title as Record<string, unknown> | undefined;
+      const title = decodeEntities(String(titleObj?.rendered || ""));
+      const link = String(p.link || "");
+      const key = title.toLowerCase();
+      if (!title || !link || seen.has(key)) return;
+      seen.add(key);
+      results.push({
+        uid: `wp-${site.name.toLowerCase().replace(/[^a-z]/g, "")}-${p.id}`,
+        type: "url",
+        title,
+        subtitle: site.name,
+        url: link,
+      });
+    });
+  });
+
+  // 2. TheMealDB
+  if (mdb && Array.isArray(mdb.meals)) {
+    mdb.meals.forEach((m: Record<string, unknown>) => {
+      const title = String(m.strMeal || "").trim();
+      const key = title.toLowerCase();
+      if (!title || seen.has(key)) return;
+      seen.add(key);
+      const rawLines: string[] = [];
+      for (let k = 1; k <= 20; k++) {
+        const ing = String(m["strIngredient" + k] || "").trim();
+        const meas = String(m["strMeasure" + k] || "").trim();
+        if (ing) rawLines.push((meas ? meas + " " : "") + ing);
+      }
+      results.push({
+        uid: "mdb-" + m.idMeal,
+        type: "direct",
+        title,
+        category: String(m.strCategory || "Main Entree"),
+        subtitle: `TheMealDB · ${m.strCategory || "Main"}${m.strArea ? " · " + m.strArea : ""}`,
+        base_servings: 4,
+        prep_min: 20,
+        cook_min: 35,
+        rawLines,
+        steps: String(m.strInstructions || "").split(/\r?\n+/).map((s) => s.trim()).filter(Boolean),
+      });
+    });
+  }
+
+  // 3. DummyJSON Recipes
+  if (dj && Array.isArray(dj.recipes)) {
+    dj.recipes.forEach((d: Record<string, unknown>) => {
+      const title = String(d.name || "").trim();
+      const key = title.toLowerCase();
+      if (!title || seen.has(key)) return;
+      seen.add(key);
+      const mealType = Array.isArray(d.mealType) && d.mealType[0] ? String(d.mealType[0]) : "Main Entree";
+      results.push({
+        uid: "dj-" + d.id,
+        type: "direct",
+        title,
+        category: mealType,
+        subtitle: `Open Recipe · ${d.cuisine || "Classic"}${d.servings ? " · Serves " + d.servings : ""}`,
+        base_servings: Number(d.servings) || 4,
+        prep_min: Number(d.prepTimeMinutes) || 20,
+        cook_min: Number(d.cookTimeMinutes) || 35,
+        rawLines: Array.isArray(d.ingredients) ? d.ingredients : [],
+        steps: Array.isArray(d.instructions) ? d.instructions : [],
+      });
+    });
+  }
+
+  return results;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { url } = await req.json();
-    const target = String(url || "").trim();
+    const body = await req.json();
+    const query = String(body?.query || "").trim();
+    if (query) {
+      const results = await searchAllRecipeSources(query);
+      return new Response(JSON.stringify({ ok: true, results }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const target = String(body?.url || "").trim();
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(target);
@@ -106,15 +231,13 @@ serve(async (req) => {
       });
     }
 
-    const res = await fetch(parsedUrl.toString(), {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; SalvationArmyKMS/1.0; +https://supabase.com)",
-        "Accept": "text/html,application/xhtml+xml",
-      },
-    });
+    const res = await fetch(parsedUrl.toString(), { headers: BROWSER_HEADERS });
     if (!res.ok) {
-      return new Response(JSON.stringify({ error: `Site returned HTTP ${res.status}` }), {
-        status: 502,
+      const msg = res.status === 403
+        ? `${parsedUrl.hostname} blocks automated imports (HTTP 403). Copy & paste the recipe text into "Add / Paste a Recipe" below.`
+        : `${parsedUrl.hostname} returned HTTP ${res.status}`;
+      return new Response(JSON.stringify({ error: msg }), {
+        status: res.status === 403 ? 403 : 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

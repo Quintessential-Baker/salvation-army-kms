@@ -2373,15 +2373,15 @@
                     <span>Results for "${esc(state._webRecQuery)}"</span>
                     <a href="https://www.google.com/search?q=${encodeURIComponent(state._webRecQuery + ' recipe (site:allrecipes.com OR site:budgetbytes.com OR site:simplyrecipes.com)')}" target="_blank" rel="noopener noreferrer" class="underline font-semibold text-[#b3122b]">Search Recipe Sites ↗</a>
                   </div>
-                  ${!(state._webRecResults || []).length ? '<p class="text-[11px] opacity-70">No direct matches found — try Search Recipe Sites ↗ and paste the URL below.</p>' : (state._webRecResults || []).slice(0, 6).map(m => `
+                  ${!(state._webRecResults || []).length ? '<p class="text-[11px] opacity-70">No direct matches found — try Search Recipe Sites ↗ and paste the URL below.</p>' : `<div class="max-h-56 overflow-y-auto space-y-1.5 pr-0.5">${(state._webRecResults || []).slice(0, 20).map(m => `
                     <div class="p-2 rounded border border-[var(--line)] flex items-center justify-between gap-2 text-xs">
                       <div class="min-w-0">
-                        <div class="font-bold truncate">${esc(m.strMeal)}</div>
-                        <div class="text-[10px] opacity-65">${esc(m.strCategory || 'Main')}${m.strArea ? ' · ' + esc(m.strArea) : ''}</div>
+                        <div class="font-bold truncate">${esc(m.title)}</div>
+                        <div class="text-[10px] opacity-65">${esc(m.subtitle || 'Main')}</div>
                       </div>
-                      <button type="button" data-import-mealdb="${esc(m.idMeal)}" class="kms-btn-ok px-2.5 py-1 text-[11px] shrink-0">Import</button>
+                      <button type="button" data-import-mealdb="${esc(m.uid)}" class="kms-btn-ok px-2.5 py-1 text-[11px] shrink-0">Import</button>
                     </div>
-                  `).join('')}
+                  `).join('')}</div>`}
                 </div>
               ` : ''}
               <form id="form-import-recipe-url" class="flex gap-1.5 pt-2 border-t border-[var(--line)]/60">
@@ -3919,17 +3919,16 @@
     const importMealBtn = e.target.closest('[data-import-mealdb]');
     if (importMealBtn) {
       if (!isMgmtOrHigher()) { showToast('Only Management can import recipes', 'warn'); return; }
-      const meal = (state._webRecResults || []).find(m => String(m.idMeal) === String(importMealBtn.dataset.importMealdb));
+      const meal = (state._webRecResults || []).find(m => String(m.uid) === String(importMealBtn.dataset.importMealdb));
       if (meal) {
-        const baseServ = 4;
-        const rawLines = [];
-        for (let k = 1; k <= 20; k++) {
-          const ing = String(meal['strIngredient' + k] || '').trim();
-          const meas = String(meal['strMeasure' + k] || '').trim();
-          if (ing) rawLines.push((meas ? meas + ' ' : '') + ing);
+        if (meal.type === 'url' && meal.url) {
+          importRecipeFromUrl(meal.url, importMealBtn);
+          return;
         }
-        const steps = String(meal.strInstructions || '').split(/\\r?\\n+/).map(s => s.trim()).filter(Boolean);
-        const allText = (meal.strMeal || '') + ' ' + rawLines.join(' ');
+        const baseServ = meal.base_servings || 4;
+        const rawLines = meal.rawLines || [];
+        const steps = meal.steps || [];
+        const allText = (meal.title || '') + ' ' + rawLines.join(' ');
         const allergenKeywords = {
           milk: /milk|cheese|butter|cream|yogurt|dairy/i,
           eggs: /egg/i,
@@ -3944,11 +3943,11 @@
         const allergens = Object.keys(allergenKeywords).filter(a => allergenKeywords[a].test(allText));
         const r = {
           id: uid('rec'),
-          name: meal.strMeal || 'Imported Recipe',
-          category: meal.strCategory || 'Main Entree',
+          name: meal.title || 'Imported Recipe',
+          category: meal.category || 'Main Entree',
           base_servings: baseServ,
-          prep_min: 20,
-          cook_min: 35,
+          prep_min: meal.prep_min || 20,
+          cook_min: meal.cook_min || 35,
           allergens,
           steps,
           ingredients: rawLines.map(ln => parseIngredientLine(ln, baseServ))
@@ -4929,30 +4928,8 @@
       showToast(`Submitted "${title}" for ADMIN / MANAGER approval!`);
       return;
     }
-    if (e.target.id === 'form-search-web-recipes') {
-      const q = String(fd.get('q') || '').trim();
-      if (!q) return;
-      state._webRecQuery = q;
-      const btn = document.getElementById('btn-search-web-rec');
-      if (btn) { btn.disabled = true; btn.textContent = 'Searching...'; }
-      fetch('https://www.themealdb.com/api/json/v1/1/search.php?s=' + encodeURIComponent(q))
-        .then(r => r.json())
-        .then(data => {
-          state._webRecResults = Array.isArray(data.meals) ? data.meals : [];
-          render();
-        })
-        .catch(() => {
-          state._webRecResults = [];
-          render();
-          showToast('Web search offline — try Search Recipe Sites ↗ or paste a URL', 'warn');
-        });
-      return;
-    }
-
-    if (e.target.id === 'form-import-recipe-url') {
-      if (!isMgmtOrHigher()) { showToast('Only Management can import recipes', 'warn'); return; }
-      const targetUrl = String(fd.get('url') || '').trim();
-      const btn = document.getElementById('btn-import-url');
+    function importRecipeFromUrl(targetUrl, btn) {
+      const origTxt = btn ? btn.textContent : 'Import';
       if (btn) { btn.disabled = true; btn.textContent = 'Importing...'; }
       fetch(SUPABASE_URL + '/functions/v1/scrape-recipe', {
         method: 'POST',
@@ -4999,12 +4976,92 @@
         logActivity('RECIPE IMPORTED', `${r.name} (from URL)`);
         saveState();
         render();
-        showToast(`Imported ${r.name} (base ${baseServ}, scaled to ${state.recipeScale})`);
+        showToast(`Imported "${r.name}" (base ${baseServ}, scaled to ${state.recipeScale})`);
       }).catch(err => {
-        showToast(String(err.message || err) + ' — deploy scrape-recipe Edge Function or paste recipe text below.', 'warn');
+        showToast(String(err.message || err), 'warn');
       }).finally(() => {
-        if (btn) { btn.disabled = false; btn.textContent = 'Import'; }
+        if (btn) { btn.disabled = false; btn.textContent = origTxt; }
       });
+    }
+
+    if (e.target.id === 'form-search-web-recipes') {
+      const q = String(fd.get('q') || '').trim();
+      if (!q) return;
+      state._webRecQuery = q;
+      const btn = document.getElementById('btn-search-web-rec');
+      if (btn) { btn.disabled = true; btn.textContent = 'Searching...'; }
+      fetch(SUPABASE_URL + '/functions/v1/scrape-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({ query: q })
+      }).then(async res => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok || !Array.isArray(data.results)) throw new Error('fallback');
+        state._webRecResults = data.results;
+        render();
+      }).catch(() => {
+        Promise.allSettled([
+          fetch('https://www.themealdb.com/api/json/v1/1/search.php?s=' + encodeURIComponent(q)).then(r => r.json()),
+          fetch('https://dummyjson.com/recipes/search?q=' + encodeURIComponent(q)).then(r => r.json())
+        ]).then(([mdbRes, djRes]) => {
+          const results = [];
+          const seen = new Set();
+          if (mdbRes.status === 'fulfilled' && Array.isArray(mdbRes.value.meals)) {
+            mdbRes.value.meals.forEach(m => {
+              const key = String(m.strMeal || '').toLowerCase();
+              if (!key || seen.has(key)) return;
+              seen.add(key);
+              const rawLines = [];
+              for (let k = 1; k <= 20; k++) {
+                const ing = String(m['strIngredient' + k] || '').trim();
+                const meas = String(m['strMeasure' + k] || '').trim();
+                if (ing) rawLines.push((meas ? meas + ' ' : '') + ing);
+              }
+              results.push({
+                uid: 'mdb-' + m.idMeal, type: 'direct', title: m.strMeal,
+                category: m.strCategory || 'Main Entree',
+                subtitle: 'TheMealDB · ' + (m.strCategory || 'Main') + (m.strArea ? ' · ' + m.strArea : ''),
+                base_servings: 4, prep_min: 20, cook_min: 35, rawLines,
+                steps: String(m.strInstructions || '').split(/\r?\n+/).map(s => s.trim()).filter(Boolean)
+              });
+            });
+          }
+          if (djRes.status === 'fulfilled' && Array.isArray(djRes.value.recipes)) {
+            djRes.value.recipes.forEach(d => {
+              const key = String(d.name || '').toLowerCase();
+              if (!key || seen.has(key)) return;
+              seen.add(key);
+              results.push({
+                uid: 'dj-' + d.id, type: 'direct', title: d.name,
+                category: (Array.isArray(d.mealType) && d.mealType[0]) || 'Main Entree',
+                subtitle: 'Open Recipe · ' + (d.cuisine || 'Classic') + (d.servings ? ' · Serves ' + d.servings : ''),
+                base_servings: Number(d.servings) || 4,
+                prep_min: Number(d.prepTimeMinutes) || 20,
+                cook_min: Number(d.cookTimeMinutes) || 35,
+                rawLines: Array.isArray(d.ingredients) ? d.ingredients : [],
+                steps: Array.isArray(d.instructions) ? d.instructions : []
+              });
+            });
+          }
+          state._webRecResults = results;
+          render();
+        }).catch(() => {
+          state._webRecResults = [];
+          render();
+          showToast('Web search offline — try Search Recipe Sites ↗ or paste a URL', 'warn');
+        });
+      });
+      return;
+    }
+
+    if (e.target.id === 'form-import-recipe-url') {
+      if (!isMgmtOrHigher()) { showToast('Only Management can import recipes', 'warn'); return; }
+      const targetUrl = String(fd.get('url') || '').trim();
+      importRecipeFromUrl(targetUrl, document.getElementById('btn-import-url'));
       return;
     }
 
