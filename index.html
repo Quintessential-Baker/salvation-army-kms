@@ -3628,6 +3628,7 @@
     state.chatLastRead[u.id] = Date.now();
     updateChatBadge();
     const target = state._chatTarget || 'ALL';
+    const editingId = state._editingMsgId || null;
     const others = (state.users || []).filter(x => x.active !== false && x.id !== u.id);
     const visibleMsgs = (state.messages || []).filter(m => {
       if (target === 'ALL') return m.recipient_id === 'ALL' || !m.recipient_id;
@@ -3644,19 +3645,50 @@
 
     openModal('Kitchen Alerts & Private DMs', `
       <div class="space-y-3">
-        <div class="flex flex-wrap items-center gap-1.5 text-xs">
-          <button type="button" data-chat-target="ALL" class="px-2.5 py-1 rounded-lg font-bold border ${target === 'ALL' ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">Alert All (Broadcast)</button>
-          ${others.map(o => `
-            <button type="button" data-chat-target="${o.id}" class="px-2.5 py-1 rounded-lg font-semibold border ${target === o.id ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">DM: ${esc(o.name)} (${esc(o.role)})</button>
-          `).join('')}
+        <div class="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" data-chat-target="ALL" class="px-2.5 py-1 rounded-lg font-bold border ${target === 'ALL' ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">Alert All (Broadcast)</button>
+            ${others.map(o => `
+              <button type="button" data-chat-target="${o.id}" class="px-2.5 py-1 rounded-lg font-semibold border ${target === o.id ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">DM: ${esc(o.name)} (${esc(o.role)})</button>
+            `).join('')}
+          </div>
+          ${visibleMsgs.length && isMgmtOrHigher(u) ? `<button type="button" id="btn-clear-chat-thread" class="text-[11px] font-semibold text-red-500 hover:underline px-1.5 py-1">Clear Thread</button>` : ''}
         </div>
         <div class="max-h-60 overflow-y-auto space-y-2 p-2 rounded-lg bg-black/5">
-          ${!visibleMsgs.length ? `<p class="text-xs opacity-60 text-center py-6">${target === 'ALL' ? 'No broadcast alerts yet.' : 'No private messages with ' + esc(targetUser ? targetUser.name : 'user') + ' yet.'}</p>` : visibleMsgs.map(m => `
-            <div class="p-2 rounded-lg kms-card text-xs ${m.sender_id === u.id ? 'border-l-4 border-l-[#1b365d]' : ''}">
-              <div class="font-bold">${esc(m.sender_name)} ${m.recipient_id && m.recipient_id !== 'ALL' ? `<span class="opacity-65 font-normal">&rarr; ${esc(m.recipient_name)} (Private)</span>` : ''} <span class="opacity-60 font-normal">(${esc(m.timestamp_label)})</span> ${m.priority === 'urgent' ? '<span class="tag tag-OUT">URGENT</span>' : ''}</div>
-              <div class="mt-0.5">${esc(m.body)}</div>
+          ${!visibleMsgs.length ? `<p class="text-xs opacity-60 text-center py-6">${target === 'ALL' ? 'No broadcast alerts yet.' : 'No private messages with ' + esc(targetUser ? targetUser.name : 'user') + ' yet.'}</p>` : visibleMsgs.map(m => {
+            const canEditMsg = (m.sender_id === u.id) || isMgmtOrHigher(u);
+            const isEditing = editingId === m.id;
+            return `
+            <div class="p-2.5 rounded-lg kms-card text-xs ${m.sender_id === u.id ? 'border-l-4 border-l-[#1b365d]' : ''}">
+              <div class="flex items-start justify-between gap-2">
+                <div class="font-bold">
+                  ${esc(m.sender_name)}
+                  ${m.recipient_id && m.recipient_id !== 'ALL' ? `<span class="opacity-65 font-normal">&rarr; ${esc(m.recipient_name)} (Private)</span>` : ''}
+                  <span class="opacity-60 font-normal">(${esc(m.timestamp_label)})</span>
+                  ${m.priority === 'urgent' ? '<span class="tag tag-OUT ml-1">URGENT</span>' : ''}
+                  ${m.edited ? '<span class="opacity-55 font-normal italic ml-1">(edited)</span>' : ''}
+                </div>
+                ${canEditMsg && !isEditing ? `
+                  <div class="flex items-center gap-2 shrink-0 text-[11px]">
+                    <button type="button" data-edit-msg="${esc(m.id)}" class="font-semibold text-[var(--navy)] hover:underline">Edit</button>
+                    <button type="button" data-del-msg="${esc(m.id)}" class="font-semibold text-red-500 hover:underline">Delete</button>
+                  </div>
+                ` : ''}
+              </div>
+              ${isEditing ? `
+                <form class="form-edit-msg mt-2 space-y-2" data-msg-id="${esc(m.id)}">
+                  <textarea name="body" rows="2" required class="kms-input w-full text-xs leading-relaxed">${esc(m.body)}</textarea>
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <label class="flex items-center gap-1.5 text-xs font-bold cursor-pointer"><input type="checkbox" name="urgent" ${m.priority === 'urgent' ? 'checked' : ''} /> Urgent</label>
+                    <div class="flex gap-1.5">
+                      <button type="button" id="btn-cancel-edit-msg" class="kms-btn-alt px-2.5 py-1 text-xs">Cancel</button>
+                      <button type="submit" class="kms-btn-ok px-3 py-1 text-xs">Update</button>
+                    </div>
+                  </div>
+                </form>
+              ` : `<div class="mt-1 whitespace-pre-line">${esc(m.body)}</div>`}
             </div>
-          `).join('')}
+          `; }).join('')}
         </div>
         <form id="form-chat" class="space-y-2">
           <input type="hidden" name="recipientId" value="${esc(target)}" />
@@ -3722,17 +3754,54 @@
     if (e.target.id === 'modal-close' || e.target.id === 'modal-backdrop') { closeModal(); return; }
     if (e.target.closest('[data-close-modal]')) { closeModal(); if (!e.target.closest('[data-tab]')) return; }
     if (e.target.closest('#btn-switch-user')) { showSwitchUserModal(); return; }
-    if (e.target.closest('#btn-open-chat')) { showChatModal(); return; }
+    if (e.target.closest('#btn-open-chat')) { state._editingMsgId = null; showChatModal(); return; }
     const chatTgtBtn = e.target.closest('[data-chat-target]');
-    if (chatTgtBtn) { state._chatTarget = chatTgtBtn.dataset.chatTarget; showChatModal(); return; }
-    if (e.target.closest('#btn-lock-app')) { const curU = getActiveUser(); logActivity('LOGOUT', `${curU.name} locked / signed out`); state.isLocked = true; delete state._sbAuthEmail; setSessionUnlocked(false); if (sbClient && sbClient.auth) { try { sbClient.auth.signOut(); } catch (err) {} } saveState(); render(); return; }
-    if (e.target.id === 'btn-undo' || e.target.id === 'btn-stock-undo') { doUndo(); return; }
-    if (e.target.id === 'btn-print-qr') { showQrLabelsModal(); return; }
-    if (e.target.id === 'btn-print-page') { window.print(); return; }
-    if (e.target.id === 'btn-text-size') {
-      state.textZoom = ((state.textZoom || 0) + 1) % 3;
-      document.documentElement.style.fontSize = ['100%', '112.5%', '125%'][state.textZoom];
+    if (chatTgtBtn) { state._chatTarget = chatTgtBtn.dataset.chatTarget; state._editingMsgId = null; showChatModal(); return; }
+    const editMsgBtn = e.target.closest('[data-edit-msg]');
+    if (editMsgBtn) {
+      state._editingMsgId = editMsgBtn.dataset.editMsg;
+      showChatModal();
+      return;
+    }
+    if (e.target.id === 'btn-cancel-edit-msg') {
+      state._editingMsgId = null;
+      showChatModal();
+      return;
+    }
+    const delMsgBtn = e.target.closest('[data-del-msg]');
+    if (delMsgBtn) {
+      const msgId = delMsgBtn.dataset.delMsg;
+      const u = getActiveUser();
+      const targetMsg = (state.messages || []).find(m => m.id === msgId);
+      if (targetMsg && (targetMsg.sender_id === u.id || isMgmtOrHigher(u))) {
+        state.messages = (state.messages || []).filter(m => m.id !== msgId);
+        if (state._editingMsgId === msgId) state._editingMsgId = null;
+        if (sbClient) sbClient.from('kms_messages').delete().eq('id', msgId).then(() => {});
+        logActivity('CHAT DELETED', `Deleted message from ${targetMsg.sender_name}`);
+        saveState();
+        updateChatBadge();
+        showChatModal();
+        showToast('Message deleted');
+      }
+      return;
+    }
+    if (e.target.id === 'btn-clear-chat-thread') {
+      if (!isMgmtOrHigher()) { showToast('Only Management can clear a chat thread', 'warn'); return; }
+      const u = getActiveUser();
+      const target = state._chatTarget || 'ALL';
+      const toDelete = (state.messages || []).filter(m => {
+        if (target === 'ALL') return m.recipient_id === 'ALL' || !m.recipient_id;
+        return (m.sender_id === u.id && m.recipient_id === target) || (m.sender_id === target && m.recipient_id === u.id);
+      }).map(m => m.id);
+      if (!toDelete.length) return;
+      state.messages = (state.messages || []).filter(m => !toDelete.includes(m.id));
+      state._editingMsgId = null;
+      if (sbClient) sbClient.from('kms_messages').delete().in('id', toDelete).then(() => {});
+      logActivity('CHAT CLEARED', `Cleared ${toDelete.length} message(s) in ${target === 'ALL' ? 'Broadcast' : 'DM'}`);
       saveState();
+      updateChatBadge();
+      showChatModal();
+      showToast(`Cleared ${toDelete.length} message(s)`);
       return;
     }
     if (e.target.id === 'btn-theme-toggle') {
@@ -5751,21 +5820,21 @@
       showToast(`Updated ${u.name} (${u.role})`);
       return;
     }
-
-    if (e.target.id === 'form-add-user') {
-      const me = getActiveUser();
-      const reqRole = normalizeRole(fd.get('role'));
-      if (!isMgmtOrHigher(me) || !(isAdminRole(me) ? (ROLE_RANK[reqRole] || 0) <= (ROLE_RANK[normalizeRole(me.role)] || 0) : (ROLE_RANK[reqRole] || 0) < (ROLE_RANK[normalizeRole(me.role)] || 0))) {
-        showToast('You can only create accounts with a role lower than yours', 'warn');
-        return;
+    if (e.target.classList && e.target.classList.contains('form-edit-msg')) {
+      const msgId = e.target.dataset.msgId;
+      const u = getActiveUser();
+      const m = (state.messages || []).find(x => x.id === msgId);
+      const newBody = String(fd.get('body') || '').trim();
+      if (m && newBody && (m.sender_id === u.id || isMgmtOrHigher(u))) {
+        m.body = newBody;
+        m.priority = fd.get('urgent') ? 'urgent' : 'normal';
+        m.edited = true;
+        state._editingMsgId = null;
+        logActivity('CHAT EDITED', `Updated message in ${m.recipient_id === 'ALL' ? 'Broadcast' : 'DM'}`);
+        saveState();
+        showChatModal();
+        showToast('Message updated');
       }
-      const u = makeUser(uid('usr'), fd.get('name').trim(), reqRole, fd.get('initials').trim().toUpperCase(), fd.get('pin'), true);
-      u.email = String(fd.get('email') || '').trim();
-      state.users.push(u);
-      logActivity('ADD USER', `${u.name} (${u.role})`);
-      saveState();
-      render();
-      showToast(`Added ${u.name}`);
       return;
     }
 
