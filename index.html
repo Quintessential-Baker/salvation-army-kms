@@ -241,7 +241,7 @@
     { label: "Freezer Backup (90d)", cat: "LEFTOVER", days: 90, zone: "Walk-in freezer" }
   ];
 
-  // Local-only fallback SHA-256 PIN Hashing (used only before tablet connects to Supabase)
+  // Offline fallback SHA-256 PIN Hashing (used only when device has no internet)
   const WEAK_PINS = ['0000','1111','2222','9999','1234','12345','123456','000000'];
   function sha256hex(str) {
     const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
@@ -1188,7 +1188,7 @@
     document.getElementById('cf-yes').onclick = () => { closeModal(); onConfirm(); };
   }
 
-  // Supabase Relational Sync Engine (Option C: Shared Tablet Session + Server-Checked PINs)
+  // Direct Supabase Sync + Server-Checked Bcrypt PINs (No separate tablet login required)
   function updateSyncUI() {
     const dot = document.getElementById('sync-dot');
     const lbl = document.getElementById('sync-label');
@@ -1205,28 +1205,18 @@
     }
   }
 
-  let tabletSession = null;
   let sessionPin = '';
-  const cloudAuth = () => !!(sbClient && tabletSession);
+  const cloudAuth = () => !!sbClient;
   const cloudManaged = () => !!state.cloudManaged;
 
   async function edgeFetch(fnName, init) {
     if (!sbClient) throw new Error('Supabase client not initialized');
-    let { data } = await sbClient.auth.getSession();
-    let sess = data && data.session;
-    if (sess && sess.expires_at && (sess.expires_at * 1000 - Date.now() < 60000)) {
-      const refreshed = await sbClient.auth.refreshSession();
-      sess = (refreshed.data && refreshed.data.session) || sess;
-    }
-    if (!sess || !sess.access_token) {
-      throw new Error('Connect this tablet to the cloud first (Lock screen -> Connect This Tablet)');
-    }
     return fetch(SUPABASE_URL + '/functions/v1/' + fnName, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + sess.access_token
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
       },
       body: init.body
     });
@@ -1276,7 +1266,7 @@
   }
 
   async function syncToSupabase() {
-    if (!sbClient || !tabletSession || syncStatus === 'local') return;
+    if (!sbClient || syncStatus === 'local') return;
     try {
       await Promise.all([
         sbClient.from('kms_inventory_items').upsert(state.items.map(x => ({
@@ -1389,7 +1379,6 @@
 
   async function refreshFromCloud() {
     if (!sbClient || sbRefreshing) return;
-    if (!tabletSession) { syncStatus = 'local'; updateSyncUI(); return; }
     sbRefreshing = true;
     try {
       const { data: invData, error } = await sbClient.from('kms_inventory_items').select('*');
@@ -1464,7 +1453,7 @@
   }
 
   async function startCloud() {
-    if (!sbClient || !tabletSession) { syncStatus = 'local'; updateSyncUI(); return; }
+    if (!sbClient) { syncStatus = 'local'; updateSyncUI(); return; }
     if (syncStatus !== 'live') { syncStatus = 'connecting'; updateSyncUI(); }
     await refreshFromCloud();
     if (!sbRealtimeChannel && sbClient) {
@@ -1484,13 +1473,9 @@
     }
     if (!sbClient) {
       sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      sbClient.auth.onAuthStateChange((evt, sess) => {
-        tabletSession = sess || null;
-        if (!sess) { syncStatus = 'local'; updateSyncUI(); }
-      });
     }
-    try { const { data } = await sbClient.auth.getSession(); tabletSession = (data && data.session) || null; } catch (e) { tabletSession = null; }
-    if (!tabletSession) { syncStatus = 'local'; updateSyncUI(); render(); return; }
+    state.cloudManaged = true;
+    stripLocalPins();
     await startCloud();
   }
 
@@ -1631,17 +1616,6 @@
             <div id="unlock-err" class="text-xs font-bold text-red-600 hidden">Incorrect PIN.</div>
             <button type="submit" class="kms-btn-primary w-full py-2.5 text-sm">Sign In &amp; Unlock</button>
           </form>
-          ${cloudManaged() && !cloudAuth() ? '<div class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">This tablet is not connected to the cloud. Connect it below before signing in.</div>' : ''}
-          <details class="pt-3 border-t border-[var(--line)] text-xs" ${cloudManaged() && !cloudAuth() ? 'open' : ''}>
-            <summary class="cursor-pointer font-semibold opacity-75 hover:opacity-100">${cloudAuth() ? 'Tablet connected to cloud ✓' : 'Connect This Tablet (one-time setup)'}</summary>
-            <form id="form-sb-auth" class="space-y-2.5 mt-3">
-              <p class="opacity-70">Sign in once with the shared kitchen-tablet account (Supabase Dashboard &rarr; Authentication &rarr; Users). This only unlocks cloud access. Everyone still signs in with their own PIN.</p>
-              <input name="email" type="email" required placeholder="Kitchen tablet account email" class="kms-input w-full text-xs" />
-              <input name="password" type="password" required placeholder="Kitchen tablet account password" class="kms-input w-full text-xs" />
-              <div id="sb-auth-err" class="text-xs font-bold text-red-600 hidden"></div>
-              <button type="submit" class="kms-btn-navy w-full py-2 text-xs">Connect Tablet</button>
-            </form>
-          </details>
         </div>
       `;
       checkMandatoryModals();
@@ -3547,7 +3521,7 @@
     `;
   }
 
-  // Modals: Switch User, Announcement, Chat, QR Labels
+  // Modals: Switch User, Announcement, Chat, QR Labels, Backup
   function showSwitchUserModal() {
     const active = sortUsersByRoleAndName(state.users.filter(u => u.active !== false));
     openModal('Switch User (PIN Required)', `
@@ -3654,7 +3628,7 @@
   }
 
   async function sendBackgroundAlert(recipients, subject, text) {
-    if (!sbClient || !tabletSession) return false;
+    if (!sbClient) return false;
     const uniqueTo = Array.from(new Set((recipients || []).map(r => r.email).filter(Boolean)));
     if (!uniqueTo.length) return false;
     try {
@@ -3910,7 +3884,6 @@
       const curU = getActiveUser();
       logActivity('LOGOUT', `${curU.name} locked / signed out`);
       state.isLocked = true;
-      delete state._sbAuthEmail;
       setSessionUnlocked(false);
       sessionPin = '';
       saveState();
@@ -3944,7 +3917,7 @@
     }
     if (e.target.id === 'btn-sb-push') {
       closeModal();
-      if (!tabletSession) { showToast('Connect this tablet to the cloud on the Lock screen first', 'warn'); return; }
+      if (!sbClient) { showToast('Supabase client unavailable', 'warn'); return; }
       syncStatus = 'live';
       updateSyncUI();
       syncToSupabase().then(() => showToast('Pushed local data to Supabase cloud!'));
@@ -4944,8 +4917,8 @@
       }
       if (u) {
         const tmp = randomTempPin();
-        if (cloudManaged()) {
-          if (!cloudAuth() || !sessionPin) { requireRelogin(); return; }
+        if (cloudManaged() && sbClient) {
+          if (!sessionPin) { requireRelogin(); return; }
           rpcSetPin(me.id, sessionPin, u.id, tmp, true).then(res => {
             if (!res || !res.ok) { showToast(pinErrorText(res), 'warn'); return; }
             u.must_change_pin = true;
@@ -5122,10 +5095,10 @@
             showToast('Invalid backup JSON file', 'error');
             return;
           }
-          const wasCloud = cloudManaged();
           state = Object.assign(getDefaultState(), parsed);
           if (Array.isArray(state.recipes)) state.recipes = state.recipes.map(normalizeRecipe);
-          if (wasCloud) { state.cloudManaged = true; stripLocalPins(); }
+          state.cloudManaged = true;
+          stripLocalPins();
           ensureOwnerIntegrity();
           state.isLocked = false;
           setSessionUnlocked(true);
@@ -5259,33 +5232,8 @@
 
   document.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (state.isLocked && !['form-unlock', 'form-sb-auth'].includes(e.target.id)) return;
+    if (state.isLocked && e.target.id !== 'form-unlock') return;
     const fd = new FormData(e.target);
-
-    if (e.target.id === 'form-sb-auth') {
-      const email = String(fd.get('email') || '').trim();
-      const password = String(fd.get('password') || '');
-      const errEl = document.getElementById('sb-auth-err');
-      if (!sbClient || !sbClient.auth) {
-        if (errEl) { errEl.textContent = 'Supabase cloud connection is offline.'; errEl.classList.remove('hidden'); }
-        return;
-      }
-      if (errEl) errEl.classList.add('hidden');
-      sbClient.auth.signInWithPassword({ email, password }).then(async ({ data, error }) => {
-        if (error || !data || !data.session) {
-          if (errEl) { errEl.textContent = (error && error.message) || 'Invalid tablet account credentials.'; errEl.classList.remove('hidden'); }
-          return;
-        }
-        tabletSession = data.session;
-        state.cloudManaged = true;
-        stripLocalPins();
-        saveState();
-        showToast('Tablet connected to cloud');
-        await startCloud();
-        render();
-      });
-      return;
-    }
 
     if (e.target.id === 'form-unlock' || e.target.id === 'form-switch-user') {
       const u = state.users.find(x => x.id === fd.get('userId') && x.active !== false);
@@ -5303,8 +5251,7 @@
         render();
       };
       if (!u) return;
-      if (cloudManaged()) {
-        if (!cloudAuth()) { showErr('Connect this tablet to the cloud first (see below).'); return; }
+      if (sbClient) {
         rpcLogin(u.id, pin).then(res => {
           if (!res || !res.ok) {
             if (res && (res.error === 'bad_pin' || res.error === 'locked')) { logActivity('LOGIN FAILED', `${res.error === 'locked' ? 'Locked-out' : 'Incorrect'} PIN attempt for ${u.name}`); saveState(); }
@@ -5334,8 +5281,8 @@
       if (p1.length < 6 || WEAK_PINS.includes(p1)) { err.textContent = 'Choose a stronger 6+ character PIN.'; err.classList.remove('hidden'); return; }
       if (p1 !== p2) { err.textContent = 'PINs do not match.'; err.classList.remove('hidden'); return; }
       const u = getActiveUser();
-      if (cloudManaged()) {
-        if (!cloudAuth() || !sessionPin) { requireRelogin(); return; }
+      if (sbClient) {
+        if (!sessionPin) { requireRelogin(); return; }
         rpcSetPin(u.id, sessionPin, u.id, p1, false).then(res => {
           if (!res || !res.ok) { err.textContent = pinErrorText(res); err.classList.remove('hidden'); return; }
           sessionPin = p1;
@@ -6051,8 +5998,8 @@
         return;
       }
       const startPin = String(fd.get('pin') || '');
-      if (cloudManaged()) {
-        if (!cloudAuth() || !sessionPin) { requireRelogin(); return; }
+      if (cloudManaged() && sbClient) {
+        if (!sessionPin) { requireRelogin(); return; }
         const nu = { id: uid('usr'), name: fd.get('name').trim(), role: reqRole, initials: fd.get('initials').trim().toUpperCase(),
           must_change_pin: true, active: true, onboarding_completed: false, completed_training_ids: [], email: String(fd.get('email') || '').trim() };
         (async () => {
@@ -6200,7 +6147,6 @@
   function lockOnExit() {
     if (!state.isLocked) logActivity('LOGOUT', `${getActiveUser().name} session ended on exit`);
     state.isLocked = true;
-    delete state._sbAuthEmail;
     setSessionUnlocked(false);
     sessionPin = '';
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
