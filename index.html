@@ -3402,7 +3402,7 @@
       </div>
     `;
   }
- // 8. SAFETY
+  // 8. SAFETY
   function renderSafety(main) {
     const today = localDateStr();
     const log = state.safetyLogs[today] || { temps: {}, cleaning: {} };
@@ -5141,7 +5141,46 @@
       return;
     }
 
-    // Menu Sheet, Clear & Served
+    // Menu Sheet, Bulk Past/Future Menu Entry, Print Suite & Served
+    if (e.target.id === 'btn-open-menu-print-suite') {
+      showMenuPrintSuiteModal('weekly', localDateStr());
+      return;
+    }
+    const printWeekBtn = e.target.closest('[data-print-week-of]');
+    if (printWeekBtn) {
+      showMenuPrintSuiteModal('weekly', printWeekBtn.dataset.printWeekOf);
+      return;
+    }
+    const printPeriodBtn = e.target.closest('[data-menu-print-period]');
+    if (printPeriodBtn) {
+      const curRef = document.getElementById('menu-print-ref-date')?.value || state._menuPrintDate || localDateStr();
+      showMenuPrintSuiteModal(printPeriodBtn.dataset.menuPrintPeriod, curRef);
+      return;
+    }
+    if (e.target.id === 'btn-open-bulk-menu') {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can bulk-edit menus', 'warn'); return; }
+      showBulkMenuModal(addDays(localDateStr(), -30), addDays(localDateStr(), 45));
+      return;
+    }
+    if (e.target.id === 'btn-bmenu-reload') {
+      const s = document.getElementById('bmenu-start')?.value || addDays(localDateStr(), -30);
+      const en = document.getElementById('bmenu-end')?.value || addDays(localDateStr(), 45);
+      showBulkMenuModal(s, en);
+      return;
+    }
+    const bmenuPresetBtn = e.target.closest('[data-bmenu-preset]');
+    if (bmenuPresetBtn) {
+      const today = localDateStr();
+      if (bmenuPresetBtn.dataset.bmenuPreset === 'past60') showBulkMenuModal(addDays(today, -60), today);
+      else showBulkMenuModal(today, addDays(today, 60));
+      return;
+    }
+    const menuRangeBtn = e.target.closest('[data-menu-range]');
+    if (menuRangeBtn) {
+      state._menuViewRange = menuRangeBtn.dataset.menuRange;
+      render();
+      return;
+    }
     const shBtn = e.target.closest('[data-open-sheet]');
     if (shBtn) { state.selectedSheetDate = shBtn.dataset.openSheet; render(); return; }
     if (e.target.id === 'btn-back-menu') { state.selectedSheetDate = null; render(); return; }
@@ -6227,6 +6266,10 @@
   });
 
   document.addEventListener('change', (e) => {
+    if (e.target.id === 'menu-print-ref-date') {
+      showMenuPrintSuiteModal(state._menuPrintPeriod || 'weekly', e.target.value || localDateStr());
+      return;
+    }
     if (e.target.id === 'act-cat-filter') { state._actCat = e.target.value; render(); return; }
     if (e.target.id === 'rec-photo-file') {
       const file = e.target.files && e.target.files[0];
@@ -6874,6 +6917,101 @@
         render();
         showToast(`Updated ${po.po_number}`);
       }
+      return;
+    }
+
+    if (e.target.id === 'form-bulk-menu-paste') {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can bulk-import menus', 'warn'); return; }
+      const lines = String(fd.get('bulkMenuRaw') || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      let count = 0;
+      lines.forEach(ln => {
+        const parts = ln.split(/,|\t/).map(s => s.trim());
+        if (parts.length < 2) return;
+        const ds = parseFlexibleDate(parts[0]);
+        if (!ds) return;
+        const title = cleanItemName(parts[1]);
+        if (!title) return;
+        const isClosed = /closed|holiday/i.test(title) && (parts[2] === '0' || !parts[2]);
+        const matchRec = state.recipes.find(r => r.name.toLowerCase() === title.toLowerCase() || r.name.toLowerCase().includes(title.toLowerCase()));
+        const plan = parts[2] !== undefined && parts[2] !== '' ? Math.max(0, parseInt(parts[2], 10) || 0) : (isClosed ? 0 : forecastWeekday(ds));
+        const hasSrv = parts[3] !== undefined && parts[3] !== '' && !isNaN(parseInt(parts[3], 10));
+        const srv = hasSrv ? Math.max(0, parseInt(parts[3], 10)) : null;
+        const note = parts.slice(4).join(', ');
+
+        let mp = state.menuPlan.find(m => m.service_date === ds);
+        if (!mp) {
+          mp = { id: uid('mp'), service_date: ds, status: 'PLANNED', circumstance: 'Normal Day', note: '', logged_by: '' };
+          state.menuPlan.push(mp);
+        }
+        mp.recipe_id = matchRec ? matchRec.id : '';
+        mp.custom_title = matchRec ? matchRec.name : title;
+        mp.planned_portions = plan;
+        if (isClosed) {
+          mp.status = 'CLOSED';
+          mp.circumstance = 'Closed / Federal Holiday';
+          mp.served_portions = 0;
+        } else if (hasSrv) {
+          mp.served_portions = srv;
+          mp.status = 'SERVED';
+        } else {
+          mp.status = 'PLANNED';
+        }
+        if (note) mp.note = note;
+        count++;
+      });
+      logActivity('BULK MENU PASTE', `Imported ${count} past/future menu day(s)`);
+      saveState();
+      closeModal();
+      render();
+      showToast(`Imported ${count} past/future menu day(s)!`);
+      return;
+    }
+
+    if (e.target.id === 'form-bulk-menu-grid') {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can bulk-edit menus', 'warn'); return; }
+      const start = String(fd.get('rangeStart') || '');
+      const end = String(fd.get('rangeEnd') || '');
+      const dates = allMonTueWedFriBetween(start, end);
+      let updated = 0;
+      dates.forEach(ds => {
+        const recId = String(fd.get('rec_' + ds) || '').trim();
+        const titleRaw = cleanItemName(fd.get('title_' + ds) || '');
+        const plan = Math.max(0, parseInt(fd.get('plan_' + ds), 10) || 0);
+        const srvRaw = String(fd.get('srv_' + ds) ?? '').trim();
+        const hasSrv = srvRaw !== '' && !isNaN(parseInt(srvRaw, 10));
+        const srv = hasSrv ? Math.max(0, parseInt(srvRaw, 10)) : null;
+        const rec = recId ? state.recipes.find(r => r.id === recId) : null;
+        const finalTitle = titleRaw || (rec ? rec.name : '');
+        let mp = state.menuPlan.find(m => m.service_date === ds);
+        if (!finalTitle && !recId && !hasSrv) {
+          if (mp) { mp.recipe_id = ''; mp.custom_title = ''; mp.status = 'PLANNED'; mp.served_portions = null; }
+          return;
+        }
+        if (!mp) {
+          mp = { id: uid('mp'), service_date: ds, status: 'PLANNED', circumstance: 'Normal Day', note: '', logged_by: '' };
+          state.menuPlan.push(mp);
+        }
+        mp.recipe_id = recId;
+        mp.custom_title = finalTitle;
+        mp.planned_portions = plan;
+        if (/closed|holiday/i.test(finalTitle) && plan === 0) {
+          mp.status = 'CLOSED';
+          mp.circumstance = 'Closed / Federal Holiday';
+          mp.served_portions = 0;
+        } else if (hasSrv) {
+          mp.served_portions = srv;
+          mp.status = 'SERVED';
+        } else {
+          mp.status = 'PLANNED';
+          mp.served_portions = null;
+        }
+        updated++;
+      });
+      logActivity('BULK MENU SAVE', `Updated ${updated} service day(s) (${start} to ${end})`);
+      saveState();
+      closeModal();
+      render();
+      showToast(`Saved ${updated} past & future menu day(s)!`);
       return;
     }
 
