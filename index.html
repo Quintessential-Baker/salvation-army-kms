@@ -238,7 +238,7 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_MpzBqpjpEl4l7G9mM_XEFg_H5u-xSTv';
   const WK_MS = 604800000;
 
-  // Butler, PA Community Meals Inventory Seed
+  // Butler, PA Community Meals Inventory Seed (Standardized Spelling & Units)
   const SEED_ITEMS = [
     ["Scalloped potatoes","Stockroom","boxes",11,11,"M"],["Crackers (individual)","Stockroom","cases",1.5,1.5,"M"],["Tuna fish","Stockroom","cans",6,6,"M"],["Tomato soup","Stockroom","cases",1,1,"M"],["Manwich","Stockroom","cans",2,2,"M"],["Ketchup (large)","Stockroom","bottles",2,2,"M"],["Mustard (large)","Stockroom","bottles",2,2,"M"],["Mustard packets","Stockroom","cases",1,1,"M"],["Italian dressing (individual)","Stockroom","cases",1,1,"M"],["Vegetable oil","Stockroom","bottles",23,23,"M"],
     ["Mixed fruit","Stockroom","cases",4.5,4.5,"M"],["Apricots","Stockroom","cases",1,1,"M"],["Chocolate pudding","Stockroom","cans",5,7,"M"],["Vanilla pudding","Stockroom","cans",6,7,"M"],["Butterscotch pudding","Stockroom","cans",1,2,"M"],["Kidney beans (small)","Stockroom","cases",7,7,"M"],["Mixed vegetables (small)","Stockroom","cases",4,4,"M"],["Corn (small)","Stockroom","cases",2.5,2.5,"M"],["Green beans (small)","Stockroom","cases",3,3,"M"],["Black beans (large)","Stockroom","cans",2,2,"M"],["Pork & beans (large)","Stockroom","cans",6,6,"M"],["Whole potatoes","Stockroom","cans",2,2,"M"],["Tomato sauce","Stockroom","cans",5,5,"M"],["Spaghetti sauce (small)","Stockroom","cans",15,15,"M"],["Spaghetti sauce (large)","Stockroom","cases",1,1,"M"],
@@ -255,6 +255,74 @@
     "Kitchen Freezer",
     "Kitchen Dry Goods"
   ];
+
+  // Standardized Stock Units & Spelling Normalizer
+  const STOCK_UNITS = [
+    "cases", "cans", "boxes", "bags", "packs", "bottles", "jugs",
+    "jars", "tubs", "crates", "pieces", "lbs", "oz", "gallons", "quarts", "pints", "loaves", "trays", "rolls"
+  ];
+  const STOCK_UNIT_MAP = {
+    case: "cases", cases: "cases", cs: "cases",
+    can: "cans", cans: "cans", cn: "cans", "#10 can": "cans", "#10 cans": "cans",
+    box: "boxes", boxes: "boxes", bx: "boxes",
+    bag: "bags", bags: "bags", bg: "bags",
+    pack: "packs", packs: "packs", pkg: "packs", pkgs: "packs", package: "packs", packages: "packs",
+    bottle: "bottles", bottles: "bottles", btl: "bottles", btls: "bottles",
+    jug: "jugs", jugs: "jugs",
+    jar: "jars", jars: "jars",
+    tub: "tubs", tubs: "tubs",
+    crate: "crates", crates: "crates",
+    piece: "pieces", pieces: "pieces", pc: "pieces", pcs: "pieces", each: "pieces", ea: "pieces", unit: "pieces", units: "pieces",
+    lb: "lbs", lbs: "lbs", pound: "lbs", pounds: "lbs",
+    oz: "oz", ounce: "oz", ounces: "oz",
+    gal: "gallons", gallon: "gallons", gallons: "gallons",
+    qt: "quarts", qts: "quarts", quart: "quarts", quarts: "quarts",
+    pt: "pints", pts: "pints", pint: "pints", pints: "pints",
+    loaf: "loaves", loaves: "loaves",
+    tray: "trays", trays: "trays", pan: "trays", pans: "trays",
+    roll: "rolls", rolls: "rolls"
+  };
+  const SPELLING_FIXES = [
+    [/\bspagetti\b/gi, "spaghetti"],
+    [/\btomatoe(s)?\b/gi, "tomato$1"],
+    [/\bpotatoe(s)?\b/gi, "potato$1"],
+    [/\bpeirogies\b|\bperogies\b/gi, "pierogies"],
+    [/\bparmesian\b|\bparmasan\b/gi, "parmesan"],
+    [/\bmozzerella\b|\bmozerella\b/gi, "mozzarella"],
+    [/\bbroccli\b|\bbrocolli\b/gi, "broccoli"],
+    [/\bmayonaise\b|\bmayonaisse\b/gi, "mayonnaise"],
+    [/\bchickn\b|\bchiken\b/gi, "chicken"],
+    [/\bvegtables\b|\bvegetabels\b/gi, "vegetables"],
+    [/\bcheeze\b/gi, "cheese"],
+    [/\bsause\b/gi, "sauce"],
+    [/\bbiskits\b/gi, "biscuits"],
+    [/\bbutterscoth\b/gi, "butterscotch"]
+  ];
+
+  function normStockUnit(u) {
+    const raw = String(u || "cases").trim().toLowerCase().replace(/\.$/, "");
+    return STOCK_UNIT_MAP[raw] || raw || "cases";
+  }
+  function cleanItemName(name) {
+    let s = String(name || "").replace(/\s+/g, " ").trim();
+    if (!s) return "";
+    SPELLING_FIXES.forEach(([rx, rep]) => { s = s.replace(rx, rep); });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  function normalizeInventoryItem(x) {
+    if (!x || typeof x !== "object") return x;
+    const cleanU = normStockUnit(x.unit || x.pack_label || "cases");
+    const cleanLoc = LOCATIONS.find(l => l.toLowerCase() === String(x.location || "").trim().toLowerCase()) || String(x.location || "Stockroom").trim() || "Stockroom";
+    return {
+      ...x,
+      sku: String(x.sku || "").trim().toUpperCase(),
+      name: cleanItemName(x.name),
+      location: cleanLoc,
+      unit: cleanU,
+      pack_label: cleanU
+    };
+  }
+
   const VENDORS = {
     W: "Weekly order – Marberger (dairy) & produce",
     M: "Monthly order – Jordan Banana (dry goods & frozen)"
@@ -311,14 +379,14 @@
       steps: [
         'Review the suggested whole-case quantities (only items needing 1+ full case appear).',
         'Check/uncheck items or add extra items at the bottom, then click "Request Selected PO".',
-        'Managers approve & mark ordered; when the truck arrives, reconcile it in PO Check-In & Donations.'
+        'Managers approve & mark ordered; when the truck arrives, enter actual counts in PO Check-In & Donations.'
       ]
     },
     receive: {
-      title: 'PO Check-In & Donations — Reconcile POs & Print Tax Receipts',
-      summary: 'Check in arriving Purchase Orders into Living Stock and record in-kind food donations with printable IRS tax receipts.',
+      title: 'PO Check-In & Donations — Verify Counts & Print Tax Receipts',
+      summary: 'Manually enter actual received quantities to accept POs and record in-kind food donations with printable IRS tax receipts.',
       steps: [
-        'In Section 1, verify actual quantities received on open/ordered POs and click "Reconcile & Check In PO".',
+        'In Section 1, count the delivery and enter the exact quantity received for every line (enter 0 if shorted) before clicking "Reconcile & Check In PO".',
         'In Section 2, enter the donor\'s name, address, and donated items to update Living Stock automatically.',
         'Click "View / Print Tax Receipt" on any donation to print a Letter-size IRS donor acknowledgment.'
       ]
@@ -387,12 +455,12 @@
       ]
     },
     records: {
-      title: 'Blind Count & Waste — Honest Audits & Backups',
-      summary: 'Run unbiased shelf counts without seeing expected computer numbers first.',
+      title: 'Blind Count & Waste — Section Counts, Hard-Copy Entry & Backups',
+      summary: 'Pick a storage section to live-count on screen or print a blank count sheet and enter hard-copy numbers later.',
       steps: [
-        'Open "Blind Physical Count", type what you actually see on the shelf (leave uncounted items blank), and save.',
-        'Use "Log Waste" whenever food is dropped, burned, or expired so stock counts stay accurate.',
-        'Download CSV spreadsheets or full JSON backups at the bottom of the page.'
+        'Select a section (e.g. Walk-in cooler, Walk-in freezer, Stockroom) and choose Live Count or Hard-Copy Entry.',
+        'Click "Print Blank Count Sheet" if counting on paper, then enter your numbers and click "Review & Reconcile Count".',
+        'Use "Log Waste" whenever food is dropped, burned, or expired so stock counts stay accurate.'
       ]
     },
     report: {
@@ -425,16 +493,16 @@
   };
 
   const HOW_DO_I_TASKS = [
-    { q: 'Check in an arriving Purchase Order from Marberger or Jordan Banana', tab: 'receive', ans: 'Go to PO Check-In & Donations, verify the actual quantities received under Section 1, and click "Reconcile & Check In PO".' },
+    { q: 'Check in an arriving Purchase Order from Marberger or Jordan Banana', tab: 'receive', ans: 'Go to PO Check-In & Donations, type the actual received quantity in every blank box (enter 0 if shorted), and click "Reconcile & Check In PO".' },
     { q: 'Record an in-kind food donation and print a tax receipt for the donor', tab: 'receive', ans: 'Go to PO Check-In & Donations, fill out the In-Kind Food Donation form in Section 2, and click "Log Donation & Generate Tax Receipt".' },
+    { q: 'Do a Blind Physical Count by section (live or from a printed sheet)', tab: 'records', ans: 'Go to Blind Count & Waste, choose a section (e.g. Walk-in cooler), select Live Count or Hard-Copy Entry, enter counts, and click Review & Reconcile.' },
     { q: 'Edit, add, or delete inventory items individually or in bulk', tab: 'stock', ans: 'Go to Stock, click "Edit" or "Delete" on a single item or "Bulk Edit / Delete Stock" at the top to update or remove multiple items.' },
     { q: 'Scale a recipe for 40 to 80 people or print a recipe card', tab: 'recipes', ans: 'Go to Recipes, pick the dish, drag the 40–80 slider (or tap 40–80 Quick-Scan Table), and click Print Recipe + QR.' },
     { q: 'Add, edit, delete, or bulk-update recipes and directions', tab: 'recipes', ans: 'Go to Recipes and click "Edit Details & Directions" or "Delete" on one recipe, or "Bulk Add / Edit" to update/delete many recipes.' },
     { q: 'Record today\'s lunch count and deduct ingredients from stock', tab: 'menu', ans: 'Go to Menu & Daily Sheet, enter the number served next to today\'s meal, and click "Served".' },
     { q: 'Log refrigerator, freezer, or steam table temperatures', tab: 'safety', ans: 'Go to Temps & Cleaning and type the °F reading into each of the 6 boxes; PASS or FIX NOW appears automatically.' },
     { q: 'Put a 3-day, 4-day, or 7-day date label on leftovers or salad bar items', tab: 'storage', ans: 'Go to Date Labels & Salad Bar, click a 1-Tap Preset button, enter the item name, and click Add & Date-Label.' },
-    { q: 'Create, edit, approve, or delete a Weekly or Monthly Purchase Order (PO)', tab: 'orders', ans: 'Go to Orders & POs, review items below par, and click "Request Selected PO" (use Edit PO or Delete as needed).' },
-    { q: 'Verify that all app math, roles, scaling, forecasting, and sync pass tests', tab: 'help', ans: 'Click "Run Full System Self-Test" here or in Tools to execute all 13 diagnostic checks and print a PASS report.' }
+    { q: 'Create, edit, approve, or delete a Weekly or Monthly Purchase Order (PO)', tab: 'orders', ans: 'Go to Orders & POs, review items below par, and click "Request Selected PO" (use Edit PO or Delete as needed).' }
   ];
 
   // Offline fallback SHA-256 PIN Hashing
@@ -692,7 +760,7 @@
     const rawU = (m[3] || '').toLowerCase();
     const knownUnit = rawU && (UNIT_ALIASES[rawU] || KITCHEN_UNITS.includes(rawU));
     const unit = knownUnit ? normUnit(rawU) : 'pieces';
-    const ingName = (knownUnit ? m[4] : ((m[3] ? m[3] + ' ' : '') + m[4])).trim();
+    const ingName = cleanItemName(knownUnit ? m[4] : ((m[3] ? m[3] + ' ' : '') + m[4]));
     const words = ingName.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
     const matchInv = state.items.find(i => {
       const iname = i.name.toLowerCase();
@@ -713,7 +781,7 @@
     const ingredients = (Array.isArray(r.ingredients) ? r.ingredients : []).map(g => {
       const unit = normUnit(g.unit || (Number(g.qty) > 0 ? 'pieces' : 'to taste'));
       const ing = {
-        name: String(g.name || 'Ingredient').trim(),
+        name: cleanItemName(g.name || 'Ingredient'),
         qty: unit === 'to taste' ? 0 : (Number(g.qty) || 0),
         unit,
         inv_id: g.inv_id || '',
@@ -867,14 +935,15 @@
   function buildSeedInventory() {
     return SEED_ITEMS.map((r, i) => {
       const prefix = r[1] === 'Walk-in freezer' ? 'FRZ' : r[1] === 'Walk-in cooler' ? 'CLR' : 'STK';
+      const u = normStockUnit(r[2]);
       return {
         id: 'item-' + i,
         sku: prefix + '-' + String(101 + i),
-        name: r[0],
+        name: cleanItemName(r[0]),
         location: r[1],
         category: r[5] === 'W' ? 'Dairy / Refrigerated' : r[1] === 'Walk-in freezer' ? 'Frozen' : 'Dry / Canned',
-        unit: r[2],
-        pack_label: r[2],
+        unit: u,
+        pack_label: u,
         units_per_pack: 1,
         on_hand: r[3],
         par: r[4],
@@ -1008,7 +1077,7 @@
         { id: 'chk-m-2', freq: 'monthly', category: 'Inventory', title: 'Complete full Blind Physical Count & Reconcile', done: false, done_by: '', done_at: '', priority_carryover: false }
       ],
       blindAudits: [],
-      blindDraft: { zone: 'ALL', revealed: false, counts: {} },
+      blindDraft: { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} },
       announcements: [
         { id: 'ann-1', priority: 'urgent', title: 'Thanksgiving Holiday Closing (Nov 26–27)', body: 'Kitchen & office closed Thu Nov 26 & Fri Nov 27. Thanksgiving Dinner is Tue Nov 24 (75 portions).', author: 'William Clark', created_at: '2026-11-16', alert_at: '', repeat_rule: 'none', repeat_days: [], expires_at: '2026-11-27', dismissed_by: {} },
         { id: 'ann-2', priority: 'reminder', title: 'Weekly & Monthly Order Schedule', body: 'Marberger (dairy) and Produce can be ordered weekly. Dry Goods & Frozen items (Jordan Banana) are ordered monthly on the 3rd Friday.', author: 'William Clark', created_at: '2026-11-16', alert_at: '', repeat_rule: 'weekly', repeat_days: [5], expires_at: '', dismissed_by: {} }
@@ -1024,8 +1093,8 @@
       trainingModules: [
         { id: 'trn-1', role: 'ALL', title: 'Welcome, Role Boundaries & Auto-Lock', content: 'Welcome to The Salvation Army Community Meals KMS (Butler, PA).\n\nEvery stock change, temp log, and checklist tick is stamped with your name. Shared tablets auto-lock after 5 minutes of inactivity.' },
         { id: 'trn-2', role: 'ALL', title: 'Daily Temps, Salad Bar & Variable Shelf Lives', content: 'On service days (Mon/Tue/Wed/Fri), log all 6 temperature checks in Safety.\n\nUse 1-Tap Date Labels for storage: Cut Salad Greens & Fruit = 3 days; Dairy/Deli Salads = 4 days; Cooked Entrees = 7 days; Freezer = 90 days.' },
-        { id: 'trn-3', role: 'VOLUNTEER', title: 'Volunteer Guide: Prep, Blind Counts & Temps', content: '1. View Recipes (scale 40-80) & Menu Planner (read-only).\n2. Check off Next-Day Prep pulls and Daily Checklists.\n3. Log 6-point Temps, tag Leftovers/Salad Bar, and submit Blind Counts (Managers reconcile variances).' },
-        { id: 'trn-4', role: 'STAFF', title: 'Staff Operations: PO Check-In, Donations & Service', content: '1. Reconcile arriving POs and log In-Kind Donations (with printable IRS Tax Receipts) in PO Check-In & Donations.\n2. Create PO Requests in Orders & POs.\n3. Schedule meals and mark Served to deduct Living Stock.' },
+        { id: 'trn-3', role: 'VOLUNTEER', title: 'Volunteer Guide: Prep, Blind Counts & Temps', content: '1. View Recipes (scale 40-80) & Menu Planner (read-only).\n2. Check off Next-Day Prep pulls and Daily Checklists.\n3. Log 6-point Temps, tag Leftovers/Salad Bar, and submit Section Blind Counts.' },
+        { id: 'trn-4', role: 'STAFF', title: 'Staff Operations: PO Check-In, Donations & Service', content: '1. Reconcile arriving POs (entering exact received quantities) and log In-Kind Donations (with printable IRS Tax Receipts) in PO Check-In & Donations.\n2. Create PO Requests in Orders & POs.\n3. Schedule meals and mark Served to deduct Living Stock.' },
         { id: 'trn-5', role: 'MANAGER', title: 'Manager Guide: PO Approvals, Pars & Funding Reports', content: '1. Approve, edit, and place POs with Marberger & Jordan Banana.\n2. Set Par Levels, reconcile Blind Audits, and edit historical attendance.\n3. Access Executive, Funding & Donation Reports.' },
         { id: 'trn-6', role: 'ADMIN', title: 'Admin Guide: Users, PINs, Announcements & Backups', content: 'Full system control: manage ADMIN / MANAGER / STAFF / VOLUNTEER logins & PINs, post/schedule Announcements, configure Auto-Lock, and export/restore full JSON backups.' }
       ],
@@ -1036,7 +1105,7 @@
   let state = loadState();
   let undoSnapshot = null;
   let sbClient = null;
-  let syncStatus = 'local'; // 'live' | 'connecting' | 'local'
+  let syncStatus = 'local';
   let forecastChart = null;
   let trainingStep = 0;
   let inactivityTimer = null;
@@ -1047,7 +1116,9 @@
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.items)) {
-          return Object.assign(getDefaultState(), parsed);
+          const merged = Object.assign(getDefaultState(), parsed);
+          merged.items = merged.items.map(normalizeInventoryItem);
+          return merged;
         }
       }
     } catch (e) {}
@@ -1806,7 +1877,7 @@
           sbClient.from('kms_settings').select('*').eq('key', 'suggestions'),
           sbClient.from('kms_blind_audits').select('*').order('created_at', { ascending: false }).limit(60)
         ]);
-        state.items = invData;
+        state.items = invData.map(normalizeInventoryItem);
         if (recR.data && recR.data.length) state.recipes = recR.data.map(normalizeRecipe);
         if (mpR.data && mpR.data.length) state.menuPlan = mpR.data;
         if (poR.data) state.purchaseOrders = poR.data;
@@ -2098,7 +2169,7 @@
     { tab: 'dashboard', title: '1. Home Dashboard & Announcements', desc: 'Your daily command center: see Quick Shift Actions, color-coded Announcements & Reminders, Use-By alerts, Priority Carryover tasks, today\'s meal, and next-service forecast.', tryIt: 'Review any red or amber notices first, or tap a Quick Shift Action button.' },
     { tab: 'stock', title: '2. Living Stock & Bulk Manager', desc: 'Tracks real-time quantities across all 6 storage zones, with individual Edit/Delete buttons and a Bulk Edit / Delete Stock modal.', tryIt: 'Search or filter by zone, tap + / -, or open Bulk Edit / Delete Stock.' },
     { tab: 'orders', title: '3. Orders & Purchase Orders', desc: 'Separates Weekly orders (Marberger Dairy & Produce) from Monthly orders (3rd Friday Jordan Banana). Create Draft POs, approve quantities, and track deliveries.', tryIt: 'Review items below par and create a Draft PO for approval.' },
-    { tab: 'receive', title: '4. PO Check-In & Donations (Tax Receipts)', desc: 'Reconcile arriving Purchase Orders into Living Stock and record in-kind food donations with printable IRS tax receipts.', tryIt: 'Check in an expected PO or log a donation and view its tax receipt.' },
+    { tab: 'receive', title: '4. PO Check-In & Donations (Tax Receipts)', desc: 'Enter exact quantities received on open POs to accept deliveries, and log in-kind food donations with printable IRS tax receipts.', tryIt: 'Enter received quantities in Section 1 or log a donation in Section 2.' },
     { tab: 'menu', title: '5. Menu Planner & Letter Daily Sheets', desc: 'Schedule meals for Mon/Tue/Wed/Fri service days, print clean 1-page Letter Daily Sheets, and mark Served to deduct stock.', tryIt: 'Select a service date to assign a recipe or print a Daily Sheet.' },
     { tab: 'prep', title: '6. Next-Day Prep List', desc: 'Automatically pulls tomorrow\'s ingredient requirements grouped by storage zone (Cooler, Freezer, Dry Storage) plus FIFO leftovers.', tryIt: 'Check off each ingredient pull as you stage it for service.' },
     { tab: 'recipes', title: '7. Recipes (40–80), Bulk Edit & QR Scan', desc: 'Paste new recipes, bulk add/edit/delete recipes, scan recipe QR cards, drag the 40–80 portion slider, or open the 40–80 Quick-Scan Table.', tryIt: 'Drag the 40–80 slider or click "Bulk Add / Edit".' },
@@ -2106,7 +2177,7 @@
     { tab: 'storage', title: '9. Storage & Date Labels (FIFO)', desc: 'Use 1-Tap Presets for Cut Salad Greens/Fruit (3d), Dairy/Deli Salads (4d), Cooked Entrees (7d), and Freezer (90d) so Use-By alerts fire automatically.', tryIt: 'Tap a 1-Tap Preset or mark a stored container as Served/Used.' },
     { tab: 'checklists', title: '10. Daily, Weekly & Monthly Checklists', desc: 'Stamp your name and time on cleaning, ordering, and food safety tasks, and add, edit, or delete custom tasks.', tryIt: 'Switch between Daily, Weekly, and Monthly tabs and check off a task.' },
     { tab: 'forecasting', title: '11. Patrons Served & Forecasting', desc: 'Log actual patrons served, bulk-enter up to 1 year of past dates, or paste CSV/Spreadsheet rows to drive weekday & monthly attendance forecasts.', tryIt: 'Log a test count or open "+ Bulk Enter Past Dates".' },
-    { tab: 'records', title: '12. Records, Blind Audit & Backups', desc: 'Run Blind Audits (system stock stays hidden while volunteers count), log waste, inspect history, and export/import full JSON backups.', tryIt: 'Enter a physical count in Blind Audit and save.' },
+    { tab: 'records', title: '12. Section Blind Count, Waste & Backups', desc: 'Pick a storage section to live-count on screen or print a blank count sheet and enter hard-copy numbers later.', tryIt: 'Select a section, enter counts, and click Review & Reconcile.' },
     { tab: 'report', title: '13. Monthly Operations Report', desc: 'View monthly meals served, top items used, waste summary, and print-ready Letter compliance reports.', tryIt: 'Pick a month and click Print Report.' },
     { tab: 'users', title: '14. Users, Announcements & Activity', desc: 'Manage Admin, Manager, Staff, and Volunteer profiles, post/schedule Announcements, and watch the Real-Time Accountability Feed.', tryIt: 'Click "+ Post / Schedule Announcement" or review the Accountability Feed.' }
   ];
@@ -2162,7 +2233,7 @@
               <h3 class="text-sm font-bold uppercase tracking-wide">"How Do I...?" Instant Task Finder</h3>
               <p class="text-xs opacity-75">Type any question below to get a 1-sentence answer and jump directly to that screen.</p>
             </div>
-            <input id="help-task-search" type="text" value="${esc(state._helpSearch || '')}" placeholder="Search e.g. PO, donation, tax, recipe..." class="kms-input text-xs w-64 max-w-full" />
+            <input id="help-task-search" type="text" value="${esc(state._helpSearch || '')}" placeholder="Search e.g. PO, donation, blind count..." class="kms-input text-xs w-64 max-w-full" />
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
             ${!filteredTasks.length ? '<p class="opacity-70 py-2">No matching tasks found.</p>' : filteredTasks.map(t => `
@@ -2208,9 +2279,9 @@
             </div>
             <div class="p-3.5 rounded-lg border border-[var(--line)]">
               <div class="font-bold text-[#b3122b] uppercase">Step 5 &bull; Weekly / Monthly</div>
-              <div class="font-bold text-sm mt-1">Blind Audits &amp; Ordering</div>
-              <p class="opacity-80 mt-1 leading-relaxed">Run unbiased physical counts in <strong>Records &rarr; Blind Audit</strong>. Submit Weekly (Marberger/Produce) and Monthly 3rd-Friday (Jordan Banana) POs in <strong>Orders</strong>.</p>
-              ${goBtn('orders', 'Orders')}
+              <div class="font-bold text-sm mt-1">Section Blind Audits &amp; POs</div>
+              <p class="opacity-80 mt-1 leading-relaxed">Run unbiased physical counts by section in <strong>Blind Count &amp; Waste</strong>. Submit Weekly (Marberger) and Monthly 3rd-Friday (Jordan Banana) POs in <strong>Orders</strong>.</p>
+              ${goBtn('records', 'Blind Count')}
             </div>
             <div class="p-3.5 rounded-lg border border-[var(--line)]">
               <div class="font-bold text-[#b3122b] uppercase">Step 6 &bull; Security &amp; Sync</div>
@@ -2400,7 +2471,7 @@
     `;
   }
 
-  // 2. STOCK (Individual Edit/Delete + Bulk Edit/Delete/Add + Letter Print)
+  // 2. STOCK (Individual Edit/Delete + Bulk Edit/Delete/Add + Letter Print + Standardized Units)
   function renderStock(main) {
     const q = (state._stockSearch || '').toLowerCase();
     const locFilter = state._stockLoc || 'ALL';
@@ -2438,6 +2509,8 @@
               <h3 class="text-sm font-bold uppercase tracking-wide pb-1 border-b-2 border-[#b3122b]">${esc(L)} (${list.length})</h3>
               ${list.map(x => {
                 const st = itemStatus(x);
+                const curUnit = normStockUnit(x.unit);
+                const unitOpts = Array.from(new Set([...STOCK_UNITS, curUnit]));
                 return `
                   <div class="kms-card p-3 flex flex-wrap items-center justify-between gap-2 stock-row-card">
                     <div class="min-w-[200px] flex-1">
@@ -2446,7 +2519,10 @@
                         <span class="tag tag-${st}">${st}</span>
                         <span>Par${x.par_learned ? ' (learned)' : ''}:</span>
                         <input type="number" step="0.5" min="0" value="${x.par}" data-item-field="${x.id}:par" ${!isMgr ? 'disabled' : ''} class="kms-input w-16 text-xs text-center font-bold" />
-                        <span>${esc(x.unit)} · $</span>
+                        <select data-item-field="${x.id}:unit" ${!isMgr ? 'disabled' : ''} class="kms-input text-xs font-semibold" title="Stock Unit">
+                          ${unitOpts.map(u => `<option value="${esc(u)}" ${curUnit === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}
+                        </select>
+                        <span>· $</span>
                         <input type="number" step="0.01" min="0" value="${x.unit_price || ''}" placeholder="0.00" data-item-field="${x.id}:unit_price" ${!isMgr ? 'disabled' : ''} class="kms-input w-16 text-xs text-center" />
                         <select data-item-field="${x.id}:cadence" ${!isMgr ? 'disabled' : ''} class="kms-input text-xs">
                           <option value="W" ${x.cadence === 'W' ? 'selected' : ''}>Weekly</option>
@@ -2587,7 +2663,7 @@
                   <div class="p-2 rounded bg-black/5 flex items-center justify-between gap-2">
                     <span>${esc(ln.name)}</span>
                     ${po.status === 'ordered'
-                      ? `<span class="flex items-center gap-1">Ord ${ln.qty} · Recv <input type="number" step="0.5" min="0" id="rc-${po.id}-${idx}" value="${Math.max(0, ln.qty - (ln.received || 0))}" class="kms-input w-14 text-xs text-center" /></span>`
+                      ? `<span class="flex items-center gap-1">Ord ${ln.qty} · Recv <input type="number" step="0.5" min="0" required id="rc-${po.id}-${idx}" value="" placeholder="Enter qty" class="kms-input w-20 text-xs text-center font-bold" /></span>`
                       : `<span class="font-bold">${ln.qty} ${esc(ln.unit)}</span>`}
                   </div>
                 `).join('')}
@@ -2696,7 +2772,7 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 class="text-base font-bold">1. Purchase Order (PO) Check-In &amp; Reconciliation</h2>
-              <p class="text-xs opacity-75">All vendor deliveries are checked in through the PO system. Verify actual quantities received and match the vendor Invoice / PO # to update Living Stock.</p>
+              <p class="text-xs opacity-75">You must physically count the delivery and enter the <strong>Actually Received</strong> amount for every item (enter <code>0</code> if shorted) before accepting the order.</p>
             </div>
             <button type="button" data-tab="orders" class="kms-btn-alt px-3 py-1.5 text-xs font-semibold no-print">+ Create New PO</button>
           </div>
@@ -2713,13 +2789,13 @@
               </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
-                  <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1 pr-2">Item</th><th class="py-1 pr-2">Ordered</th><th class="py-1">Actually Received</th></tr></thead>
+                  <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1 pr-2">Item</th><th class="py-1 pr-2">Ordered</th><th class="py-1">Actually Received (Required)</th></tr></thead>
                   <tbody class="divide-y divide-[var(--line)]">
                     ${(po.lines || []).filter(l => (l.qty || 0) > 0).map(ln => `
                       <tr>
                         <td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td>
                         <td class="py-1.5 pr-2">${ln.qty} ${esc(ln.unit || '')}</td>
-                        <td class="py-1.5"><input type="number" step="1" min="0" name="rec_${esc(ln.item_id)}" value="${Math.max(0, Math.ceil(ln.qty - (ln.received || 0)))}" class="kms-input w-20 text-xs font-bold text-center" /></td>
+                        <td class="py-1.5"><input type="number" step="0.5" min="0" required name="rec_${esc(ln.item_id)}" value="" placeholder="Enter qty" class="kms-input w-24 text-xs font-bold text-center" /></td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -3326,8 +3402,7 @@
       </div>
     `;
   }
-
-  // 8. SAFETY
+ // 8. SAFETY
   function renderSafety(main) {
     const today = localDateStr();
     const log = state.safetyLogs[today] || { temps: {}, cleaning: {} };
@@ -3678,14 +3753,119 @@
     }
   }
 
-  // 12. RECORDS: WASTE, BLIND PHYSICAL COUNT & BACKUPS
+  // 12. RECORDS: SECTION BLIND PHYSICAL COUNT (LIVE OR HARD-COPY ENTRY), WASTE & BACKUPS
   function renderRecords(main) {
-    const opts = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
-    const draft = state.blindDraft || { zone: 'ALL', counts: {} };
+    const activeItems = state.items.filter(i => !i.discontinued);
+    const opts = activeItems.map(i => `<option value="${i.id}">${esc(i.name)} (${esc(normStockUnit(i.unit))})</option>`).join('');
+    if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
+    const draft = state.blindDraft;
+    const selZone = draft.zone || LOCATIONS[0];
+    const mode = draft.mode || 'live';
+    const bSearch = (draft.search || '').trim().toLowerCase();
+    const counts = draft.counts || {};
     const lastAudit = state.blindAudits[0];
+
+    const sectionItems = activeItems.filter(x =>
+      (selZone === 'ALL' || x.location === selZone) &&
+      (!bSearch || x.name.toLowerCase().includes(bSearch) || x.sku.toLowerCase().includes(bSearch))
+    );
+    const totalEntered = Object.keys(counts).filter(k => counts[k] !== '' && counts[k] !== undefined && activeItems.some(i => i.id === k)).length;
 
     main.innerHTML = `
       <div class="space-y-4">
+        <!-- Section Blind Physical Count -->
+        <div class="kms-card p-4 border-l-4 border-l-[#1b365d] space-y-3">
+          <div class="flex flex-wrap justify-between items-start gap-2">
+            <div>
+              <h2 class="text-base font-bold">Blind Physical Inventory Count (By Section)</h2>
+              <p class="text-xs opacity-75">System stock stays hidden so shelf counts stay honest. Select a section, count live on your tablet or print a blank sheet and type in hard-copy numbers later.</p>
+            </div>
+            <div class="flex flex-wrap gap-1.5 no-print">
+              <button type="button" id="btn-print-blind-sheet" class="kms-btn-alt px-3 py-1.5 text-xs">Print Blank Count Sheet</button>
+              ${totalEntered ? `<button type="button" id="btn-clear-blind-draft" class="kms-btn-alt px-3 py-1.5 text-xs">Clear Draft (${totalEntered})</button>` : ''}
+              <button type="button" id="btn-review-blind" class="kms-btn-ok px-3.5 py-1.5 text-xs font-semibold">Review &amp; Reconcile Count (${totalEntered})</button>
+            </div>
+          </div>
+
+          <!-- Section Selector Tabs -->
+          <div class="flex flex-wrap items-center gap-1.5 text-xs no-print">
+            ${LOCATIONS.map(loc => {
+              const locItems = activeItems.filter(x => x.location === loc);
+              const locDone = locItems.filter(x => counts[x.id] !== '' && counts[x.id] !== undefined).length;
+              const isOn = selZone === loc;
+              return `<button type="button" data-blind-zone="${esc(loc)}" class="px-3 py-1.5 rounded-lg font-semibold border transition ${isOn ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">${esc(loc)} <span class="opacity-80">(${locDone}/${locItems.length})</span></button>`;
+            }).join('')}
+            <button type="button" data-blind-zone="ALL" class="px-3 py-1.5 rounded-lg font-semibold border transition ${selZone === 'ALL' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">All Sections (${totalEntered}/${activeItems.length})</button>
+          </div>
+
+          <!-- Entry Mode Switcher + Search -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[var(--line)] text-xs no-print">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold opacity-75">Entry Mode:</span>
+              <button type="button" data-blind-mode="live" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'live' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Live Shelf Count (Tablet / − +)</button>
+              <button type="button" data-blind-mode="hardcopy" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'hardcopy' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Hard-Copy Sheet Entry (Fast Tab)</button>
+            </div>
+            <input id="blind-search-inp" type="text" value="${esc(draft.search || '')}" placeholder="Filter items in ${esc(selZone === 'ALL' ? 'All Sections' : selZone)}..." class="kms-input text-xs w-60 max-w-full" />
+          </div>
+
+          <!-- Count Rows -->
+          ${!sectionItems.length ? '<p class="text-xs opacity-70 py-2">No matching items in this section.</p>' : mode === 'hardcopy' ? `
+            <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                    <th class="p-2">SKU</th>
+                    <th class="p-2">Item Name</th>
+                    <th class="p-2">Section</th>
+                    <th class="p-2">Unit</th>
+                    <th class="p-2 text-right">Hard-Copy Count</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--line)]">
+                  ${sectionItems.map(x => {
+                    const val = counts[x.id] !== undefined ? counts[x.id] : '';
+                    return `
+                      <tr class="${val !== '' ? 'bg-emerald-50/40' : ''}">
+                        <td class="p-2 font-mono opacity-70">${esc(x.sku)}</td>
+                        <td class="p-2 font-bold">${esc(x.name)}</td>
+                        <td class="p-2 opacity-75">${esc(x.location)}</td>
+                        <td class="p-2 font-semibold">${esc(normStockUnit(x.unit))}</td>
+                        <td class="p-2 text-right">
+                          <input type="number" step="0.5" min="0" data-blind-id="${x.id}" value="${esc(val)}" placeholder="Blank = skip" class="kms-input w-28 text-xs text-center font-bold" />
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : `
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+              ${sectionItems.map(x => {
+                const val = counts[x.id] !== undefined ? counts[x.id] : '';
+                const uLabel = normStockUnit(x.unit);
+                return `
+                  <div class="p-2.5 rounded-lg border ${val !== '' ? 'border-emerald-500 bg-emerald-50/30' : 'border-[var(--line)]'} flex flex-wrap items-center justify-between gap-2 text-xs print-keep">
+                    <div>
+                      <div class="font-bold text-sm">${esc(x.name)} <span class="text-[11px] font-mono opacity-60">${esc(x.sku)}</span></div>
+                      <div class="opacity-75">${esc(x.location)} &middot; Count in <strong>${esc(uLabel)}</strong></div>
+                    </div>
+                    <div class="flex items-center gap-1.5 no-print">
+                      <button type="button" data-blind-step="${x.id}:-1" class="w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--bg)] font-bold text-base">−</button>
+                      <input type="number" step="0.5" min="0" data-blind-id="${x.id}" value="${esc(val)}" placeholder="0" class="kms-input w-20 text-center font-bold text-sm" />
+                      <button type="button" data-blind-step="${x.id}:1" class="w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--bg)] font-bold text-base">+</button>
+                      <span class="font-semibold w-14">${esc(uLabel)}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+
+          ${lastAudit ? `<div class="text-xs opacity-80 pt-2 border-t border-[var(--line)]">Last reconciled count: <strong>${dLabel(lastAudit.audit_date)}</strong> (${esc(lastAudit.zone || 'ALL')}) by ${esc(lastAudit.auditor)} — ${lastAudit.rows.filter(r => r.sys !== r.phys).length} variance(s)</div>` : ''}
+        </div>
+
+        <!-- Log Waste -->
         <form id="form-waste" class="kms-card p-4 space-y-3 no-print">
           <h2 class="text-base font-bold">Log Waste</h2>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -3696,31 +3876,7 @@
           <button type="submit" class="kms-btn-primary px-4 py-2 text-sm">Remove from Stock</button>
         </form>
 
-        <div class="kms-card p-4 space-y-3">
-          <div class="flex flex-wrap justify-between items-center gap-2">
-            <div>
-              <h3 class="text-sm font-bold">Blind Physical Count</h3>
-              <p class="text-xs opacity-75">System counts are hidden so the shelf count stays honest. Leave items blank to skip.</p>
-            </div>
-            <div class="flex gap-1.5 no-print">
-              <button type="button" onclick="window.print()" class="kms-btn-alt px-3 py-1.5 text-xs">Print Count Sheet</button>
-              <button type="button" id="btn-save-blind" class="kms-btn-ok px-4 py-2 text-xs">Save Physical Count</button>
-            </div>
-          </div>
-          <details open>
-            <summary class="text-xs font-bold cursor-pointer no-print">Open Count Sheet (${state.items.length} items)</summary>
-            <div class="mt-3 space-y-2 max-h-96 overflow-y-auto">
-              ${state.items.filter(i => !i.discontinued).map(x => `
-                <div class="p-2 rounded border border-[var(--line)] flex items-center justify-between text-xs print-keep">
-                  <span><strong>${esc(x.name)}</strong> (${esc(x.location)} · ${esc(x.unit)})</span>
-                  <input type="number" step="0.5" min="0" data-blind-id="${x.id}" value="${draft.counts[x.id] !== undefined ? draft.counts[x.id] : ''}" placeholder="_____" class="kms-input w-20 text-center font-bold" />
-                </div>
-              `).join('')}
-            </div>
-          </details>
-          ${lastAudit ? `<div class="text-xs opacity-80 pt-2">Last count: ${dLabel(lastAudit.audit_date)} by ${esc(lastAudit.auditor)} (${lastAudit.rows.filter(r => r.sys !== r.phys).length} variance(s))</div>` : ''}
-        </div>
-
+        <!-- Exports & Backups -->
         <div class="kms-card p-4 flex flex-wrap gap-2 no-print">
           <button type="button" id="btn-exp-csv" class="kms-btn-alt px-3.5 py-2 text-xs">Download Stock CSV</button>
           <button type="button" id="btn-exp-json" class="kms-btn-alt px-3.5 py-2 text-xs">Download Full JSON Backup</button>
@@ -4667,6 +4823,8 @@
       if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can edit item details', 'warn'); return; }
       const x = state.items.find(i => i.id === editItemBtn.dataset.editItem);
       if (x) {
+        const curU = normStockUnit(x.unit);
+        const uOpts = Array.from(new Set([...STOCK_UNITS, curU]));
         openModal(`Edit Inventory Item — ${x.name}`, `
           <form id="form-edit-item" class="space-y-3 text-xs">
             <input type="hidden" name="itemId" value="${esc(x.id)}" />
@@ -4676,7 +4834,7 @@
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div><label class="block font-semibold mb-1">Storage Location</label><select name="location" class="kms-input w-full text-xs">${LOCATIONS.map(l => `<option value="${esc(l)}" ${x.location === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
-              <div><label class="block font-semibold mb-1">Unit</label><input name="unit" type="text" required value="${esc(x.unit)}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Standardized Unit</label><select name="unit" class="kms-input w-full text-xs">${uOpts.map(u => `<option value="${esc(u)}" ${curU === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></div>
               <div><label class="block font-semibold mb-1">Order Schedule</label><select name="cadence" class="kms-input w-full text-xs"><option value="W" ${x.cadence === 'W' ? 'selected' : ''}>Weekly (Marberger)</option><option value="M" ${x.cadence === 'M' ? 'selected' : ''}>Monthly (Jordan Banana)</option></select></div>
             </div>
             <div class="grid grid-cols-3 gap-2">
@@ -4739,17 +4897,20 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--line)]">
-                  ${state.items.map(x => `
+                  ${state.items.map(x => {
+                    const curU = normStockUnit(x.unit);
+                    const uOpts = Array.from(new Set([...STOCK_UNITS, curU]));
+                    return `
                     <tr>
                       <td class="p-1.5 text-center"><input type="checkbox" name="del_${esc(x.id)}" class="accent-red-600" title="Check to delete" /></td>
                       <td class="p-1"><input name="name_${esc(x.id)}" type="text" value="${esc(x.name)}" class="kms-input w-full text-xs font-semibold" /></td>
                       <td class="p-1"><select name="loc_${esc(x.id)}" class="kms-input text-xs">${LOCATIONS.map(l => `<option value="${esc(l)}" ${x.location === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></td>
-                      <td class="p-1"><input name="unit_${esc(x.id)}" type="text" value="${esc(x.unit)}" class="kms-input w-16 text-xs" /></td>
+                      <td class="p-1"><select name="unit_${esc(x.id)}" class="kms-input text-xs">${uOpts.map(u => `<option value="${esc(u)}" ${curU === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select></td>
                       <td class="p-1"><input name="hand_${esc(x.id)}" type="number" step="0.5" min="0" value="${x.on_hand}" class="kms-input w-16 text-xs text-center font-bold" /></td>
                       <td class="p-1"><input name="par_${esc(x.id)}" type="number" step="0.5" min="0" value="${x.par}" class="kms-input w-16 text-xs text-center" /></td>
                       <td class="p-1"><select name="cad_${esc(x.id)}" class="kms-input text-xs"><option value="W" ${x.cadence === 'W' ? 'selected' : ''}>W</option><option value="M" ${x.cadence === 'M' ? 'selected' : ''}>M</option></select></td>
                     </tr>
-                  `).join('')}
+                  `; }).join('')}
                 </tbody>
               </table>
             </div>
@@ -4764,10 +4925,10 @@
       if (!isStaffOrHigher()) { showToast('Only Staff or Management can add new items', 'warn'); return; }
       openModal('Add Inventory Item', `
         <form id="form-add-item" class="space-y-3">
-          <input name="name" required placeholder="Item name" class="kms-input w-full text-sm" />
+          <input name="name" required placeholder="Item name (spelling auto-standardized)" class="kms-input w-full text-sm" />
           <div class="grid grid-cols-2 gap-2">
             <select name="location" class="kms-input text-sm">${LOCATIONS.map(l => `<option>${esc(l)}</option>`).join('')}</select>
-            <input name="unit" value="cases" required placeholder="Unit (cases, cans...)" class="kms-input text-sm" />
+            <select name="unit" class="kms-input text-sm">${STOCK_UNITS.map(u => `<option value="${esc(u)}" ${u === 'cases' ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
           </div>
           <div class="grid grid-cols-3 gap-2">
             <input name="onHand" type="number" step="0.5" value="0" placeholder="On hand" class="kms-input text-sm" />
@@ -4840,7 +5001,7 @@
               <div class="font-semibold">New Item Details</div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <input name="newItemName" type="text" placeholder="Item name (e.g. Applesauce cups)" class="kms-input text-xs" />
-                <input name="newItemUnit" type="text" value="cases" placeholder="Unit (cases, bags, cans...)" class="kms-input text-xs" />
+                <select name="newItemUnit" class="kms-input text-xs">${STOCK_UNITS.map(u => `<option value="${esc(u)}" ${u === 'cases' ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <select name="newItemLoc" class="kms-input text-xs">${LOCATIONS.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select>
@@ -4934,6 +5095,14 @@
     if (recPoBtn) {
       const po = state.purchaseOrders.find(p => p.id === recPoBtn.dataset.poReconcile);
       if (po) {
+        for (let idx = 0; idx < (po.lines || []).length; idx++) {
+          const inp = document.getElementById(`rc-${po.id}-${idx}`);
+          if (inp && (inp.value === '' || isNaN(parseFloat(inp.value)) || parseFloat(inp.value) < 0)) {
+            showToast(`Enter the actual received quantity for ${po.lines[idx].name} (enter 0 if none received)`, 'warn');
+            inp.focus();
+            return;
+          }
+        }
         po.lines.forEach((ln, idx) => {
           const v = parseFloat(document.getElementById(`rc-${po.id}-${idx}`)?.value || 0);
           if (v <= 0) return;
@@ -5397,7 +5566,7 @@
       return;
     }
 
-    // Checklists Edit/Delete, Forecast Horizon, Blind Count, Exports, Training, Users
+    // Checklists Edit/Delete, Forecast Horizon, Blind Count (Section, Mode, Steppers, Print, Reconcile), Exports, Training, Users
     const editChkBtn = e.target.closest('[data-edit-chk]');
     if (editChkBtn) {
       if (!isMgmtOrHigher()) { showToast('Only Management can edit checklist tasks', 'warn'); return; }
@@ -5439,24 +5608,162 @@
     const hzBtn = e.target.closest('[data-hz]');
     if (hzBtn) { state.horizon = hzBtn.dataset.hz; render(); return; }
 
-    if (e.target.id === 'btn-save-blind') {
+    // Section Blind Physical Count Controls
+    const blindZoneBtn = e.target.closest('[data-blind-zone]');
+    if (blindZoneBtn) {
+      if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
+      state.blindDraft.zone = blindZoneBtn.dataset.blindZone;
+      saveState();
+      render();
+      return;
+    }
+    const blindModeBtn = e.target.closest('[data-blind-mode]');
+    if (blindModeBtn) {
+      if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
+      state.blindDraft.mode = blindModeBtn.dataset.blindMode;
+      saveState();
+      render();
+      return;
+    }
+    const blindStepBtn = e.target.closest('[data-blind-step]');
+    if (blindStepBtn) {
+      const [id, d] = blindStepBtn.dataset.blindStep.split(':');
+      const delta = Number(d);
+      if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
+      const curRaw = state.blindDraft.counts[id];
+      const curVal = curRaw === undefined || curRaw === '' ? 0 : (parseFloat(curRaw) || 0);
+      const nextVal = Math.max(0, Math.round((curVal + delta) * 100) / 100);
+      state.blindDraft.counts[id] = String(nextVal);
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.id === 'btn-clear-blind-draft') {
+      askConfirm('Clear Blind Count Draft', 'Clear all unsubmitted physical count entries?', () => {
+        state.blindDraft = { zone: (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0], mode: (state.blindDraft && state.blindDraft.mode) || 'live', search: '', revealed: false, counts: {} };
+        saveState();
+        render();
+        showToast('Blind count draft cleared');
+      });
+      return;
+    }
+    if (e.target.id === 'btn-print-blind-sheet') {
+      const zone = (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0];
+      const list = state.items.filter(x => !x.discontinued && (zone === 'ALL' || x.location === zone));
+      document.body.classList.add('printing-modal');
+      openModal(`Printable Hard-Copy Blind Count Sheet — ${zone === 'ALL' ? 'All Sections' : zone}`, `
+        <div class="space-y-3 text-xs">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 print-keep">
+            <div>
+              <div class="font-bold text-sm">The Salvation Army · Butler, PA — Blind Shelf Count</div>
+              <div class="opacity-75">Section: <strong>${esc(zone === 'ALL' ? 'All Sections' : zone)}</strong> &bull; Date: ______________ &bull; Counter: ______________________</div>
+            </div>
+            <button type="button" onclick="window.print()" class="kms-btn-navy px-3.5 py-1.5 text-xs no-print">Print Hard-Copy Sheet (Letter)</button>
+          </div>
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                <th class="py-1.5 px-2">SKU</th>
+                <th class="py-1.5 px-2">Item Name</th>
+                <th class="py-1.5 px-2">Section</th>
+                <th class="py-1.5 px-2">Unit</th>
+                <th class="py-1.5 px-2 text-right">Physical Count</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--line)]">
+              ${list.map(x => `
+                <tr>
+                  <td class="py-1.5 px-2 font-mono">${esc(x.sku)}</td>
+                  <td class="py-1.5 px-2 font-semibold">${esc(x.name)}</td>
+                  <td class="py-1.5 px-2 opacity-75">${esc(x.location)}</td>
+                  <td class="py-1.5 px-2">${esc(normStockUnit(x.unit))}</td>
+                  <td class="py-1.5 px-2 text-right font-mono">____________</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `);
+      return;
+    }
+    if (e.target.id === 'btn-review-blind') {
       const counts = (state.blindDraft && state.blindDraft.counts) || {};
       const rows = [];
-      state.items.forEach(x => {
+      state.items.filter(i => !i.discontinued).forEach(x => {
         const val = counts[x.id];
         if (val === undefined || val === '') return;
         const phys = parseFloat(val);
-        if (isNaN(phys)) return;
-        rows.push({ name: x.name, unit: x.unit, sys: x.on_hand, phys });
-        x.on_hand = phys;
+        if (isNaN(phys) || phys < 0) return;
+        const diff = Math.round((phys - x.on_hand) * 100) / 100;
+        rows.push({ id: x.id, name: x.name, location: x.location, unit: normStockUnit(x.unit), sys: x.on_hand, phys, diff });
       });
-      if (!rows.length) { showToast('Enter at least one counted amount', 'warn'); return; }
-      state.blindAudits.unshift({ id: uid('aud'), audit_date: localDateStr(), auditor: getActiveUser().name, zone: 'ALL', rows });
-      state.blindDraft = { zone: 'ALL', revealed: false, counts: {} };
-      logActivity('BLIND COUNT', `Counted ${rows.length} items`);
+      if (!rows.length) { showToast('Enter at least one counted amount first', 'warn'); return; }
+      const varCount = rows.filter(r => r.diff !== 0).length;
+      openModal(`Review & Reconcile Blind Count (${rows.length} Items)`, `
+        <div class="space-y-3 text-xs">
+          <div class="p-3 rounded-lg bg-black/5 border border-[var(--line)] flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="font-bold text-sm">Variance Check Before Updating Living Stock</div>
+              <div class="opacity-75"><strong>${rows.length}</strong> item(s) counted &bull; <strong>${varCount}</strong> variance(s) detected</div>
+            </div>
+            <span class="tag ${varCount === 0 ? 'tag-OK' : 'tag-LOW'}">${varCount === 0 ? 'EXACT MATCH' : varCount + ' VARIANCE(S)'}</span>
+          </div>
+          <div class="max-h-72 overflow-y-auto border border-[var(--line)] rounded-lg">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                  <th class="p-2">Item</th>
+                  <th class="p-2">Unit</th>
+                  <th class="p-2 text-right">System</th>
+                  <th class="p-2 text-right">Counted</th>
+                  <th class="p-2 text-right">Variance</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--line)]">
+                ${rows.map(r => `
+                  <tr>
+                    <td class="p-2 font-bold">${esc(r.name)} <span class="opacity-60 font-normal">(${esc(r.location)})</span></td>
+                    <td class="p-2">${esc(r.unit)}</td>
+                    <td class="p-2 text-right opacity-75">${fmtNum(r.sys)}</td>
+                    <td class="p-2 text-right font-bold">${fmtNum(r.phys)}</td>
+                    <td class="p-2 text-right font-bold ${r.diff === 0 ? 'text-emerald-700' : 'text-[#b3122b]'}">${r.diff > 0 ? '+' + fmtNum(r.diff) : fmtNum(r.diff)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button type="button" id="btn-commit-blind" class="kms-btn-ok flex-1 py-2 text-xs font-semibold">Accept &amp; Update Living Stock</button>
+            <button type="button" data-close-modal="1" class="kms-btn-alt px-4 py-2 text-xs font-semibold">Back to Counting</button>
+          </div>
+        </div>
+      `);
+      return;
+    }
+    if (e.target.id === 'btn-commit-blind') {
+      const counts = (state.blindDraft && state.blindDraft.counts) || {};
+      const zone = (state.blindDraft && state.blindDraft.zone) || 'ALL';
+      const rows = [];
+      snapUndo();
+      state.items.filter(i => !i.discontinued).forEach(x => {
+        const val = counts[x.id];
+        if (val === undefined || val === '') return;
+        const phys = parseFloat(val);
+        if (isNaN(phys) || phys < 0) return;
+        const cleanU = normStockUnit(x.unit);
+        x.unit = cleanU;
+        x.pack_label = cleanU;
+        rows.push({ name: x.name, unit: cleanU, sys: x.on_hand, phys });
+        x.on_hand = Math.round(phys * 100) / 100;
+      });
+      if (!rows.length) { closeModal(); return; }
+      state.blindAudits.unshift({ id: uid('aud'), audit_date: localDateStr(), auditor: getActiveUser().name, zone, rows });
+      state.blindDraft = { zone, mode: (state.blindDraft && state.blindDraft.mode) || 'live', search: '', revealed: false, counts: {} };
+      logActivity('BLIND COUNT', `Reconciled ${rows.length} item(s) in ${zone}`);
+      closeModal();
       saveState();
       render();
-      showToast(`Saved physical count for ${rows.length} item(s)`);
+      showToast(`Reconciled physical count for ${rows.length} item(s) into Living Stock!`);
       return;
     }
 
@@ -5891,6 +6198,14 @@
   document.addEventListener('input', (e) => {
     if (e.target.id === 'help-task-search') { state._helpSearch = e.target.value; render(); const el = document.getElementById('help-task-search'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
     if (e.target.id === 'stock-search') { state._stockSearch = e.target.value; render(); const el = document.getElementById('stock-search'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
+    if (e.target.id === 'blind-search-inp') {
+      if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
+      state.blindDraft.search = e.target.value;
+      render();
+      const el = document.getElementById('blind-search-inp');
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+      return;
+    }
     if (e.target.id === 'rec-scale-inp' || e.target.id === 'rec-scale-slider') { state.recipeScale = Math.max(1, parseFloat(e.target.value) || 1); render(); return; }
     if (e.target.id === 'act-search-inp') { state._actSearch = e.target.value; render(); const el = document.getElementById('act-search-inp'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
     if (e.target.id === 'rec-search-inp') {
@@ -5903,7 +6218,12 @@
       if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
       return;
     }
-    if (e.target.matches('[data-blind-id]')) { state.blindDraft.counts[e.target.dataset.blindId] = e.target.value; saveState(); return; }
+    if (e.target.matches('[data-blind-id]')) {
+      if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
+      state.blindDraft.counts[e.target.dataset.blindId] = e.target.value;
+      saveState();
+      return;
+    }
   });
 
   document.addEventListener('change', (e) => {
@@ -5949,6 +6269,7 @@
             return;
           }
           state = Object.assign(getDefaultState(), parsed);
+          state.items = state.items.map(normalizeInventoryItem);
           if (Array.isArray(state.recipes)) state.recipes = state.recipes.map(normalizeRecipe);
           state.cloudManaged = true;
           stripLocalPins();
@@ -5978,13 +6299,13 @@
     if (e.target.id === 'fc-whatif-circ') { state._fcCircFilter = e.target.value; render(); return; }
     if (e.target.id === 'rep-month') { state.reportMonth = e.target.value; render(); return; }
 
-    // Auto-fill unit when picking a catalog item on the Donation form
+    // Auto-fill standardized unit when picking a catalog item on the Donation form
     if (e.target.name === 'donItemId') {
       const row = e.target.closest('tr');
       const x = state.items.find(i => i.id === e.target.value);
       if (row && x) {
         const uInp = row.querySelector('[name="donUnit"]');
-        if (uInp) uInp.value = x.unit || 'cases';
+        if (uInp) uInp.value = normStockUnit(x.unit || 'cases');
       }
       return;
     }
@@ -5994,10 +6315,16 @@
       const [id, f] = itemField.split(':');
       const x = state.items.find(i => i.id === id);
       if (x) {
-        if (f !== 'on_hand' && !isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can edit par, price, or zone', 'warn'); render(); return; }
+        if (f !== 'on_hand' && !isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can edit par, unit, price, or zone', 'warn'); render(); return; }
         snapUndo();
         if (f === 'cadence') { x.cadence = e.target.value; x.vendor = x.cadence === 'W' ? 'Marberger / Produce' : 'Jordan Banana'; }
         else if (f === 'location') { x.location = e.target.value; }
+        else if (f === 'unit') {
+          const nu = normStockUnit(e.target.value);
+          x.unit = nu;
+          x.pack_label = nu;
+          (state.recipes || []).forEach(r => (r.ingredients || []).forEach(ing => { if (ing.inv_id === x.id) recomputeIngredientPer100(ing, r.base_servings); }));
+        }
         else {
           const v = Math.max(0, parseFloat(e.target.value) || 0);
           if (f === 'on_hand' && v < x.on_hand) recordUsage(x, x.on_hand - v);
@@ -6172,6 +6499,17 @@
     if (e.target.classList && e.target.classList.contains('form-reconcile-po')) {
       const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.poId);
       if (po && ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(po.status)) {
+        const activeLines = (po.lines || []).filter(ln => Number(ln.qty || 0) > 0);
+        for (const ln of activeLines) {
+          const rawVal = String(fd.get('rec_' + ln.item_id) ?? '').trim();
+          const numVal = parseFloat(rawVal);
+          if (rawVal === '' || isNaN(numVal) || numVal < 0) {
+            showToast(`Enter the actual received quantity for ${ln.name} (enter 0 if shorted)`, 'warn');
+            const badInp = e.target.querySelector(`[name="rec_${ln.item_id}"]`);
+            if (badInp) badInp.focus();
+            return;
+          }
+        }
         const uName = getActiveUser().name;
         const todayStr = localDateStr();
         const poNum = String(fd.get('recPoNum') || '').trim();
@@ -6179,12 +6517,9 @@
         const invNum = String(fd.get('recInvNum') || '').trim();
         if (invNum) po.vendor_conf = invNum;
         let added = 0;
-        (po.lines || []).forEach(ln => {
+        activeLines.forEach(ln => {
           const iid = ln.item_id;
-          const ord = Number(ln.qty || 0);
-          if (ord <= 0) return;
-          const recVal = parseFloat(fd.get('rec_' + iid));
-          const actual = isNaN(recVal) ? ord : Math.max(0, Math.ceil(recVal));
+          const actual = Math.max(0, Math.round((parseFloat(fd.get('rec_' + iid)) || 0) * 100) / 100);
           ln.received = actual;
           if (actual <= 0) return;
           const x = state.items.find(i => i.id === iid);
@@ -6226,10 +6561,10 @@
         const q = parseFloat(qtys[idx]) || 0;
         if (q <= 0) return;
         const inv = itemId ? state.items.find(i => i.id === itemId) : null;
-        const cName = String(customNames[idx] || '').trim();
+        const cName = cleanItemName(customNames[idx] || '');
         const name = inv ? inv.name : cName;
         if (!name) return;
-        const unit = inv ? inv.unit : (String(units[idx] || '').trim() || 'cases');
+        const unit = inv ? normStockUnit(inv.unit) : normStockUnit(units[idx] || 'cases');
         if (inv) {
           inv.on_hand = Math.round((inv.on_hand + q) * 100) / 100;
           state.transactions.unshift({
@@ -6273,17 +6608,18 @@
       if (!isStaffOrHigher()) { showToast('Only Staff or Management can add items', 'warn'); return; }
       const loc = String(fd.get('location') || LOCATIONS[0]);
       const prefix = /freezer/i.test(loc) ? 'FRZ' : /cooler/i.test(loc) ? 'CLR' : /kitchen dry/i.test(loc) ? 'KDG' : 'STK';
-      const item = {
-        id: uid('item'), sku: prefix + '-' + String(state.items.length + 101), name: fd.get('name').trim(),
-        location: loc, category: 'General', unit: fd.get('unit').trim() || 'cases',
-        pack_label: fd.get('unit').trim() || 'cases', units_per_pack: 1,
+      const uClean = normStockUnit(fd.get('unit') || 'cases');
+      const item = normalizeInventoryItem({
+        id: uid('item'), sku: prefix + '-' + String(state.items.length + 101), name: cleanItemName(fd.get('name')),
+        location: loc, category: 'General', unit: uClean,
+        pack_label: uClean, units_per_pack: 1,
         on_hand: parseFloat(fd.get('onHand')) || 0, par: parseFloat(fd.get('par')) || 1,
         par_manual: false, par_learned: false, cadence: fd.get('cadence'),
         vendor: fd.get('cadence') === 'W' ? 'Marberger / Produce' : 'Jordan Banana',
         unit_price: null, usage_log: [], discontinued: false
-      };
+      });
       state.items.push(item);
-      logActivity('ADD ITEM', `${item.name} (${loc})`);
+      logActivity('ADD ITEM', `${item.name} (${loc}, ${item.unit})`);
       saveState();
       closeModal();
       render();
@@ -6296,10 +6632,10 @@
       const x = state.items.find(i => i.id === fd.get('itemId'));
       if (x) {
         snapUndo();
-        x.name = String(fd.get('name') || '').trim() || x.name;
-        x.sku = String(fd.get('sku') || '').trim() || x.sku;
+        x.name = cleanItemName(fd.get('name')) || x.name;
+        x.sku = String(fd.get('sku') || '').trim().toUpperCase() || x.sku;
         x.location = String(fd.get('location') || x.location);
-        x.unit = String(fd.get('unit') || '').trim() || x.unit;
+        x.unit = normStockUnit(fd.get('unit') || x.unit);
         x.pack_label = x.unit;
         x.cadence = fd.get('cadence') === 'W' ? 'W' : 'M';
         x.vendor = x.cadence === 'W' ? 'Marberger / Produce' : 'Jordan Banana';
@@ -6309,6 +6645,7 @@
         x.par_learned = false;
         const up = parseFloat(fd.get('unitPrice'));
         x.unit_price = isNaN(up) || up <= 0 ? null : up;
+        (state.recipes || []).forEach(r => (r.ingredients || []).forEach(ing => { if (ing.inv_id === x.id) recomputeIngredientPer100(ing, r.base_servings); }));
         logActivity('EDIT ITEM', `Updated ${x.name} (${x.sku})`);
         closeModal();
         saveState();
@@ -6326,19 +6663,19 @@
         const parts = ln.split(',').map(s => s.trim());
         if (!parts[0]) return;
         const loc = LOCATIONS.find(l => l.toLowerCase() === (parts[1] || '').toLowerCase()) || 'Stockroom';
-        const unit = parts[2] || 'cases';
+        const unit = normStockUnit(parts[2] || 'cases');
         const onHand = Math.max(0, parseFloat(parts[3]) || 0);
         const par = Math.max(0, parseFloat(parts[4]) || 1);
         const cad = /^w/i.test(parts[5] || '') ? 'W' : 'M';
         const prefix = /freezer/i.test(loc) ? 'FRZ' : /cooler/i.test(loc) ? 'CLR' : /kitchen dry/i.test(loc) ? 'KDG' : 'STK';
-        state.items.push({
-          id: uid('item'), sku: prefix + '-' + String(state.items.length + 101), name: parts[0],
+        state.items.push(normalizeInventoryItem({
+          id: uid('item'), sku: prefix + '-' + String(state.items.length + 101), name: cleanItemName(parts[0]),
           location: loc, category: cad === 'W' ? 'Dairy / Refrigerated' : 'General',
           unit, pack_label: unit, units_per_pack: 1, on_hand: onHand, par,
           par_manual: false, par_learned: false, cadence: cad,
           vendor: cad === 'W' ? 'Marberger / Produce' : 'Jordan Banana',
           unit_price: null, usage_log: [], discontinued: false
-        });
+        }));
         added++;
       });
       logActivity('BULK ADD STOCK', `Added ${added} inventory item(s)`);
@@ -6359,11 +6696,11 @@
           delIds.push(x.id);
           return;
         }
-        const nName = String(fd.get('name_' + x.id) || '').trim();
+        const nName = cleanItemName(fd.get('name_' + x.id) || '');
         if (nName) x.name = nName;
         const nLoc = String(fd.get('loc_' + x.id) || '').trim();
         if (nLoc) x.location = nLoc;
-        const nUnit = String(fd.get('unit_' + x.id) || '').trim();
+        const nUnit = normStockUnit(fd.get('unit_' + x.id) || x.unit);
         if (nUnit) { x.unit = nUnit; x.pack_label = nUnit; }
         const nHand = parseFloat(fd.get('hand_' + x.id));
         if (!isNaN(nHand) && nHand >= 0) x.on_hand = nHand;
@@ -6378,6 +6715,7 @@
         state.items = state.items.filter(x => !delIds.includes(x.id));
         if (sbClient) sbClient.from('kms_inventory_items').delete().in('id', delIds).then(() => {});
       }
+      (state.recipes || []).forEach(r => (r.ingredients || []).forEach(ing => recomputeIngredientPer100(ing, r.base_servings)));
       logActivity('BULK EDIT STOCK', `Updated ${updated}, deleted ${delIds.length} stock item(s)`);
       closeModal();
       saveState();
@@ -6492,8 +6830,8 @@
         const exId = fd.get('extraItemId');
         const exQ = Math.ceil(parseFloat(fd.get('extraQty')) || 0);
         if (exId === '__NEW__') {
-          const newName = String(fd.get('newItemName') || '').trim();
-          const newUnit = String(fd.get('newItemUnit') || 'cases').trim() || 'cases';
+          const newName = cleanItemName(fd.get('newItemName') || '');
+          const newUnit = normStockUnit(fd.get('newItemUnit') || 'cases');
           const newLoc = String(fd.get('newItemLoc') || LOCATIONS[0]);
           const newPar = Math.round((parseFloat(fd.get('newItemPar')) || 1) * 100) / 100;
           if (!newName) { showToast('Enter a name for the new item', 'warn'); return; }
@@ -6501,13 +6839,13 @@
           if (fd.get('addToCatalog')) {
             const prefix = /freezer/i.test(newLoc) ? 'FRZ' : /cooler/i.test(newLoc) ? 'CLR' : /kitchen dry/i.test(newLoc) ? 'KDG' : 'STK';
             const sku = prefix + '-' + (100 + state.items.length + 1);
-            const newItem = {
+            const newItem = normalizeInventoryItem({
               id: uid('itm'), sku, name: newName, location: newLoc, category: 'General',
               unit: newUnit, pack_label: newUnit, units_per_pack: 1,
               on_hand: 0, par: newPar, par_manual: true, par_learned: false,
               cadence: po.cadence || 'M', vendor: po.vendor || '', unit_price: null,
               usage_log: [], discontinued: false
-            };
+            });
             state.items.push(newItem);
             logActivity('ADD ITEM', `Added ${newItem.name} (${newItem.sku}) via PO ${po.po_number}`);
             nextLines.push({ item_id: newItem.id, name: newItem.name, unit: newItem.unit, qty: exQ, received: 0, price: 0 });
@@ -6841,7 +7179,7 @@
       const r = state.recipes.find(x => x.id === e.target.dataset.recId);
       if (r) {
         const ingObj = {
-          name: String(fd.get('name') || '').trim(),
+          name: cleanItemName(fd.get('name') || ''),
           qty: parseFloat(fd.get('qty')) || 1,
           unit: normUnit(fd.get('unit') || 'cups'),
           inv_id: String(fd.get('inv_id') || ''),
