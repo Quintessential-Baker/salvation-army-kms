@@ -1,18 +1,14 @@
 // Supabase Edge Function: notify-alert
 // Deploy in Supabase Dashboard -> Edge Functions -> Create a new function named "notify-alert"
 // Secrets (Edge Functions -> Secrets): RESEND_API_KEY = re_xxxxxxxxx
-//   Optional: FROM_EMAIL = "Salvation Army KMS <onboarding@resend.dev>" (or your verified domain)
-//   Optional: ALLOWED_ORIGIN = https://YOUR-USER.github.io  (locks browser access to your site)
-// SECURITY: requires a signed-in tablet session, and only sends to e-mail addresses
-// saved on active KMS user accounts, so it cannot be used as an open mail relay.
-// SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
+//   Optional: FROM_EMAIL = "Salvation Army KMS <onboarding@resend.dev>"
+//   Optional: ALLOWED_ORIGIN = https://YOUR-USER.github.io
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") || "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ---- Shared guard: only a signed-in kitchen-tablet session may call this function ----
 const SB_URL = Deno.env.get("SUPABASE_URL") || "";
 const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY") || "";
 async function isSignedIn(req: Request): Promise<boolean> {
@@ -22,7 +18,7 @@ async function isSignedIn(req: Request): Promise<boolean> {
     const r = await fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_ANON, Authorization: auth } });
     if (!r.ok) return false;
     const u = await r.json();
-    return !!(u && u.id);          // the public anon key has no user, so it fails here
+    return !!(u && u.id);
   } catch {
     return false;
   }

@@ -194,7 +194,7 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_MpzBqpjpEl4l7G9mM_XEFg_H5u-xSTv';
   const WK_MS = 604800000;
 
-  // Exact Butler, PA Community Meals Inventory Seed (from Community Meals Inventory-2.html)
+  // Butler, PA Community Meals Inventory Seed
   const SEED_ITEMS = [
     ["Scalloped potatoes","Stockroom","boxes",11,11,"M"],["Crackers (individual)","Stockroom","cases",1.5,1.5,"M"],["Tuna fish","Stockroom","cans",6,6,"M"],["Tomato soup","Stockroom","cases",1,1,"M"],["Manwich","Stockroom","cans",2,2,"M"],["Ketchup (large)","Stockroom","bottles",2,2,"M"],["Mustard (large)","Stockroom","bottles",2,2,"M"],["Mustard packets","Stockroom","cases",1,1,"M"],["Italian dressing (individual)","Stockroom","cases",1,1,"M"],["Vegetable oil","Stockroom","bottles",23,23,"M"],
     ["Mixed fruit","Stockroom","cases",4.5,4.5,"M"],["Apricots","Stockroom","cases",1,1,"M"],["Chocolate pudding","Stockroom","cans",5,7,"M"],["Vanilla pudding","Stockroom","cans",6,7,"M"],["Butterscotch pudding","Stockroom","cans",1,2,"M"],["Kidney beans (small)","Stockroom","cases",7,7,"M"],["Mixed vegetables (small)","Stockroom","cases",4,4,"M"],["Corn (small)","Stockroom","cases",2.5,2.5,"M"],["Green beans (small)","Stockroom","cases",3,3,"M"],["Black beans (large)","Stockroom","cans",2,2,"M"],["Pork & beans (large)","Stockroom","cans",6,6,"M"],["Whole potatoes","Stockroom","cans",2,2,"M"],["Tomato sauce","Stockroom","cans",5,5,"M"],["Spaghetti sauce (small)","Stockroom","cans",15,15,"M"],["Spaghetti sauce (large)","Stockroom","cases",1,1,"M"],
@@ -203,7 +203,14 @@
     ["Block butter","Walk-in cooler","pieces",2,2,"W"],["Shredded cheese","Walk-in cooler","bags",3,4,"W"],["Parmesan cheese","Walk-in cooler","bags",2,2,"W"],["Feta cheese","Walk-in cooler","tubs",1,1,"W"],["Chopped garlic","Walk-in cooler","jars",4,4,"W"],["Vegetable stock","Walk-in cooler","jars",5,5,"W"],["Yogurt","Walk-in cooler","pieces",4,5,"W"],["Cottage cheese","Walk-in cooler","pieces",2,2,"W"],["Lemonade","Walk-in cooler","crates",2,2,"W"],["Iced tea","Walk-in cooler","crates",1,2,"W"],["Milk","Walk-in cooler","crates",1,2.5,"W"]
   ];
 
-  const LOCATIONS = ["Walk-in cooler", "Walk-in freezer", "Stockroom"];
+  const LOCATIONS = [
+    "Walk-in cooler",
+    "Walk-in freezer",
+    "Stockroom",
+    "Kitchen Cooler",
+    "Kitchen Freezer",
+    "Kitchen Dry Goods"
+  ];
   const VENDORS = {
     W: "Weekly order – Marberger (dairy) & produce",
     M: "Monthly order – Jordan Banana (dry goods & frozen)"
@@ -234,7 +241,7 @@
     { label: "Freezer Backup (90d)", cat: "LEFTOVER", days: 90, zone: "Walk-in freezer" }
   ];
 
-  // Salted SHA-256 PIN Hashing (from index.html)
+  // Local-only fallback SHA-256 PIN Hashing (used only before tablet connects to Supabase)
   const WEAK_PINS = ['0000','1111','2222','9999','1234','12345','123456','000000'];
   function sha256hex(str) {
     const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
@@ -573,7 +580,6 @@
   }
 
   function adjustOrderDateForHoliday(targetDateStr) {
-    // If order date falls on a holiday OR within +/- 1 day of a federal holiday, move to preceding open MTWF/business day
     let d = targetDateStr;
     const holOn = isHolidayOrClosedDay(d);
     const holPrev = getFederalHoliday(addDays(d, -1));
@@ -595,7 +601,6 @@
     const today = todayStr || localDateStr();
     const list = [];
 
-    // 1. Upcoming Federal Holiday Closings (next 14 days, grouped if consecutive like Thanksgiving Thu+Fri)
     const holHits = [];
     for (let i = 0; i <= 14; i++) {
       const ds = addDays(today, i);
@@ -616,7 +621,6 @@
       });
     }
 
-    // 2. Weekly Order (Marberger Dairy & Produce — Fridays, adjusted if on/near holiday)
     const todayDow = new Date(today + 'T12:00:00').getDay();
     const daysToFri = (5 - todayDow + 7) % 7;
     const nextFri = addDays(today, daysToFri);
@@ -638,7 +642,6 @@
       });
     }
 
-    // 3. Monthly Order (Jordan Banana Dry & Frozen — 3rd Friday, adjusted if on/near holiday)
     const nowD = new Date(today + 'T12:00:00');
     let m3Fri = getThirdFriday(nowD.getFullYear(), nowD.getMonth());
     if (addDays(m3Fri, 1) < today) {
@@ -940,7 +943,7 @@
     showToast('Undid last stock change');
   }
 
-  // Auto-Learning Par Levels (preserved from Community Meals Inventory-2.html)
+  // Auto-Learning Par Levels
   function recordUsage(item, amount) {
     if (amount <= 0) return;
     item.usage_log = item.usage_log || [];
@@ -1028,7 +1031,6 @@
       bucketFactor[k] = avgRecent > 0 ? Math.min(1.25, Math.max(0.8, bAvg / avgRecent)) : 1;
     });
 
-    // By-Meal / Dish Popularity Trends
     const mealMap = {};
     open.forEach(m => {
       const r = m.recipe_id ? state.recipes.find(x => x.id === m.recipe_id) : null;
@@ -1053,7 +1055,6 @@
       return hit ? hit.mult : 1;
     }
 
-    // By-Holiday & Circumstance Trends
     const circMap = {};
     open.forEach(m => {
       const c = (m.circumstance || 'Normal Day').trim();
@@ -1085,8 +1086,6 @@
     return m.openCount ? Math.round(m.avgRecent * 1.1) : 65;
   }
 
-  // Live attendance prediction for a service date. Closed days / holidays fall back to the overall average
-  // (so a recipe still scales sensibly); 65 is used only when there is no attendance history at all.
   function predictedPortions(dateStr) {
     const f = forecastWeekday(dateStr);
     return f > 0 ? f : (suggestPortionsOverall() || 65);
@@ -1189,7 +1188,7 @@
     document.getElementById('cf-yes').onclick = () => { closeModal(); onConfirm(); };
   }
 
-  // Supabase Relational Sync Engine (14 Normalized Tables)
+  // Supabase Relational Sync Engine (Option C: Shared Tablet Session + Server-Checked PINs)
   function updateSyncUI() {
     const dot = document.getElementById('sync-dot');
     const lbl = document.getElementById('sync-label');
@@ -1206,21 +1205,33 @@
     }
   }
 
-  // ===== Option C: shared kitchen-tablet session + server-checked PINs =====
-  let tabletSession = null;   // Supabase Auth session for the shared tablet account
-  let sessionPin = '';        // signed-in person's PIN: memory only, never stored or synced
+  let tabletSession = null;
+  let sessionPin = '';
   const cloudAuth = () => !!(sbClient && tabletSession);
-  const cloudManaged = () => !!state.cloudManaged;   // true once this tablet has connected to the cloud
+  const cloudManaged = () => !!state.cloudManaged;
 
   async function edgeFetch(fnName, init) {
-    let tok = SUPABASE_ANON_KEY;
-    try { const { data } = await sbClient.auth.getSession(); if (data && data.session) tok = data.session.access_token; } catch (e) {}
+    if (!sbClient) throw new Error('Supabase client not initialized');
+    let { data } = await sbClient.auth.getSession();
+    let sess = data && data.session;
+    if (sess && sess.expires_at && (sess.expires_at * 1000 - Date.now() < 60000)) {
+      const refreshed = await sbClient.auth.refreshSession();
+      sess = (refreshed.data && refreshed.data.session) || sess;
+    }
+    if (!sess || !sess.access_token) {
+      throw new Error('Connect this tablet to the cloud first (Lock screen -> Connect This Tablet)');
+    }
     return fetch(SUPABASE_URL + '/functions/v1/' + fnName, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + tok },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + sess.access_token
+      },
       body: init.body
     });
   }
+
   async function rpcLogin(userId, pin) {
     const { data, error } = await sbClient.rpc('kms_login', { p_user_id: userId, p_pin: String(pin) });
     if (error) return { ok: false, error: 'network' };
@@ -1954,7 +1965,7 @@
     `;
   }
 
-  // 2. STOCK (Community Meals Inventory-2.html core + Search/Filter/Add/QR)
+  // 2. STOCK
   function renderStock(main) {
     const q = (state._stockSearch || '').toLowerCase();
     const locFilter = state._stockLoc || 'ALL';
@@ -2002,6 +2013,9 @@
                           <option value="W" ${x.cadence === 'W' ? 'selected' : ''}>Weekly</option>
                           <option value="M" ${x.cadence === 'M' ? 'selected' : ''}>Monthly</option>
                         </select>
+                        <select data-item-field="${x.id}:location" class="kms-input text-xs" title="Storage location">
+                          ${Array.from(new Set([...LOCATIONS, x.location])).map(loc => `<option value="${esc(loc)}" ${x.location === loc ? 'selected' : ''}>${esc(loc)}</option>`).join('')}
+                        </select>
                       </div>
                     </div>
                     <div class="flex items-center gap-1.5">
@@ -2019,7 +2033,7 @@
     `;
   }
 
-  // 3. ORDERS & PURCHASE ORDERS (Weekly Marberger / Monthly Jordan Banana + Approval Flow)
+  // 3. ORDERS & PURCHASE ORDERS
   function renderOrders(main) {
     const hz = Number(state._orderHorizon || 7);
     const days = serviceDaysBetween(localDateStr(), addDays(localDateStr(), hz === 1 ? 4 : hz));
@@ -2143,7 +2157,7 @@
     `;
   }
 
-  // 4. RECEIVE & FAST SCAN TERMINAL (Camera QR + USB/Bluetooth SKU + Expiration Tracking)
+  // 4. RECEIVE & FAST SCAN TERMINAL
   function renderReceive(main) {
     const today = localDateStr();
     const dated = state.transactions.filter(t => t.tx_type === 'RECEIVE' && t.exp_date && !t.cleared).sort((a, b) => a.exp_date.localeCompare(b.exp_date));
@@ -2453,7 +2467,7 @@
     `;
   }
 
-  // 6. NEXT-DAY PREP (pulls grouped by location + FIFO leftovers)
+  // 6. NEXT-DAY PREP
   function renderPrep(main) {
     const today = localDateStr();
     const nextMeal = state.menuPlan.filter(m => m.service_date > today && m.status !== 'CLOSED' && m.recipe_id).sort((a, b) => a.service_date.localeCompare(b.service_date))[0];
@@ -2476,7 +2490,7 @@
         <div class="kms-card p-4 flex flex-wrap justify-between items-center gap-2">
           <div>
             <h2 class="text-base font-bold">Next-Day Prep Pulls</h2>
-            <p class="text-xs opacity-75">${nextMeal && rec ? `Next service (${dLabel(nextMeal.service_date)}): <strong>${esc(rec.name)}</strong> (${nextMeal.planned_portions} portions)` : 'Schedule a recipe on the Menu tab to generate tomorrow’s prep pulls.'}</p>
+            <p class="text-xs opacity-75">${nextMeal && rec ? `Next service (${dLabel(nextMeal.service_date)}): <strong>${esc(rec.name)}</strong> (${nextMeal.planned_portions || predictedPortions(nextMeal.service_date)} portions)` : 'Schedule a recipe on the Menu tab to generate tomorrow’s prep pulls.'}</p>
           </div>
           <button type="button" onclick="window.print()" class="kms-btn-alt px-3 py-1.5 text-xs no-print">Print Prep Sheet</button>
         </div>
@@ -2508,7 +2522,7 @@
     `;
   }
 
-  // 7. RECIPES (Smart Offline Paste Parser + Scaling + Allergens + Stock Linkage)
+  // 7. RECIPES
   function parsePastedRecipe(raw) {
     const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const name = lines[0] || 'Imported Recipe';
@@ -2634,7 +2648,8 @@
                       </div>
                     ` : `<p class="text-[11px] opacity-85 whitespace-pre-line">${esc(s.raw)}</p>`}
                     ${isMgmtOrHigher() ? `
-                      <div class="flex gap-1.5 pt-1">
+                      <div class="flex flex-wrap gap-1.5 pt-1">
+                        <button type="button" data-review-recsug="${s.id}" class="kms-btn-navy px-2.5 py-1 text-[11px]">Review &amp; Edit</button>
                         <button type="button" data-approve-recsug="${s.id}" class="kms-btn-ok px-2.5 py-1 text-[11px]">Approve &amp; Add</button>
                         <button type="button" data-reject-recsug="${s.id}" class="kms-btn-alt px-2.5 py-1 text-[11px]">Reject</button>
                       </div>
@@ -2790,7 +2805,7 @@
     `;
   }
 
-  // 8. SAFETY (6-Point Temps + 7-Point Cleaning)
+  // 8. SAFETY
   function renderSafety(main) {
     const today = localDateStr();
     const log = state.safetyLogs[today] || { temps: {}, cleaning: {} };
@@ -2835,7 +2850,7 @@
     `;
   }
 
-  // 9. STORAGE & DATE LABELS (1-Tap Presets + Separate Leftovers & Salad Bar FIFO)
+  // 9. STORAGE & DATE LABELS
   function renderStorage(main) {
     const today = localDateStr();
     const activeLeft = state.storageTags.filter(t => t.status === 'STORED' && t.tag_category !== 'SALAD_BAR').sort((a, b) => a.use_by_date.localeCompare(b.use_by_date));
@@ -2898,7 +2913,7 @@
     `;
   }
 
-  // 10. CHECKLISTS (Daily / Weekly / Monthly + Carryover)
+  // 10. CHECKLISTS
   function renderChecklists(main) {
     const freq = state.checklistFreq || 'daily';
     const list = state.checklists.filter(c => c.freq === freq);
@@ -2935,11 +2950,10 @@
     `;
   }
 
-  // 11. FORECASTING & SERVED (Add / Edit / Bulk Past Patrons + Multi-Horizon Chart)
+  // 11. FORECASTING & SERVED
   function renderForecasting(main) {
     const today = localDateStr();
     const fc = getForecastMetrics();
-    const avg = suggestPortionsOverall();
     const hz = state.horizon || 'days';
     let rows = [];
 
@@ -3030,7 +3044,6 @@
           </div>
         </div>
 
-        <!-- Trend Breakdown & What-If Meal / Holiday Planner -->
         <div class="kms-card p-4 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -3158,12 +3171,13 @@
         <div class="kms-card p-4 flex flex-wrap gap-2">
           <button type="button" id="btn-exp-csv" class="kms-btn-alt px-3.5 py-2 text-xs">Download Stock CSV</button>
           <button type="button" id="btn-exp-json" class="kms-btn-alt px-3.5 py-2 text-xs">Download Full JSON Backup</button>
+          <button type="button" id="btn-open-restore" class="kms-btn-alt px-3.5 py-2 text-xs">Restore JSON Backup</button>
         </div>
       </div>
     `;
   }
 
-  // 13. MONTHLY REPORT (from Community Meals Inventory-2.html)
+  // 13. MONTHLY REPORT
   function renderReport(main) {
     if (!isMgmtOrHigher()) {
       main.innerHTML = `
@@ -3178,7 +3192,7 @@
 
     const today = localDateStr();
     const rm = state.reportMonth || today.slice(0, 7);
-    const rangeMode = state.reportRange || 'month'; // 'month' | '30d' | '90d' | 'ytd' | '365d'
+    const rangeMode = state.reportRange || 'month';
     const months = [];
     for (let i = 0; i < 12; i++) {
       const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
@@ -3195,7 +3209,6 @@
 
     const inPeriod = (ds) => { const s = String(ds || '').slice(0, 10); return s >= startStr && s <= endStr; };
 
-    // 1. Current Stats
     const servedDays = state.menuPlan.filter(m => m.status === 'SERVED' && inPeriod(m.service_date));
     const meals = servedDays.reduce((s, m) => s + (m.served_portions || 0), 0);
     const avgPerDay = servedDays.length ? (meals / servedDays.length) : 0;
@@ -3224,7 +3237,6 @@
     });
     const safetyPct = checks ? Math.round(((checks - fails) / checks) * 100) : null;
 
-    // 2. Inventory Valuation & Restock Gap
     const activeItems = state.items.filter(x => !x.discontinued);
     const stockValue = activeItems.reduce((s, x) => s + (x.on_hand || 0) * (x.unit_price || 0), 0);
     const lowItems = activeItems.filter(x => itemStatus(x) !== 'OK').map(x => {
@@ -3235,21 +3247,19 @@
     const restockCost = lowItems.reduce((s, r) => s + r.estCost, 0);
     const parHealthPct = activeItems.length ? Math.round(((activeItems.length - lowItems.length) / activeItems.length) * 100) : 100;
 
-    // 3. Forecasts & Budget Projections
     const fc = getForecastMetrics();
     const proj30Meals = Math.round(fc.avgRecent * 17);
     const proj90Meals = Math.round(fc.avgRecent * 51);
     const proj365Meals = Math.round(fc.avgRecent * 204);
-    const benchPerMeal = costPerMeal > 0 ? costPerMeal : 3.25; // fallback estimate if unit prices aren't all filled
+    const benchPerMeal = costPerMeal > 0 ? costPerMeal : 3.25;
     const usingBench = costPerMeal <= 0;
     const proj30Budget = Math.round(proj30Meals * benchPerMeal);
     const proj90Budget = Math.round(proj90Meals * benchPerMeal);
     const proj365Budget = Math.round(proj365Meals * benchPerMeal);
     const next7Days = serviceDaysBetween(today, addDays(today, 14)).slice(0, 7);
     const next7Meals = next7Days.reduce((s, d) => s + forecastWeekday(d), 0);
-    const peakDow = Object.entries(fc.dowMult || {}).sort((a, b) => b[1] - a[1])[0];
+    const peakDow = Object.entries(fc.dowFactor || {}).sort((a, b) => b[1] - a[1])[0];
 
-    // 4. Dynamic Executive & Funding Suggestions
     const suggestions = [];
     if (lowItems.length > 0) {
       suggestions.push(`<strong>Restock Funding / Purchase Request:</strong> ${lowItems.length} staple item(s) are below Par (${lowItems.reduce((s, r) => s + r.needCases, 0)} whole cases needed${restockCost > 0 ? ', est. $' + restockCost.toFixed(2) : ''}). Prioritize: ${lowItems.slice(0, 4).map(r => esc(r.item.name) + ' (' + r.needCases + ' cs)').join(', ')}.`);
@@ -3282,7 +3292,6 @@
 
     main.innerHTML = `
       <div class="space-y-4">
-        <!-- Header & Dynamic Range Controls -->
         <div class="kms-card p-4 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -3306,7 +3315,6 @@
           </div>
         </div>
 
-        <!-- KPI Row -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
           <div class="kms-card p-4">
             <div class="text-xs uppercase opacity-65 font-semibold">Meals Served</div>
@@ -3330,7 +3338,6 @@
           </div>
         </div>
 
-        <!-- Forecasts & Budget Predictions -->
         <div class="kms-card p-4 space-y-3">
           <div class="flex flex-wrap justify-between items-center gap-2">
             <div>
@@ -3362,7 +3369,6 @@
           </div>
         </div>
 
-        <!-- Executive Suggestions & Copyable Funding Brief -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div class="kms-card p-4 space-y-2.5">
             <h3 class="text-sm font-bold">Executive Suggestions &amp; Action Plan</h3>
@@ -3380,7 +3386,6 @@
           </div>
         </div>
 
-        <!-- Priority Donation & Restock Needs Table -->
         <div class="kms-card p-4 space-y-2.5">
           <h3 class="text-sm font-bold">Priority Restock &amp; In-Kind Donation Needs (${lowItems.length} Items Below Par)</h3>
           ${!lowItems.length ? '<p class="text-xs opacity-70">All active items are at or above Par Level.</p>' : `
@@ -3542,7 +3547,7 @@
     `;
   }
 
-  // Modals: Switch User, Add Item, Chat, QR Labels, Backup
+  // Modals: Switch User, Announcement, Chat, QR Labels
   function showSwitchUserModal() {
     const active = sortUsersByRoleAndName(state.users.filter(u => u.active !== false));
     openModal('Switch User (PIN Required)', `
@@ -3649,17 +3654,61 @@
   }
 
   async function sendBackgroundAlert(recipients, subject, text) {
-    if (!sbClient || !sbClient.functions) return false;
+    if (!sbClient || !tabletSession) return false;
     const uniqueTo = Array.from(new Set((recipients || []).map(r => r.email).filter(Boolean)));
     if (!uniqueTo.length) return false;
     try {
-      const { data, error } = await sbClient.functions.invoke('notify-alert', {
-        body: { to: uniqueTo, subject, text }
+      const res = await edgeFetch('notify-alert', {
+        body: JSON.stringify({ to: uniqueTo, subject, text })
       });
-      return !error && data && data.ok !== false;
+      const data = await res.json().catch(() => ({}));
+      return res.ok && data && data.ok !== false;
     } catch (e) {
       return false;
     }
+  }
+
+  function invokeScrapeRecipe(payload) {
+    const fallbackClientFetch = async (url) => {
+      if (!url) throw new Error('Edge Function unavailable');
+      const r = await fetch('https://r.jina.ai/' + url, { headers: { 'Accept': 'text/plain' } });
+      if (!r.ok) throw new Error('Could not fetch recipe from URL (HTTP ' + r.status + '). Try copying and pasting the recipe text below.');
+      const md = await r.text();
+      const lines = md.split(/\r?\n/).map(l => l.trim());
+      let name = '', baseServings = 4, mode = 'none';
+      const ingredients = [], steps = [];
+      for (const raw of lines) {
+        if (!raw) continue;
+        const tm = raw.match(/^Title:\s*(.+)$/i);
+        if (tm && !name) { name = tm[1].replace(/\s*[-|].*(Allrecipes|Food Network|Recipe).*$/i, '').trim(); continue; }
+        if (!name && /^#\s+/.test(raw)) { name = raw.replace(/^#+\s*/, '').trim(); continue; }
+        const ym = raw.match(/^(?:Yield|Servings|Serves)\s*:?\s*(\d+)/i);
+        if (ym) { baseServings = Math.max(1, Number(ym[1])); continue; }
+        if (/^#{1,4}\s*Ingredients\b|^Ingredients\s*:?$/i.test(raw)) { mode = 'ing'; continue; }
+        if (/^#{1,4}\s*(?:Directions|Instructions|Method|Steps)\b|^(?:Directions|Instructions|Method)\s*:?$/i.test(raw)) { mode = 'step'; continue; }
+        if (/^#{1,4}\s*(?:Nutrition|Reviews|Shop|Related|More|Video|Cook's Note|Notes)\b/i.test(raw)) { if (ingredients.length && steps.length) break; mode = 'none'; continue; }
+        const clean = raw.replace(/^[-*•\[\]xX\s]+(?=[A-Za-z0-9¼½¾⅓⅔⅛])/, '').replace(/^\*+|\*+$/g, '').trim();
+        if (!clean || /^!\[|^\[.*\]\(http/.test(raw)) continue;
+        if (mode === 'ing' && clean.length < 180) ingredients.push(clean);
+        else if (mode === 'step') { const st = clean.replace(/^\d+[\.\)]\s*/, '').trim(); if (st.length > 8) steps.push(st); }
+      }
+      if (!ingredients.length) throw new Error('No recipe ingredients found on that page. Copy and paste the recipe text below instead.');
+      return { ok: true, recipe: { name: name || 'Imported Recipe', category: 'Main Entree', base_servings: baseServings, prep_min: 20, cook_min: 35, ingredients, steps, source_url: url } };
+    };
+
+    return edgeFetch('scrape-recipe', { body: JSON.stringify(payload) })
+      .then(async res => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || (data && data.ok === false)) {
+          if (payload && payload.url) return await fallbackClientFetch(payload.url);
+          throw new Error((data && data.error) || ('Edge Function HTTP ' + res.status));
+        }
+        return data;
+      })
+      .catch(async err => {
+        if (payload && payload.url) return await fallbackClientFetch(payload.url);
+        throw err;
+      });
   }
 
   function showChatModal() {
@@ -3668,6 +3717,7 @@
     state.chatLastRead[u.id] = Date.now();
     updateChatBadge();
     const target = state._chatTarget || 'ALL';
+    const editingId = state._editingMsgId || null;
     const others = (state.users || []).filter(x => x.active !== false && x.id !== u.id);
     const visibleMsgs = (state.messages || []).filter(m => {
       if (target === 'ALL') return m.recipient_id === 'ALL' || !m.recipient_id;
@@ -3684,19 +3734,50 @@
 
     openModal('Kitchen Alerts & Private DMs', `
       <div class="space-y-3">
-        <div class="flex flex-wrap items-center gap-1.5 text-xs">
-          <button type="button" data-chat-target="ALL" class="px-2.5 py-1 rounded-lg font-bold border ${target === 'ALL' ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">Alert All (Broadcast)</button>
-          ${others.map(o => `
-            <button type="button" data-chat-target="${o.id}" class="px-2.5 py-1 rounded-lg font-semibold border ${target === o.id ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">DM: ${esc(o.name)} (${esc(o.role)})</button>
-          `).join('')}
+        <div class="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" data-chat-target="ALL" class="px-2.5 py-1 rounded-lg font-bold border ${target === 'ALL' ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">Alert All (Broadcast)</button>
+            ${others.map(o => `
+              <button type="button" data-chat-target="${o.id}" class="px-2.5 py-1 rounded-lg font-semibold border ${target === o.id ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">DM: ${esc(o.name)} (${esc(o.role)})</button>
+            `).join('')}
+          </div>
+          ${visibleMsgs.length && isMgmtOrHigher(u) ? `<button type="button" id="btn-clear-chat-thread" class="text-[11px] font-semibold text-red-500 hover:underline px-1.5 py-1">Clear Thread</button>` : ''}
         </div>
         <div class="max-h-60 overflow-y-auto space-y-2 p-2 rounded-lg bg-black/5">
-          ${!visibleMsgs.length ? `<p class="text-xs opacity-60 text-center py-6">${target === 'ALL' ? 'No broadcast alerts yet.' : 'No private messages with ' + esc(targetUser ? targetUser.name : 'user') + ' yet.'}</p>` : visibleMsgs.map(m => `
-            <div class="p-2 rounded-lg kms-card text-xs ${m.sender_id === u.id ? 'border-l-4 border-l-[#1b365d]' : ''}">
-              <div class="font-bold">${esc(m.sender_name)} ${m.recipient_id && m.recipient_id !== 'ALL' ? `<span class="opacity-65 font-normal">&rarr; ${esc(m.recipient_name)} (Private)</span>` : ''} <span class="opacity-60 font-normal">(${esc(m.timestamp_label)})</span> ${m.priority === 'urgent' ? '<span class="tag tag-OUT">URGENT</span>' : ''}</div>
-              <div class="mt-0.5">${esc(m.body)}</div>
+          ${!visibleMsgs.length ? `<p class="text-xs opacity-60 text-center py-6">${target === 'ALL' ? 'No broadcast alerts yet.' : 'No private messages with ' + esc(targetUser ? targetUser.name : 'user') + ' yet.'}</p>` : visibleMsgs.map(m => {
+            const canEditMsg = (m.sender_id === u.id) || isMgmtOrHigher(u);
+            const isEditing = editingId === m.id;
+            return `
+            <div class="p-2.5 rounded-lg kms-card text-xs ${m.sender_id === u.id ? 'border-l-4 border-l-[#1b365d]' : ''}">
+              <div class="flex items-start justify-between gap-2">
+                <div class="font-bold">
+                  ${esc(m.sender_name)}
+                  ${m.recipient_id && m.recipient_id !== 'ALL' ? `<span class="opacity-65 font-normal">&rarr; ${esc(m.recipient_name)} (Private)</span>` : ''}
+                  <span class="opacity-60 font-normal">(${esc(m.timestamp_label)})</span>
+                  ${m.priority === 'urgent' ? '<span class="tag tag-OUT ml-1">URGENT</span>' : ''}
+                  ${m.edited ? '<span class="opacity-55 font-normal italic ml-1">(edited)</span>' : ''}
+                </div>
+                ${canEditMsg && !isEditing ? `
+                  <div class="flex items-center gap-2 shrink-0 text-[11px]">
+                    <button type="button" data-edit-msg="${esc(m.id)}" class="font-semibold text-[var(--navy)] hover:underline">Edit</button>
+                    <button type="button" data-del-msg="${esc(m.id)}" class="font-semibold text-red-500 hover:underline">Delete</button>
+                  </div>
+                ` : ''}
+              </div>
+              ${isEditing ? `
+                <form class="form-edit-msg mt-2 space-y-2" data-msg-id="${esc(m.id)}">
+                  <textarea name="body" rows="2" required class="kms-input w-full text-xs leading-relaxed">${esc(m.body)}</textarea>
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <label class="flex items-center gap-1.5 text-xs font-bold cursor-pointer"><input type="checkbox" name="urgent" ${m.priority === 'urgent' ? 'checked' : ''} /> Urgent</label>
+                    <div class="flex gap-1.5">
+                      <button type="button" id="btn-cancel-edit-msg" class="kms-btn-alt px-2.5 py-1 text-xs">Cancel</button>
+                      <button type="submit" class="kms-btn-ok px-3 py-1 text-xs">Update</button>
+                    </div>
+                  </div>
+                </form>
+              ` : `<div class="mt-1 whitespace-pre-line">${esc(m.body)}</div>`}
             </div>
-          `).join('')}
+          `; }).join('')}
         </div>
         <form id="form-chat" class="space-y-2">
           <input type="hidden" name="recipientId" value="${esc(target)}" />
@@ -3740,6 +3821,27 @@
     `);
   }
 
+  function showBackupRestoreModal() {
+    openModal('Backup & Restore Full System', `
+      <div class="space-y-4 text-xs">
+        <div class="p-3 rounded-lg border border-[var(--line)] space-y-2">
+          <div class="font-bold">1. Download Full JSON Backup</div>
+          <p class="opacity-75">Saves all Butler PA inventory, recipes, photos, menu plans, POs, users, and safety logs to a file.</p>
+          <button type="button" id="btn-dl-json" class="kms-btn-navy px-3.5 py-2 font-semibold">Download JSON Backup</button>
+        </div>
+        <div class="p-3 rounded-lg border border-[var(--line)] space-y-2">
+          <div class="font-bold">2. Restore from JSON Backup File</div>
+          <p class="opacity-75">Upload a previously saved <code>.json</code> backup file to restore locally and sync to Supabase.</p>
+          <input type="file" id="inp-restore-json" accept=".json,application/json" class="kms-input w-full text-xs" />
+        </div>
+        <div class="pt-2 border-t border-[var(--line)] flex justify-between items-center">
+          <button type="button" id="btn-reset-seed" class="kms-btn-alt px-3 py-1.5 text-xs">Reset Stock to Starting Seed</button>
+          <button type="button" data-close-modal="1" class="kms-btn-alt px-3 py-1.5 text-xs">Close</button>
+        </div>
+      </div>
+    `);
+  }
+
   // Global Event Listeners
   document.addEventListener('click', (e) => {
     if (state.isLocked) return;
@@ -3762,10 +3864,92 @@
     if (e.target.id === 'modal-close' || e.target.id === 'modal-backdrop') { closeModal(); return; }
     if (e.target.closest('[data-close-modal]')) { closeModal(); if (!e.target.closest('[data-tab]')) return; }
     if (e.target.closest('#btn-switch-user')) { showSwitchUserModal(); return; }
-    if (e.target.closest('#btn-open-chat')) { showChatModal(); return; }
+    if (e.target.closest('#btn-open-chat')) { state._editingMsgId = null; showChatModal(); return; }
     const chatTgtBtn = e.target.closest('[data-chat-target]');
-    if (chatTgtBtn) { state._chatTarget = chatTgtBtn.dataset.chatTarget; showChatModal(); return; }
-    if (e.target.closest('#btn-lock-app')) { const curU = getActiveUser(); logActivity('LOGOUT', `${curU.name} locked / signed out`); state.isLocked = true; delete state._sbAuthEmail; setSessionUnlocked(false); sessionPin = ''; saveState(); render(); return; }
+    if (chatTgtBtn) { state._chatTarget = chatTgtBtn.dataset.chatTarget; state._editingMsgId = null; showChatModal(); return; }
+    const editMsgBtn = e.target.closest('[data-edit-msg]');
+    if (editMsgBtn) { state._editingMsgId = editMsgBtn.dataset.editMsg; showChatModal(); return; }
+    if (e.target.id === 'btn-cancel-edit-msg') { state._editingMsgId = null; showChatModal(); return; }
+    const delMsgBtn = e.target.closest('[data-del-msg]');
+    if (delMsgBtn) {
+      const msgId = delMsgBtn.dataset.delMsg;
+      const u = getActiveUser();
+      const targetMsg = (state.messages || []).find(m => m.id === msgId);
+      if (targetMsg && (targetMsg.sender_id === u.id || isMgmtOrHigher(u))) {
+        state.messages = (state.messages || []).filter(m => m.id !== msgId);
+        if (state._editingMsgId === msgId) state._editingMsgId = null;
+        if (sbClient) sbClient.from('kms_messages').delete().eq('id', msgId).then(() => {});
+        logActivity('CHAT DELETED', `Deleted message from ${targetMsg.sender_name}`);
+        saveState();
+        updateChatBadge();
+        showChatModal();
+        showToast('Message deleted');
+      }
+      return;
+    }
+    if (e.target.id === 'btn-clear-chat-thread') {
+      if (!isMgmtOrHigher()) { showToast('Only Management can clear a chat thread', 'warn'); return; }
+      const u = getActiveUser();
+      const target = state._chatTarget || 'ALL';
+      const toDelete = (state.messages || []).filter(m => {
+        if (target === 'ALL') return m.recipient_id === 'ALL' || !m.recipient_id;
+        return (m.sender_id === u.id && m.recipient_id === target) || (m.sender_id === target && m.recipient_id === u.id);
+      }).map(m => m.id);
+      if (!toDelete.length) return;
+      state.messages = (state.messages || []).filter(m => !toDelete.includes(m.id));
+      state._editingMsgId = null;
+      if (sbClient) sbClient.from('kms_messages').delete().in('id', toDelete).then(() => {});
+      logActivity('CHAT CLEARED', `Cleared ${toDelete.length} message(s) in ${target === 'ALL' ? 'Broadcast' : 'DM'}`);
+      saveState();
+      updateChatBadge();
+      showChatModal();
+      showToast(`Cleared ${toDelete.length} message(s)`);
+      return;
+    }
+    if (e.target.closest('#btn-lock-app')) {
+      const curU = getActiveUser();
+      logActivity('LOGOUT', `${curU.name} locked / signed out`);
+      state.isLocked = true;
+      delete state._sbAuthEmail;
+      setSessionUnlocked(false);
+      sessionPin = '';
+      saveState();
+      render();
+      return;
+    }
+    if (e.target.closest('#btn-sync-pill')) {
+      openModal('Supabase Cloud Sync & Connection', `
+        <div class="space-y-3 text-xs">
+          <div class="p-3 rounded-lg border border-[var(--line)] flex items-center justify-between">
+            <div>
+              <div class="font-bold">Status: ${syncStatus === 'live' ? 'Connected (Live Sync)' : syncStatus === 'connecting' ? 'Connecting...' : 'Local / Offline Mode'}</div>
+              <div class="opacity-70 font-mono text-[11px] mt-0.5">${esc(SUPABASE_URL)}</div>
+            </div>
+            <span class="tag ${syncStatus === 'live' ? 'tag-OK' : 'tag-LOW'}">${syncStatus.toUpperCase()}</span>
+          </div>
+          <p class="opacity-80">Use <strong>Reconnect &amp; Pull from Cloud</strong> to refresh all devices from Supabase, or <strong>Push Local Data to Cloud</strong> if you made offline changes.</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="btn-sb-reconnect" class="kms-btn-navy flex-1 py-2 text-xs font-semibold">Reconnect &amp; Pull from Cloud</button>
+            <button type="button" id="btn-sb-push" class="kms-btn-ok flex-1 py-2 text-xs font-semibold">Push Local Data to Cloud</button>
+          </div>
+        </div>
+      `);
+      return;
+    }
+    if (e.target.id === 'btn-sb-reconnect') {
+      closeModal();
+      showToast('Reconnecting to Supabase...');
+      initSupabase();
+      return;
+    }
+    if (e.target.id === 'btn-sb-push') {
+      closeModal();
+      if (!tabletSession) { showToast('Connect this tablet to the cloud on the Lock screen first', 'warn'); return; }
+      syncStatus = 'live';
+      updateSyncUI();
+      syncToSupabase().then(() => showToast('Pushed local data to Supabase cloud!'));
+      return;
+    }
     if (e.target.id === 'btn-undo' || e.target.id === 'btn-stock-undo') { doUndo(); return; }
     if (e.target.id === 'btn-print-qr') { showQrLabelsModal(); return; }
     if (e.target.id === 'btn-print-page') { window.print(); return; }
@@ -3781,18 +3965,7 @@
       saveState();
       return;
     }
-    if (e.target.id === 'btn-backup') {
-      openModal('Backup & Restore', `
-        <div class="space-y-3 text-xs">
-          <p>Download a JSON backup of all Butler PA inventory, recipes, logs, and settings.</p>
-          <div class="flex flex-wrap gap-2">
-            <button type="button" id="btn-dl-json" class="kms-btn-navy px-3.5 py-2">Download JSON Backup</button>
-            <button type="button" id="btn-reset-seed" class="kms-btn-alt px-3.5 py-2">Reset Stock to Starting Seed</button>
-          </div>
-        </div>
-      `);
-      return;
-    }
+    if (e.target.id === 'btn-backup' || e.target.id === 'btn-open-restore') { showBackupRestoreModal(); return; }
     if (e.target.id === 'btn-dl-json') {
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
@@ -4294,11 +4467,8 @@
       if (!targetUrl) { showToast('Paste a recipe URL first', 'warn'); return; }
       const btn = e.target;
       btn.disabled = true; btn.textContent = 'Fetching...';
-      edgeFetch('scrape-recipe', {
-        body: JSON.stringify({ url: targetUrl })
-      }).then(async res => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok || !data.recipe) throw new Error(data.error || ('Fetch failed (HTTP ' + res.status + ')'));
+      invokeScrapeRecipe({ url: targetUrl }).then(data => {
+        if (!data || !data.ok || !data.recipe) throw new Error((data && data.error) || 'Could not fetch recipe from URL');
         const rec = data.recipe;
         const tInp = document.getElementById('sug-title-inp');
         const sInp = document.getElementById('sug-serv-inp');
@@ -4461,7 +4631,11 @@
       const activeItems = state.items.filter(x => !x.discontinued && itemNeed(x) > 0);
       const rows = [['Item', 'Vendor', 'On Hand', 'Par', 'Unit', 'Whole Cases Needed', 'Unit Price']];
       activeItems.forEach(x => rows.push([x.name, x.vendor || '', x.on_hand, x.par, x.unit, Math.max(1, Math.ceil(itemNeed(x))), x.unit_price || 0]));
-      download('executive_restock_needs.csv', rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv');
+      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = `executive_restock_needs-${localDateStr()}.csv`;
+      a.click();
       return;
     }
     if (e.target.id === 'btn-rec-pending-pos') {
@@ -4524,6 +4698,49 @@
         saveState();
         render();
         showToast(`Approved & added "${parsed.name}" to Recipe Book!`);
+      }
+      return;
+    }
+    const revSug = e.target.closest('[data-review-recsug]');
+    if (revSug) {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can review recipe suggestions', 'warn'); return; }
+      const s = (state.recipeSuggestions || []).find(x => x.id === revSug.dataset.reviewRecsug);
+      if (s) {
+        const pr = s.parsed_recipe
+          ? normalizeRecipe(s.parsed_recipe)
+          : parsePastedRecipe(s.title + '\nServings: ' + (s.servings || 65) + '\n' + s.raw);
+        const ingLines = (pr.ingredients || []).map(g => `${g.unit === 'to taste' ? '' : formatKitchenFraction(g.qty) + ' ' + g.unit + ' '}${g.name}`.trim()).join('\n');
+        const stepLines = (pr.steps || []).join('\n');
+        openModal(`Review & Edit Suggestion — ${s.title}`, `
+          <form id="form-review-recsug" class="space-y-3 text-xs">
+            <input type="hidden" name="sugId" value="${esc(s.id)}" />
+            <div><label class="block font-semibold mb-1">Recipe Title</label><input name="title" type="text" required value="${esc(s.title)}" class="kms-input w-full text-sm" /></div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div><label class="block font-semibold mb-1">Category</label><input name="category" type="text" value="${esc(pr.category || 'Main Entree')}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Base Servings</label><input name="servings" type="number" min="1" value="${Number(s.servings) || pr.base_servings || 65}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Prep (min)</label><input name="prepMin" type="number" min="0" value="${pr.prep_min || 20}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Cook (min)</label><input name="cookMin" type="number" min="0" value="${pr.cook_min || 35}" class="kms-input w-full text-xs" /></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div><label class="block font-semibold mb-1">Target Menu Date (Optional)</label><input name="targetDate" type="date" value="${esc(s.target_date || '')}" class="kms-input w-full text-xs" /></div>
+              <div><label class="block font-semibold mb-1">Allergens (comma-separated)</label><input name="allergens" type="text" value="${esc((pr.allergens || []).join(', '))}" placeholder="milk, wheat, soy..." class="kms-input w-full text-xs" /></div>
+            </div>
+            <div><label class="block font-semibold mb-1">Photo URL (Optional)</label><input name="photoUrl" type="text" value="${esc(pr.photo_url || '')}" placeholder="https://..." class="kms-input w-full text-xs" /></div>
+            <div><label class="block font-semibold mb-1">Notes (Optional)</label><input name="notes" type="text" value="${esc(pr.notes || '')}" placeholder="Prep or serving notes..." class="kms-input w-full text-xs" /></div>
+            <div>
+              <label class="block font-semibold mb-1">Ingredients (one per line, e.g. 4 lbs Ground beef)</label>
+              <textarea name="ingText" rows="5" required class="kms-input w-full text-xs leading-relaxed">${esc(ingLines)}</textarea>
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Directions (one step per line)</label>
+              <textarea name="stepsText" rows="5" class="kms-input w-full text-xs leading-relaxed">${esc(stepLines)}</textarea>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button type="submit" name="action" value="save" class="kms-btn-alt flex-1 py-2 text-xs font-semibold">Save Draft Changes</button>
+              <button type="submit" name="action" value="approve" class="kms-btn-ok flex-1 py-2 text-xs font-semibold">Approve &amp; Add to Recipes</button>
+            </div>
+          </form>
+        `);
       }
       return;
     }
@@ -4626,7 +4843,7 @@
     if (delAnnBtn) {
       const targetId = delAnnBtn.dataset.delAnnouncement;
       const targetAnn = (state.announcements || []).find(a => a.id === targetId);
-      askConfirm(`Globally delete "${targetAnn ? targetAnn.title : 'this announcement'}"?`, () => {
+      askConfirm('Delete Announcement', `Globally delete "${targetAnn ? targetAnn.title : 'this announcement'}"?`, () => {
         state.announcements = (state.announcements || []).filter(a => a.id !== targetId);
         if (targetAnn) logActivity('ANNOUNCEMENT DELETED', `Deleted "${targetAnn.title}"`);
         if (sbClient) sbClient.from('kms_announcements').delete().eq('id', targetId).then(() => {});
@@ -4894,6 +5111,41 @@
       if (wrap) wrap.classList.toggle('hidden', e.target.value !== '__NEW__');
       return;
     }
+    if (e.target.id === 'inp-restore-json') {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || '{}'));
+          if (!parsed || !Array.isArray(parsed.items)) {
+            showToast('Invalid backup JSON file', 'error');
+            return;
+          }
+          const wasCloud = cloudManaged();
+          state = Object.assign(getDefaultState(), parsed);
+          if (Array.isArray(state.recipes)) state.recipes = state.recipes.map(normalizeRecipe);
+          if (wasCloud) { state.cloudManaged = true; stripLocalPins(); }
+          ensureOwnerIntegrity();
+          state.isLocked = false;
+          setSessionUnlocked(true);
+          logActivity('BACKUP RESTORED', `Restored backup (${state.items.length} items, ${state.recipes.length} recipes)`);
+          closeModal();
+          saveState();
+          render();
+          showToast('Backup restored & synced to Supabase!');
+        } catch (err) {
+          showToast('Could not read JSON backup file', 'error');
+        }
+      };
+      reader.readAsText(file);
+      return;
+    }
+    if (e.target && e.target.id === 'ann-repeat-select') {
+      const wrap = document.getElementById('ann-repeat-days-wrap');
+      if (wrap) wrap.classList.toggle('hidden', !['weekly', 'biweekly'].includes(e.target.value));
+      return;
+    }
     if (e.target.id === 'stock-loc') { state._stockLoc = e.target.value; render(); return; }
     if (e.target.id === 'order-hz') { state._orderHorizon = e.target.value; render(); return; }
     if (e.target.id === 'fc-whatif-meal') { state._fcMealFilter = e.target.value; render(); return; }
@@ -4907,6 +5159,7 @@
       if (x) {
         snapUndo();
         if (f === 'cadence') { x.cadence = e.target.value; x.vendor = x.cadence === 'W' ? 'Marberger / Produce' : 'Jordan Banana'; }
+        else if (f === 'location') { x.location = e.target.value; }
         else {
           const v = Math.max(0, parseFloat(e.target.value) || 0);
           if (f === 'on_hand' && v < x.on_hand) recordUsage(x, x.on_hand - v);
@@ -4974,9 +5227,8 @@
       const today = localDateStr();
       const log = state.safetyLogs[today] = state.safetyLogs[today] || { temps: {}, cleaning: {} };
       log.temps[e.target.dataset.tempIdx] = e.target.value === '' ? null : parseFloat(e.target.value);
-      logActivity('SAFETY TEMP', `${TEMP_CHECKS[e.target.dataset.tempIdx]?.[0] || 'Temp'}: ${e.target.value || 'cleared'}°F`);
       log.logged_by = getActiveUser().name;
-      logActivity('TEMP', `${TEMP_CHECKS[e.target.dataset.tempIdx][0]}: ${e.target.value}°F`);
+      logActivity('SAFETY TEMP', `${TEMP_CHECKS[e.target.dataset.tempIdx]?.[0] || 'Temp'}: ${e.target.value || 'cleared'}°F`);
       saveState();
       render();
       return;
@@ -4986,7 +5238,6 @@
       const log = state.safetyLogs[today] = state.safetyLogs[today] || { temps: {}, cleaning: {} };
       log.cleaning[e.target.dataset.cleanIdx] = e.target.checked;
       logActivity('CLEANING LOG', `${CLEANING_TASKS[e.target.dataset.cleanIdx] || 'Task'}: ${e.target.checked ? 'Done' : 'Unchecked'}`);
-      logActivity('CLEANING', CLEANING_TASKS[e.target.dataset.cleanIdx]);
       saveState();
       render();
       return;
@@ -5067,7 +5318,6 @@
         });
         return;
       }
-      // Local-only mode (tablet has never connected to the cloud)
       if (!verifyPin(u, pin)) {
         logActivity('LOGIN FAILED', `Incorrect PIN attempt for ${u.name}`); saveState();
         showErr('Incorrect PIN.');
@@ -5106,9 +5356,11 @@
     }
 
     if (e.target.id === 'form-add-item') {
+      const loc = String(fd.get('location') || LOCATIONS[0]);
+      const prefix = /freezer/i.test(loc) ? 'FRZ' : /cooler/i.test(loc) ? 'CLR' : /kitchen dry/i.test(loc) ? 'KDG' : 'STK';
       const item = {
-        id: uid('item'), sku: 'NEW-' + String(state.items.length + 101), name: fd.get('name').trim(),
-        location: fd.get('location'), category: 'General', unit: fd.get('unit').trim() || 'cases',
+        id: uid('item'), sku: prefix + '-' + String(state.items.length + 101), name: fd.get('name').trim(),
+        location: loc, category: 'General', unit: fd.get('unit').trim() || 'cases',
         pack_label: fd.get('unit').trim() || 'cases', units_per_pack: 1,
         on_hand: parseFloat(fd.get('onHand')) || 0, par: parseFloat(fd.get('par')) || 1,
         par_manual: false, par_learned: false, cadence: fd.get('cadence'),
@@ -5116,7 +5368,7 @@
         unit_price: null, usage_log: [], discontinued: false
       };
       state.items.push(item);
-      logActivity('ADD ITEM', item.name);
+      logActivity('ADD ITEM', `${item.name} (${loc})`);
       saveState();
       closeModal();
       render();
@@ -5200,7 +5452,7 @@
           if (!newName) { showToast('Enter a name for the new item', 'warn'); return; }
           if (exQ <= 0) { showToast('Enter at least 1 case for the new item', 'warn'); return; }
           if (fd.get('addToCatalog')) {
-            const prefix = newLoc.includes('freezer') ? 'FRZ' : newLoc.includes('cooler') ? 'CLR' : 'STK';
+            const prefix = /freezer/i.test(newLoc) ? 'FRZ' : /cooler/i.test(newLoc) ? 'CLR' : /kitchen dry/i.test(newLoc) ? 'KDG' : 'STK';
             const sku = prefix + '-' + (100 + state.items.length + 1);
             const newItem = {
               id: uid('itm'), sku, name: newName, location: newLoc, category: 'General',
@@ -5403,11 +5655,8 @@
       if (sourceUrl && !raw) {
         const btn = document.getElementById('btn-submit-sug');
         if (btn) { btn.disabled = true; btn.textContent = 'Fetching & Submitting...'; }
-        edgeFetch('scrape-recipe', {
-        body: JSON.stringify({ url: sourceUrl })
-        }).then(async res => {
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data.ok || !data.recipe) throw new Error(data.error || 'Could not fetch URL');
+        invokeScrapeRecipe({ url: sourceUrl }).then(data => {
+          if (!data || !data.ok || !data.recipe) throw new Error((data && data.error) || 'Could not fetch URL');
           const rec = data.recipe;
           const lines = ['Ingredients:', ...(rec.ingredients || [])];
           if (rec.steps && rec.steps.length) lines.push('', 'Directions:', ...rec.steps.map((st, idx) => `${idx + 1}. ${st}`));
@@ -5424,15 +5673,13 @@
       finalizeSuggestion(title, serv, raw, photoUrl);
       return;
     }
+
     function importRecipeFromUrl(targetUrl, btn) {
       const origTxt = btn ? btn.textContent : 'Import';
       if (btn) { btn.disabled = true; btn.textContent = 'Importing...'; }
-      edgeFetch('scrape-recipe', {
-        body: JSON.stringify({ url: targetUrl })
-      }).then(async res => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok || !data.recipe) {
-          throw new Error(data.error || ('Import failed (HTTP ' + res.status + ')'));
+      invokeScrapeRecipe({ url: targetUrl }).then(data => {
+        if (!data || !data.ok || !data.recipe) {
+          throw new Error((data && data.error) || 'Import failed');
         }
         const rawRec = data.recipe;
         const baseServ = Math.max(1, Number(rawRec.base_servings) || 8);
@@ -5481,11 +5728,8 @@
       state._webRecQuery = q;
       const btn = document.getElementById('btn-search-web-rec');
       if (btn) { btn.disabled = true; btn.textContent = 'Searching...'; }
-      edgeFetch('scrape-recipe', {
-        body: JSON.stringify({ query: q })
-      }).then(async res => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok || !Array.isArray(data.results)) throw new Error('fallback');
+      invokeScrapeRecipe({ query: q }).then(data => {
+        if (!data || !data.ok || !Array.isArray(data.results)) throw new Error('fallback');
         state._webRecResults = data.results;
         render();
       }).catch(() => {
@@ -5574,6 +5818,59 @@
       return;
     }
 
+    if (e.target.id === 'form-review-recsug') {
+      if (!isMgmtOrHigher()) { showToast('Only Management can edit suggestions', 'warn'); return; }
+      const s = (state.recipeSuggestions || []).find(x => x.id === fd.get('sugId'));
+      if (s) {
+        const action = (e.submitter && e.submitter.value) || 'approve';
+        const title = String(fd.get('title') || '').trim() || s.title;
+        const serv = Math.max(1, parseFloat(fd.get('servings')) || 65);
+        const ingText = String(fd.get('ingText') || '').trim();
+        const stepsText = String(fd.get('stepsText') || '').trim();
+        const targetDate = String(fd.get('targetDate') || '').trim();
+        const rawCombined = `Ingredients:\n${ingText}\n\nDirections:\n${stepsText}`;
+        const parsed = parsePastedRecipe(`${title}\nServings: ${serv}\n${rawCombined}`);
+        parsed.name = title;
+        parsed.category = String(fd.get('category') || '').trim() || 'Main Entree';
+        parsed.base_servings = serv;
+        parsed.prep_min = Math.max(0, parseInt(fd.get('prepMin'), 10) || 0);
+        parsed.cook_min = Math.max(0, parseInt(fd.get('cookMin'), 10) || 0);
+        parsed.allergens = String(fd.get('allergens') || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+        parsed.photo_url = String(fd.get('photoUrl') || '').trim();
+        parsed.notes = String(fd.get('notes') || '').trim();
+
+        s.title = title;
+        s.servings = serv;
+        s.target_date = targetDate;
+        s.raw = rawCombined;
+        s.parsed_recipe = parsed;
+
+        if (action === 'approve') {
+          parsed.id = uid('rec');
+          state.recipes.unshift(parsed);
+          state.selectedRecipeId = parsed.id;
+          if (targetDate) {
+            const ex = state.menuPlan.find(m => m.service_date === targetDate);
+            if (ex) { ex.recipe_id = parsed.id; ex.custom_title = parsed.name; }
+            else state.menuPlan.push({ id: uid('mp'), service_date: targetDate, recipe_id: parsed.id, custom_title: parsed.name, planned_portions: forecastWeekday(targetDate, parsed.id), status: 'PLANNED' });
+          }
+          s.status = 'APPROVED';
+          logActivity('RECIPE APPROVED', `Reviewed & approved "${parsed.name}" (suggested by ${s.suggested_by})`);
+          closeModal();
+          saveState();
+          render();
+          showToast(`Approved & added "${parsed.name}" to Recipe Book!`);
+        } else {
+          logActivity('SUGGESTION EDITED', `Edited pending suggestion "${title}"`);
+          closeModal();
+          saveState();
+          render();
+          showToast(`Saved edits to pending suggestion "${title}"`);
+        }
+      }
+      return;
+    }
+
     if (e.target.id === 'form-add-rec-ing') {
       if (!isMgmtOrHigher()) { showToast('Only Management can edit recipes', 'warn'); return; }
       const r = state.recipes.find(x => x.id === e.target.dataset.recId);
@@ -5641,6 +5938,7 @@
       showToast(`Saved ${sv} patrons served`);
       return;
     }
+
     if (e.target.id === 'form-edit-srv') {
       const mp = state.menuPlan.find(m => m.id === fd.get('id'));
       if (mp) {
@@ -5658,6 +5956,7 @@
       }
       return;
     }
+
     if (e.target.id === 'form-bulk-paste') {
       const lines = String(fd.get('csv') || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       let count = 0;
@@ -5684,6 +5983,7 @@
       showToast(`Imported ${count} past attendance record(s)`);
       return;
     }
+
     if (e.target.id === 'form-bulk-served') {
       let count = 0;
       for (const [k, v] of fd.entries()) {
@@ -5783,6 +6083,24 @@
       return;
     }
 
+    if (e.target.classList && e.target.classList.contains('form-edit-msg')) {
+      const msgId = e.target.dataset.msgId;
+      const u = getActiveUser();
+      const m = (state.messages || []).find(x => x.id === msgId);
+      const newBody = String(fd.get('body') || '').trim();
+      if (m && newBody && (m.sender_id === u.id || isMgmtOrHigher(u))) {
+        m.body = newBody;
+        m.priority = fd.get('urgent') ? 'urgent' : 'normal';
+        m.edited = true;
+        state._editingMsgId = null;
+        logActivity('CHAT EDITED', `Updated message in ${m.recipient_id === 'ALL' ? 'Broadcast' : 'DM'}`);
+        saveState();
+        showChatModal();
+        showToast('Message updated');
+      }
+      return;
+    }
+
     if (e.target.id === 'form-chat') {
       const u = getActiveUser();
       const recId = String(fd.get('recipientId') || 'ALL');
@@ -5807,44 +6125,8 @@
       showChatModal();
       return;
     }
-  });
 
-  document.addEventListener('keydown', (e) => {
-    if (e.target && e.target.id === 'scan-input' && e.key === 'Enter') {
-      e.preventDefault();
-      const q = e.target.value.trim().toLowerCase();
-      const m = state.items.find(i => i.sku.toLowerCase() === q || i.name.toLowerCase().includes(q));
-      if (m) { document.getElementById('recv-item').value = m.id; showToast('Selected ' + m.name); e.target.value = ''; }
-      else showToast('No matching SKU or item found', 'warn');
-    }
-  });
-
-  function resetInactivity() {
-    clearTimeout(inactivityTimer);
-    if (!state.autoLockMinutes || state.isLocked) return;
-    inactivityTimer = setTimeout(() => {
-      if (!state.isLocked) logActivity('AUTO LOCK', `${getActiveUser().name} auto-locked after inactivity`);
-      state.isLocked = true;
-      setSessionUnlocked(false);
-      saveState();
-      render();
-    }, state.autoLockMinutes * 60 * 1000);
-  }
-  ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, resetInactivity, { passive: true }));
-
-  document.addEventListener('change', (e) => {
-    if (state.isLocked) return;
-    if (e.target && e.target.id === 'ann-repeat-select') {
-      const wrap = document.getElementById('ann-repeat-days-wrap');
-      if (wrap) wrap.classList.toggle('hidden', !['weekly', 'biweekly'].includes(e.target.value));
-    }
-  });
-
-  document.addEventListener('submit', (e) => {
-    if (state.isLocked && !['form-unlock', 'form-sb-auth'].includes(e.target.id)) return;
-    if (e.target && e.target.id === 'form-save-announcement') {
-      e.preventDefault();
-      const fd = new FormData(e.target);
+    if (e.target.id === 'form-save-announcement') {
       const annId = String(fd.get('annId') || '').trim();
       const title = String(fd.get('title') || '').trim();
       const body = String(fd.get('body') || '').trim();
@@ -5878,8 +6160,33 @@
       closeModal();
       saveState();
       render();
+      return;
     }
   });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.id === 'scan-input' && e.key === 'Enter') {
+      e.preventDefault();
+      const q = e.target.value.trim().toLowerCase();
+      const m = state.items.find(i => i.sku.toLowerCase() === q || i.name.toLowerCase().includes(q));
+      if (m) { document.getElementById('recv-item').value = m.id; showToast('Selected ' + m.name); e.target.value = ''; }
+      else showToast('No matching SKU or item found', 'warn');
+    }
+  });
+
+  function resetInactivity() {
+    clearTimeout(inactivityTimer);
+    if (!state.autoLockMinutes || state.isLocked) return;
+    inactivityTimer = setTimeout(() => {
+      if (!state.isLocked) logActivity('AUTO LOCK', `${getActiveUser().name} auto-locked after inactivity`);
+      state.isLocked = true;
+      setSessionUnlocked(false);
+      sessionPin = '';
+      saveState();
+      render();
+    }, state.autoLockMinutes * 60 * 1000);
+  }
+  ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, resetInactivity, { passive: true }));
 
   function setSessionUnlocked(unlocked) {
     try {

@@ -1,12 +1,5 @@
 // Supabase Edge Function: scrape-recipe
 // Deploy in Supabase Dashboard -> Edge Functions -> Create a new function named "scrape-recipe"
-// Supports both:
-//   1) POST { "query": "meatloaf" } -> searches Budget Bytes, Skinnytaste, Sally's Baking Addiction, TheMealDB, and DummyJSON
-//   2) POST { "url": "https://..." } -> scrapes Schema.org Recipe JSON-LD (with automatic reader-proxy fallback for 403-protected sites)
-// Free tier: included in Supabase Free plan (up to 500,000 invocations/month, no extra API keys needed).
-
-// SECURITY: requires a signed-in tablet session; refuses localhost / private-network / metadata addresses
-// (SSRF), follows at most 3 redirects (each re-checked), and caps page size.
 // Optional secret: ALLOWED_ORIGIN = https://YOUR-USER.github.io
 
 const corsHeaders = {
@@ -14,8 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-
-// ---- Shared guard: only a signed-in kitchen-tablet session may call this function ----
 const SB_URL = Deno.env.get("SUPABASE_URL") || "";
 const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY") || "";
 async function isSignedIn(req: Request): Promise<boolean> {
@@ -25,7 +16,7 @@ async function isSignedIn(req: Request): Promise<boolean> {
     const r = await fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_ANON, Authorization: auth } });
     if (!r.ok) return false;
     const u = await r.json();
-    return !!(u && u.id);          // the public anon key has no user, so it fails here
+    return !!(u && u.id);
   } catch {
     return false;
   }
@@ -37,7 +28,7 @@ function json(body: unknown, status = 200) {
 function isBlockedHost(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (!h || h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal") || !h.includes(".") && !h.includes(":")) return true;
-  if (h.includes(":")) {                       // IPv6 literals: block loopback, link-local, unique-local, mapped
+  if (h.includes(":")) {
     return h === "::1" || h === "::" || h.startsWith("fe80") || h.startsWith("fc") || h.startsWith("fd") || h.startsWith("::ffff:");
   }
   const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
@@ -48,6 +39,12 @@ function isBlockedHost(hostname: string): boolean {
   }
   return false;
 }
+
+const BROWSER_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
 async function safeFetch(url: string, timeoutMs: number): Promise<Response> {
   let current = url;
@@ -89,12 +86,6 @@ async function readCapped(res: Response, maxBytes: number): Promise<string> {
   for (const c of chunks) { all.set(c, off); off += c.length; }
   return new TextDecoder().decode(all);
 }
-
-const BROWSER_HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
-  "Accept-Language": "en-US,en;q=0.9",
-};
 
 function decodeEntities(str: string): string {
   return String(str || "")

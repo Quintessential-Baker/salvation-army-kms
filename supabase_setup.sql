@@ -219,7 +219,6 @@ create index if not exists idx_kms_tags_status on public.kms_storage_tags (statu
 create index if not exists idx_kms_activity_ms on public.kms_activity_logs (created_at_ms desc);
 
 -- Row Level Security: ONLY the signed-in kitchen-tablet account may touch data.
--- (anon = anyone holding the public key = no access at all)
 do $$
 declare
   tbl text;
@@ -276,17 +275,16 @@ create extension if not exists pgcrypto with schema extensions;
 
 create table if not exists public.kms_user_secrets (
   user_id text primary key references public.kms_users(id) on delete cascade,
-  pin_hash text,                 -- bcrypt hash (current)
-  legacy_hash text,              -- old browser SHA-256 hash, upgraded to bcrypt on first good login
+  pin_hash text,
+  legacy_hash text,
   legacy_salt text,
   failed_count integer not null default 0,
   locked_until timestamptz,
   updated_at timestamptz not null default now()
 );
-alter table public.kms_user_secrets enable row level security;   -- no policies = no direct access
+alter table public.kms_user_secrets enable row level security;
 revoke all on public.kms_user_secrets from anon, authenticated;
 
--- Move existing PIN hashes out of kms_users (existing databases), then drop the columns
 do $$
 begin
   if exists (select 1 from information_schema.columns
@@ -299,7 +297,6 @@ begin
   end if;
 end $$;
 
--- Starting accounts for a brand-new database (PINs are forced to change at first login)
 insert into public.kms_users (id, name, role, initials, must_change_pin) values
   ('usr-1', 'William Clark',   'ADMIN',     'WC', true),
   ('usr-2', 'Kitchen Manager', 'MANAGER',   'KM', true),
@@ -312,7 +309,6 @@ insert into public.kms_user_secrets (user_id, pin_hash)
   where exists (select 1 from public.kms_users u where u.id = v.id)
 on conflict (user_id) do nothing;
 
--- Internal: verify a PIN, handle legacy upgrade + lockout (5 misses = 5 minute lock)
 create or replace function public.kms__check_pin(p_user_id text, p_pin text)
 returns boolean
 language plpgsql security definer
@@ -357,7 +353,6 @@ begin
   return ok;
 end $$;
 
--- Sign in: returns {ok, role, must_change_pin} or {ok:false, error:'bad_pin'|'locked'|'unknown', retry_seconds}
 create or replace function public.kms_login(p_user_id text, p_pin text)
 returns jsonb
 language plpgsql security definer
@@ -388,8 +383,6 @@ begin
   return jsonb_build_object('ok', false, 'error', 'bad_pin');
 end $$;
 
--- Set / reset a PIN. The ACTING user proves who they are with their own PIN.
---   self-change: actor = target.  ADMIN: any account.  MANAGER: STAFF and VOLUNTEER only.
 create or replace function public.kms_set_pin(
   p_actor_id text, p_actor_pin text, p_target_id text, p_new_pin text, p_must_change boolean
 )
@@ -439,14 +432,3 @@ revoke all on function public.kms_login(text, text) from public, anon;
 revoke all on function public.kms_set_pin(text, text, text, text, boolean) from public, anon;
 grant execute on function public.kms_login(text, text) to authenticated;
 grant execute on function public.kms_set_pin(text, text, text, text, boolean) to authenticated;
-
--- ============================================================================
--- EMERGENCY ADMIN PIN RECOVERY (run manually in the SQL Editor if the admin
--- forgets their PIN; there is intentionally no app-side bypass):
---
---   insert into public.kms_user_secrets (user_id, pin_hash)
---     values ('usr-1', extensions.crypt('TempPin2026', extensions.gen_salt('bf', 8)))
---   on conflict (user_id) do update set pin_hash = excluded.pin_hash,
---     legacy_hash = null, legacy_salt = null, failed_count = 0, locked_until = null;
---   update public.kms_users set must_change_pin = true where id = 'usr-1';
--- ============================================================================
