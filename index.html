@@ -1683,7 +1683,7 @@
     { tab: 'receive', title: '4. Receive & Scan Deliveries', desc: 'Scan barcodes/QR labels with your camera or USB/Bluetooth scanner to check in deliveries or reconcile expected Purchase Orders into Living Stock.', tryIt: 'Scan or select an item and enter packs received.' },
     { tab: 'menu', title: '5. Menu Planner', desc: 'Schedule meals for Mon/Tue/Wed/Fri service days, mark closed holidays, and commit/deduct ingredients directly from Living Stock.', tryIt: 'Select a service date to assign a recipe or mark Leftovers Service.' },
     { tab: 'prep', title: '6. Next-Day Prep List', desc: 'Automatically pulls tomorrow\'s ingredient requirements grouped by storage zone (Cooler, Freezer, Dry Storage) plus FIFO leftovers.', tryIt: 'Check off each ingredient pull as you stage it for service.' },
-    { tab: 'recipes', title: '7. Recipes (40–80) & QR Scan', desc: 'Paste new recipes, search or scan recipe QR cards, drag the 40–80 portion slider, or open the 40–80 Quick-Scan Table to see 40/50/60/70/80 amounts side-by-side.', tryIt: 'Drag the 40–80 slider or click "40–80 Quick-Scan Table".' },
+    { tab: 'recipes', title: '7. Recipes (40–80) & QR Scan', desc: 'Paste new recipes, bulk add/edit recipes, scan recipe QR cards, drag the 40–80 portion slider, or open the 40–80 Quick-Scan Table to see 40/50/60/70/80 amounts side-by-side.', tryIt: 'Drag the 40–80 slider or click "40–80 Quick-Scan Table".' },
     { tab: 'safety', title: '8. Daily Temps & Cleaning (HACCP)', desc: 'Log the 6 required serving-day temperature checks (Coolers <=41°F, Freezers <=0°F, Entree >=165°F, Steam Table >=135°F) and 7-point cleaning checks.', tryIt: 'Enter a temperature reading to verify PASS vs. FLAGGED auto-check.' },
     { tab: 'storage', title: '9. Storage & Date Labels (FIFO)', desc: 'Use 1-Tap Presets for Cut Salad Greens/Fruit (3d), Dairy/Deli Salads (4d), Cooked Entrees (7d), and Freezer (90d) so Use-By alerts fire automatically.', tryIt: 'Tap a 1-Tap Preset or mark a stored container as Served/Used.' },
     { tab: 'checklists', title: '10. Daily, Weekly & Monthly Checklists', desc: 'Stamp your name and time on cleaning, ordering, and food safety tasks. Unfinished tasks automatically carry over as red Priority Carryover items.', tryIt: 'Switch between Daily, Weekly, and Monthly tabs and check off a task.' },
@@ -2635,9 +2635,12 @@
           })()}
 
           <div class="kms-card p-4 space-y-2.5">
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <h3 class="text-sm font-bold">Saved Recipes (${state.recipes.length})</h3>
-              <button type="button" id="btn-scan-recipe-qr" class="kms-btn-navy px-2.5 py-1 text-xs">Scan Recipe QR</button>
+              <div class="flex items-center gap-1.5">
+                ${isMgmtOrHigher() ? `<button type="button" id="btn-bulk-recipes" class="kms-btn-alt px-2.5 py-1 text-xs">Bulk Add / Edit</button>` : ''}
+                <button type="button" id="btn-scan-recipe-qr" class="kms-btn-navy px-2.5 py-1 text-xs">Scan Recipe QR</button>
+              </div>
             </div>
             <input id="rec-search-inp" type="text" value="${esc(state._recSearch || '')}" placeholder="Search or scan recipe code..." class="kms-input w-full text-xs" />
             <div id="rec-qr-wrap" class="hidden border border-[var(--line)] rounded-lg p-2 bg-black/5">
@@ -4233,7 +4236,60 @@
       return;
     }
 
-    // Recipe Selection & Delete
+    // Recipe Selection, Bulk Edit & Delete
+    if (e.target.id === 'btn-bulk-recipes') {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can bulk-edit recipes', 'warn'); return; }
+      openModal('Bulk Add, Update & Edit Recipes', `
+        <div class="space-y-4 text-xs">
+          <form id="form-bulk-paste-recipes" class="p-3 rounded-lg border border-[var(--line)] bg-black/5 space-y-2">
+            <div class="font-bold text-sm">1. Bulk Paste New or Updated Recipes (Separate with <code>---</code>)</div>
+            <p class="opacity-75">If a pasted recipe's title matches an existing recipe, it will <strong>update</strong> that recipe; otherwise it adds a new one.</p>
+            <textarea name="bulkRaw" rows="6" required placeholder="Baked Ziti&#10;Servings: 65&#10;8 lbs Penne pasta&#10;24 cups Spaghetti sauce&#10;Directions:&#10;1. Boil pasta and drain.&#10;2. Mix with sauce and bake at 350°F.&#10;---&#10;Chicken Noodle Soup&#10;Servings: 65&#10;3 cases Chicken soup&#10;Directions:&#10;1. Heat to >=165°F." class="kms-input w-full text-xs font-mono"></textarea>
+            <button type="submit" class="kms-btn-ok w-full py-2 text-xs font-semibold">Import / Update Pasted Recipes</button>
+          </form>
+
+          <form id="form-bulk-edit-recipes" class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="font-bold text-sm">2. Bulk Edit All Saved Recipes (${state.recipes.length})</div>
+              <button type="submit" class="kms-btn-primary px-3.5 py-1.5 text-xs font-semibold">Save All Changes</button>
+            </div>
+            <div class="max-h-80 overflow-y-auto space-y-2.5 pr-1">
+              ${state.recipes.map(r => {
+                const rn = normalizeRecipe(r);
+                const ingTxt = (rn.ingredients || []).map(g => `${g.unit === 'to taste' ? '' : formatKitchenFraction(g.qty) + ' ' + g.unit + ' '}${g.name}`.trim()).join('\n');
+                const stepTxt = (rn.steps || []).join('\n');
+                return `
+                  <div class="p-3 rounded-lg border border-[var(--line)] space-y-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-1.5">
+                      <input name="name_${esc(rn.id)}" type="text" required value="${esc(rn.name)}" class="kms-input sm:col-span-2 text-xs font-bold" placeholder="Recipe title" />
+                      <input name="cat_${esc(rn.id)}" type="text" value="${esc(rn.category)}" class="kms-input text-xs" placeholder="Category" />
+                      <input name="base_${esc(rn.id)}" type="number" min="1" value="${rn.base_servings}" class="kms-input text-xs text-center font-bold" title="Base servings" />
+                    </div>
+                    <div class="grid grid-cols-3 gap-1.5">
+                      <input name="prep_${esc(rn.id)}" type="number" min="0" value="${rn.prep_min}" class="kms-input text-xs text-center" title="Prep minutes" />
+                      <input name="cook_${esc(rn.id)}" type="number" min="0" value="${rn.cook_min}" class="kms-input text-xs text-center" title="Cook minutes" />
+                      <input name="allg_${esc(rn.id)}" type="text" value="${esc((rn.allergens || []).join(', '))}" placeholder="Allergens (milk, wheat...)" class="kms-input text-xs" />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      <div>
+                        <label class="block text-[10px] font-bold uppercase opacity-65 mb-0.5">Ingredients (1 per line)</label>
+                        <textarea name="ing_${esc(rn.id)}" rows="3" class="kms-input w-full text-xs leading-snug">${esc(ingTxt)}</textarea>
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold uppercase opacity-65 mb-0.5">Directions (1 step per line)</label>
+                        <textarea name="step_${esc(rn.id)}" rows="3" class="kms-input w-full text-xs leading-snug">${esc(stepTxt)}</textarea>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-semibold">Save All Recipe Changes</button>
+          </form>
+        </div>
+      `);
+      return;
+    }
     const recPresetBtn = e.target.closest('[data-rec-preset]');
     if (recPresetBtn) {
       state.recipeScale = Number(recPresetBtn.dataset.recPreset) || 65;
@@ -5849,6 +5905,64 @@
       saveState();
       render();
       showToast(`Saved recipe: ${rec.name}`);
+      return;
+    }
+
+    if (e.target.id === 'form-bulk-paste-recipes') {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can bulk-import recipes', 'warn'); return; }
+      const blocks = String(fd.get('bulkRaw') || '')
+        .split(/\r?\n\s*---+\s*\r?\n/)
+        .map(b => b.trim())
+        .filter(Boolean);
+      let added = 0, updated = 0;
+      blocks.forEach(blk => {
+        const parsed = parsePastedRecipe(blk);
+        const existing = state.recipes.find(r => r.name.trim().toLowerCase() === parsed.name.trim().toLowerCase());
+        if (existing) {
+          existing.base_servings = parsed.base_servings;
+          existing.allergens = parsed.allergens;
+          existing.steps = parsed.steps;
+          existing.ingredients = parsed.ingredients;
+          delete existing.directions;
+          updated++;
+        } else {
+          state.recipes.unshift(parsed);
+          added++;
+        }
+      });
+      if (state.recipes[0]) state.selectedRecipeId = state.recipes[0].id;
+      logActivity('BULK RECIPES', `Added ${added}, updated ${updated} recipe(s)`);
+      closeModal();
+      saveState();
+      render();
+      showToast(`Bulk import complete: ${added} added, ${updated} updated!`);
+      return;
+    }
+
+    if (e.target.id === 'form-bulk-edit-recipes') {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can bulk-edit recipes', 'warn'); return; }
+      let count = 0;
+      state.recipes.forEach(r => {
+        const newName = String(fd.get('name_' + r.id) || '').trim();
+        if (!newName) return;
+        const base = Math.max(1, parseFloat(fd.get('base_' + r.id)) || r.base_servings || 65);
+        r.name = newName;
+        r.category = String(fd.get('cat_' + r.id) || '').trim() || 'Main Entree';
+        r.base_servings = base;
+        r.prep_min = Math.max(0, parseInt(fd.get('prep_' + r.id), 10) || 0);
+        r.cook_min = Math.max(0, parseInt(fd.get('cook_' + r.id), 10) || 0);
+        r.allergens = String(fd.get('allg_' + r.id) || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        const ingLines = String(fd.get('ing_' + r.id) || '').split(/\r?\n+/).map(s => s.trim()).filter(Boolean);
+        r.ingredients = ingLines.map(ln => parseIngredientLine(ln, base));
+        r.steps = String(fd.get('step_' + r.id) || '').split(/\r?\n+/).map(s => s.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+        delete r.directions;
+        count++;
+      });
+      logActivity('BULK EDIT RECIPES', `Updated ${count} recipe(s)`);
+      closeModal();
+      saveState();
+      render();
+      showToast(`Saved changes to ${count} recipe(s)!`);
       return;
     }
 
