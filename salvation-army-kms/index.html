@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Community Meals KMS — The Salvation Army · Butler, PA</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --bg: #f6f4f0;
+      --card: #ffffff;
+      --ink: #1d2430;
+      --mute: #667085;
+      --line: #d9d5cc;
+      --red: #b3122b;
+      --navy: #1b365d;
+      --ok: #1f7a3d;
+      --low: #b45309;
+      --out: #b3122b;
+    }
+    [data-theme="dark"] {
+      --bg: #14181f;
+      --card: #1d232d;
+      --ink: #eef0f3;
+      --mute: #9aa4b2;
+      --line: #364050;
+      --red: #ff6b7d;
+      --navy: #8fb3e8;
+      --ok: #5fd38a;
+      --low: #f3b45a;
+      --out: #ff6b7d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      line-height: 1.45;
+    }
+    .kms-header { background: #1b365d; color: #fff; }
+    .kms-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+    .kms-btn-primary { background: #b3122b; color: #fff; font-weight: 600; border-radius: 8px; }
+    .kms-btn-primary:hover { background: #930e23; }
+    .kms-btn-navy { background: #1b365d; color: #fff; font-weight: 600; border-radius: 8px; }
+    .kms-btn-navy:hover { background: #142947; }
+    .kms-btn-ok { background: #1f7a3d; color: #fff; font-weight: 600; border-radius: 8px; }
+    .kms-btn-ok:hover { background: #175d2e; }
+    .kms-btn-alt { background: var(--card); color: var(--navy); border: 1.5px solid var(--navy); font-weight: 600; border-radius: 8px; }
+    .kms-input {
+      color: var(--ink);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+    .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; display: inline-block; }
+    .tag-OK { color: var(--ok); }
+    .tag-LOW { color: var(--low); }
+    .tag-OUT { color: var(--out); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+    @media (pointer: coarse) {
+      button, select, input:not([type="checkbox"]):not([type="radio"]) { min-height: 42px; }
+      input[type="checkbox"], input[type="radio"] { width: 1.25rem; height: 1.25rem; }
+    }
+    @media print {
+      @page { size: letter portrait; margin: 0.45in; }
+      .no-print, header, nav, #mobile-dock, #toast-container, #pin-change-backdrop, #training-backdrop { display: none !important; }
+      html, body {
+        height: auto !important;
+        overflow: visible !important;
+        background: #fff !important;
+        color: #000 !important;
+        font-size: 10pt !important;
+        line-height: 1.35 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      #app-main { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      .overflow-y-auto, .overflow-x-auto, .max-h-96, .max-h-80, .max-h-72, .max-h-64, .max-h-60, .max-h-56 {
+        max-height: none !important;
+        overflow: visible !important;
+      }
+      .kms-card {
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        background: #fff !important;
+        color: #000 !important;
+        padding: 10px 12px !important;
+        margin-bottom: 10px !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .kms-card.print-flow, .space-y-4 > .kms-card, .space-y-2 > .kms-card {
+        break-inside: auto;
+        page-break-inside: auto;
+      }
+      tr, .qr-label-card, .print-keep, .stock-row-card, .menu-day-card, .chk-row-card, .tag-row-card, .menu-cal-cell {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
+      table { width: 100% !important; border-collapse: collapse !important; }
+      thead { display: table-header-group; }
+      th, td { border-bottom: 1px solid #cbd5e1 !important; padding: 5px 6px !important; }
+      input, select, textarea {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        color: #000 !important;
+        font-weight: 600 !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+      }
+      .qr-print-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+      body:not(.printing-modal) #modal-backdrop { display: none !important; }
+      body.printing-modal #app-main { display: none !important; }
+      body.printing-modal #modal-backdrop { position: static !important; inset: auto !important; display: block !important; background: transparent !important; padding: 0 !important; overflow: visible !important; }
+      body.printing-modal #modal-box { position: static !important; max-width: 100% !important; width: 100% !important; max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; background: #fff !important; color: #000 !important; padding: 0 !important; }
+      body.printing-modal #modal-close { display: none !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Header -->
+  <header class="kms-header sticky top-0 z-30 shadow-sm no-print">
+    <div class="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-extrabold text-sm shadow">SA</div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold leading-tight">Community Meals KMS</h1>
+          <p class="text-xs opacity-85">The Salvation Army · Butler, PA · <span id="hdr-user">Signed out</span></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <button id="btn-sync-pill" type="button" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5">
+          <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span id="sync-label">Local Mode</span>
+        </button>
+        <button id="btn-quick-help" type="button" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1" title="Show or hide quick guide for this page">
+          <span>? Page Guide</span>
+        </button>
+        <button id="btn-open-chat" type="button" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1">
+          <span>Chat</span>
+          <span id="chat-badge" class="hidden px-1.5 py-0.2 rounded-full bg-[#b3122b] text-white text-[10px] font-bold">0</span>
+        </button>
+        <button id="btn-switch-user" type="button" class="px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold">Switch User</button>
+        <button id="btn-lock-app" type="button" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold">Lock</button>
+        <div class="relative">
+          <button id="btn-tools" type="button" class="px-2.5 py-1.5 rounded-lg bg-white text-[#1b365d] text-xs font-bold">Tools &#9662;</button>
+          <div id="tools-menu" class="hidden absolute right-0 mt-1.5 w-52 kms-card shadow-xl py-1.5 z-40 text-xs">
+            <button id="btn-start-tour" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-bold text-[#b3122b]">Interactive Guided Tour</button>
+            <button id="btn-run-selftest" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-bold text-[#1f7a3d]">Run System Self-Test &amp; Report</button>
+            <button id="btn-undo" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Undo Last Stock Change</button>
+            <button id="btn-text-size" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Bigger Text</button>
+            <button id="btn-theme-toggle" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Toggle Dark Mode</button>
+            <button id="btn-print-qr" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Print QR Bin Labels</button>
+            <button id="btn-print-page" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Print Current View (Letter)</button>
+            <button id="btn-backup" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Backup / Restore</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5-Group Navigation -->
+    <nav class="bg-black/15 border-t border-white/10 overflow-x-auto no-scrollbar">
+      <div class="max-w-6xl mx-auto px-3 sm:px-5 py-1.5 flex items-center gap-1.5 min-w-max" id="nav-groups"></div>
+      <div class="max-w-6xl mx-auto px-3 sm:px-5 py-1.5 flex items-center gap-1.5 min-w-max border-t border-white/10" id="nav-subtabs"></div>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main id="app-main" class="max-w-6xl w-full mx-auto px-3 sm:px-5 py-4 pb-24 md:pb-8 flex-1"></main>
+
+  <!-- Mobile Quick Dock -->
+  <div id="mobile-dock" class="md:hidden fixed bottom-0 inset-x-0 kms-card rounded-none border-x-0 border-b-0 z-30 px-2 py-1.5 flex justify-around items-center shadow-lg no-print"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm no-print"></div>
+
+  <!-- Reusable Modal -->
+  <div id="modal-backdrop" class="fixed inset-0 bg-black/60 z-40 hidden items-center justify-center p-4">
+    <div id="modal-box" class="kms-card shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-5">
+      <div class="flex items-center justify-between border-b border-[var(--line)] pb-2.5 mb-3">
+        <h3 id="modal-title" class="text-base font-bold">Modal</h3>
+        <button id="modal-close" type="button" class="text-xl leading-none px-2 opacity-70 hover:opacity-100">&times;</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Mandatory Force PIN Change Modal -->
+  <div id="pin-change-backdrop" class="fixed inset-0 bg-black/75 z-50 hidden items-center justify-center p-4 no-print">
+    <div class="kms-card shadow-2xl max-w-md w-full p-6 space-y-3">
+      <span class="tag tag-LOW">SECURITY REQUIRED</span>
+      <h3 class="text-lg font-bold">Set Your Personal PIN</h3>
+      <p id="pin-change-sub" class="text-xs opacity-75">Please choose a personal 6+ character PIN before continuing.</p>
+      <form id="form-force-pin" class="space-y-3">
+        <input name="newPin" type="password" required minlength="6" placeholder="New PIN (6+ characters)" class="kms-input w-full text-sm" />
+        <input name="confirmPin" type="password" required minlength="6" placeholder="Confirm New PIN" class="kms-input w-full text-sm" />
+        <div id="force-pin-err" class="text-xs font-bold text-red-600 hidden"></div>
+        <button type="submit" class="kms-btn-primary w-full py-2.5 text-sm">Save Personal PIN</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mandatory First-Login Training Modal -->
+  <div id="training-backdrop" class="fixed inset-0 bg-black/75 z-50 hidden items-center justify-center p-4 no-print">
+    <div class="kms-card shadow-2xl max-w-lg w-full p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-[var(--line)] pb-2">
+        <div>
+          <span class="tag tag-OUT" id="trn-badge">REQUIRED TRAINING</span>
+          <h3 id="trn-title" class="text-base font-bold mt-1">Welcome</h3>
+        </div>
+        <span id="trn-step" class="text-xs opacity-70 font-semibold">1 / 1</span>
+      </div>
+      <div id="trn-body" class="text-sm whitespace-pre-line leading-relaxed"></div>
+      <div class="flex items-center justify-between pt-2 border-t border-[var(--line)]">
+        <button id="btn-trn-prev" type="button" class="kms-btn-alt px-3 py-1.5 text-xs">&larr; Back</button>
+        <button id="btn-trn-next" type="button" class="kms-btn-primary px-4 py-1.5 text-xs">Next &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ES Module Entry Point -->
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
