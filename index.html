@@ -83,7 +83,6 @@
         print-color-adjust: exact;
       }
       #app-main { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
-      /* Expand all scroll containers so no rows or lists are cut off when printing */
       .overflow-y-auto, .overflow-x-auto, .max-h-96, .max-h-80, .max-h-72, .max-h-64, .max-h-60, .max-h-56 {
         max-height: none !important;
         overflow: visible !important;
@@ -294,14 +293,14 @@
       steps: [
         'Check red/amber Announcements & Reminders at the top for holiday closings or order deadlines.',
         'Watch for red "Use or Discard Today" banners on stored leftovers or salad bar items.',
-        'Tap any Quick Shift Action button to jump straight to counting stock, logging temps, or prepping.'
+        'Tap any Quick Shift Action button to jump straight to counting stock, checking in POs, or logging donations.'
       ]
     },
     stock: {
       title: 'Living Stock — What Is On the Shelves Right Now',
       summary: 'Edit, update, add, or delete individual items or use "Bulk Edit / Delete Stock" for multiple items at once.',
       steps: [
-        'Tap − / + to adjust counts, click "Edit / Delete" on any card to update name/SKU/unit or delete it.',
+        'Tap − / + to adjust counts, click "Edit" on any card to update name/SKU/unit, or "Delete" to remove it.',
         'Click "Bulk Edit / Delete Stock" at the top to edit many rows at once, bulk-add items, or delete checked items.',
         'Click "Print Stock Sheet" for a clean Letter-sized shelf count sheet.'
       ]
@@ -312,23 +311,23 @@
       steps: [
         'Review the suggested whole-case quantities (only items needing 1+ full case appear).',
         'Check/uncheck items or add extra items at the bottom, then click "Request Selected PO".',
-        'Managers approve, edit, or delete POs, enter delivery dates, and staff reconcile them on arrival.'
+        'Managers approve & mark ordered; when the truck arrives, reconcile it in PO Check-In & Donations.'
       ]
     },
     receive: {
-      title: 'Receive & Scan — Checking In Deliveries',
-      summary: 'Add incoming food from Marberger, Jordan Banana, Donations, or the Food Bank into Living Stock.',
+      title: 'PO Check-In & Donations — Reconcile POs & Print Tax Receipts',
+      summary: 'Check in arriving Purchase Orders into Living Stock and record in-kind food donations with printable IRS tax receipts.',
       steps: [
-        'If an expected PO is listed at the top, verify the received counts and click "Reconcile & Check In PO".',
-        'For paper invoices, use "Enter Full Delivery Slip" to log multiple items and expiration dates at once.',
-        'Use "Fast Scan Terminal" with a camera or barcode scanner to pull up any item by SKU.'
+        'In Section 1, verify actual quantities received on open/ordered POs and click "Reconcile & Check In PO".',
+        'In Section 2, enter the donor\'s name, address, and donated items to update Living Stock automatically.',
+        'Click "View / Print Tax Receipt" on any donation to print a Letter-size IRS donor acknowledgment.'
       ]
     },
     menu: {
       title: 'Menu Planner — Scheduling & Serving Lunches',
       summary: 'Plan Mon/Tue/Wed/Fri meals using predicted patron turnout and automatically deduct stock after lunch.',
       steps: [
-        'Pick a recipe (or type a custom meal title) for each service date; Planned Portions auto-fill from history.',
+        'Pick a recipe for each service date; Planned Portions auto-fill from historical attendance.',
         'Click "Daily Sheet" on any scheduled day to print a 1-page Letter-size kitchen prep & temp sheet.',
         'After lunch, enter the actual number of patrons served and click "Served" to deduct stock & tag leftovers.'
       ]
@@ -426,15 +425,15 @@
   };
 
   const HOW_DO_I_TASKS = [
-    { q: 'Edit, add, or delete inventory items individually or in bulk', tab: 'stock', ans: 'Go to Stock, click "Edit / Delete" on a single item or "Bulk Edit / Delete Stock" at the top to update or remove multiple items.' },
-    { q: 'Receive a delivery from Marberger, Jordan Banana, or Food Bank', tab: 'receive', ans: 'Go to Receive & Scan, use "Enter Full Delivery Slip" (or Reconcile PO), enter quantities, and click Post.' },
+    { q: 'Check in an arriving Purchase Order from Marberger or Jordan Banana', tab: 'receive', ans: 'Go to PO Check-In & Donations, verify the actual quantities received under Section 1, and click "Reconcile & Check In PO".' },
+    { q: 'Record an in-kind food donation and print a tax receipt for the donor', tab: 'receive', ans: 'Go to PO Check-In & Donations, fill out the In-Kind Food Donation form in Section 2, and click "Log Donation & Generate Tax Receipt".' },
+    { q: 'Edit, add, or delete inventory items individually or in bulk', tab: 'stock', ans: 'Go to Stock, click "Edit" or "Delete" on a single item or "Bulk Edit / Delete Stock" at the top to update or remove multiple items.' },
     { q: 'Scale a recipe for 40 to 80 people or print a recipe card', tab: 'recipes', ans: 'Go to Recipes, pick the dish, drag the 40–80 slider (or tap 40–80 Quick-Scan Table), and click Print Recipe + QR.' },
     { q: 'Add, edit, delete, or bulk-update recipes and directions', tab: 'recipes', ans: 'Go to Recipes and click "Edit Details & Directions" or "Delete" on one recipe, or "Bulk Add / Edit" to update/delete many recipes.' },
     { q: 'Record today\'s lunch count and deduct ingredients from stock', tab: 'menu', ans: 'Go to Menu & Daily Sheet, enter the number served next to today\'s meal, and click "Served".' },
     { q: 'Log refrigerator, freezer, or steam table temperatures', tab: 'safety', ans: 'Go to Temps & Cleaning and type the °F reading into each of the 6 boxes; PASS or FIX NOW appears automatically.' },
     { q: 'Put a 3-day, 4-day, or 7-day date label on leftovers or salad bar items', tab: 'storage', ans: 'Go to Date Labels & Salad Bar, click a 1-Tap Preset button, enter the item name, and click Add & Date-Label.' },
     { q: 'Create, edit, approve, or delete a Weekly or Monthly Purchase Order (PO)', tab: 'orders', ans: 'Go to Orders & POs, review items below par, and click "Request Selected PO" (use Edit PO or Delete as needed).' },
-    { q: 'Add, edit, or delete Daily, Weekly, or Monthly checklist tasks', tab: 'checklists', ans: 'Go to Checklists, use the "+ Add Task" bar at the top, or click Edit / Delete next to any checklist task.' },
     { q: 'Verify that all app math, roles, scaling, forecasting, and sync pass tests', tab: 'help', ans: 'Click "Run Full System Self-Test" here or in Tools to execute all 13 diagnostic checks and print a PASS report.' }
   ];
 
@@ -982,6 +981,7 @@
       checklistFreq: 'daily',
       reportMonth: today.slice(0, 7),
       dismissedGuides: {},
+      donations: [],
       items: buildSeedInventory(),
       recipes: buildSeedRecipes(),
       menuPlan: [
@@ -1025,7 +1025,7 @@
         { id: 'trn-1', role: 'ALL', title: 'Welcome, Role Boundaries & Auto-Lock', content: 'Welcome to The Salvation Army Community Meals KMS (Butler, PA).\n\nEvery stock change, temp log, and checklist tick is stamped with your name. Shared tablets auto-lock after 5 minutes of inactivity.' },
         { id: 'trn-2', role: 'ALL', title: 'Daily Temps, Salad Bar & Variable Shelf Lives', content: 'On service days (Mon/Tue/Wed/Fri), log all 6 temperature checks in Safety.\n\nUse 1-Tap Date Labels for storage: Cut Salad Greens & Fruit = 3 days; Dairy/Deli Salads = 4 days; Cooked Entrees = 7 days; Freezer = 90 days.' },
         { id: 'trn-3', role: 'VOLUNTEER', title: 'Volunteer Guide: Prep, Blind Counts & Temps', content: '1. View Recipes (scale 40-80) & Menu Planner (read-only).\n2. Check off Next-Day Prep pulls and Daily Checklists.\n3. Log 6-point Temps, tag Leftovers/Salad Bar, and submit Blind Counts (Managers reconcile variances).' },
-        { id: 'trn-4', role: 'STAFF', title: 'Staff Operations: Delivery Slips, PO Requests & Service', content: '1. Enter full Delivery Slips in Receive and log today\'s Patrons Served.\n2. Create PO Requests (editable until approved/ordered by Management).\n3. Schedule meals and mark Served to deduct Living Stock.' },
+        { id: 'trn-4', role: 'STAFF', title: 'Staff Operations: PO Check-In, Donations & Service', content: '1. Reconcile arriving POs and log In-Kind Donations (with printable IRS Tax Receipts) in PO Check-In & Donations.\n2. Create PO Requests in Orders & POs.\n3. Schedule meals and mark Served to deduct Living Stock.' },
         { id: 'trn-5', role: 'MANAGER', title: 'Manager Guide: PO Approvals, Pars & Funding Reports', content: '1. Approve, edit, and place POs with Marberger & Jordan Banana.\n2. Set Par Levels, reconcile Blind Audits, and edit historical attendance.\n3. Access Executive, Funding & Donation Reports.' },
         { id: 'trn-6', role: 'ADMIN', title: 'Admin Guide: Users, PINs, Announcements & Backups', content: 'Full system control: manage ADMIN / MANAGER / STAFF / VOLUNTEER logins & PINs, post/schedule Announcements, configure Auto-Lock, and export/restore full JSON backups.' }
       ],
@@ -1037,7 +1037,6 @@
   let undoSnapshot = null;
   let sbClient = null;
   let syncStatus = 'local'; // 'live' | 'connecting' | 'local'
-  let html5Qr = null;
   let forecastChart = null;
   let trainingStep = 0;
   let inactivityTimer = null;
@@ -1398,7 +1397,6 @@
     };
 
     try {
-      // Test 1: Inventory Seed & Status Classification
       const seed = buildSeedInventory();
       const outItem = { on_hand: 0, par: 2 };
       const lowItem = { on_hand: 1, par: 3 };
@@ -1406,7 +1404,6 @@
       const t1 = seed.length === 76 && itemStatus(outItem) === 'OUT' && itemStatus(lowItem) === 'LOW' && itemStatus(okItem) === 'OK';
       recordTest('T-01', 'Living Inventory', 'Seed catalog integrity (76 Butler PA items) & OUT/LOW/OK thresholds', '76 items; OUT / LOW / OK accurate', `${seed.length} items; ${itemStatus(outItem)}/${itemStatus(lowItem)}/${itemStatus(okItem)}`, t1);
 
-      // Test 2: Stock Adjustment, Bulk Update & Undo Snapshot
       const targetItem = state.items[0];
       const origQty = targetItem.on_hand;
       snapUndo();
@@ -1416,20 +1413,17 @@
       const restored = state.items[0].on_hand === origQty;
       recordTest('T-02', 'Stock & Undo Engine', 'Stock increment, bulk edit & 1-click Undo snapshot rollback', `+5 then restore to ${origQty}`, bumped && restored ? `Restored to ${state.items[0].on_hand}` : 'Mismatch', bumped && restored);
 
-      // Test 3: Culinary Unit Conversions & Kitchen Fractions
       const cupsInGal = convertCulinaryUnit(1, 'gallons', 'cups');
       const ozInLb = convertCulinaryUnit(2, 'lbs', 'oz');
       const fracStr = formatKitchenAmt(2.5, 'cups');
       const t3 = Math.abs(cupsInGal - 16) < 0.01 && Math.abs(ozInLb - 32) < 0.01 && fracStr === '2½ cups';
       recordTest('T-03', 'Culinary Conversions', 'Gallon-to-cup, pound-to-ounce & fraction formatting', '16 cups, 32 oz, "2½ cups"', `${cupsInGal} cups, ${ozInLb} oz, "${fracStr}"`, t3);
 
-      // Test 4: Recipe Paste Parser & Allergen Auto-Detection
       const parsedRec = parsePastedRecipe('Test Mac & Cheese\nServings: 40\n4 lbs Macaroni\n2 lbs Shredded cheese\nDirections:\n1. Boil macaroni.\n2. Stir in cheese.');
       const hasAllergens = parsedRec.allergens.includes('wheat') && parsedRec.allergens.includes('milk');
       const t4 = parsedRec.name === 'Test Mac & Cheese' && parsedRec.base_servings === 40 && parsedRec.ingredients.length === 2 && parsedRec.steps.length === 2 && hasAllergens;
       recordTest('T-04', 'Recipe Parser & Allergens', 'Parse pasted recipe text, steps & FDA Big 9 allergens', '40 srv, 2 ing, 2 steps, wheat+milk', `${parsedRec.base_servings} srv, ${parsedRec.ingredients.length} ing, [${parsedRec.allergens.join(', ')}]`, t4);
 
-      // Test 5: 40–80 Portion Scaling & Background Stock Deduction Math
       const spag = state.recipes.find(r => r.id === 'rec-spaghetti') || state.recipes[0];
       const baseS = spag.base_servings || 65;
       const scale80 = 80 / baseS;
@@ -1438,7 +1432,6 @@
       const t5 = scaledIng0 === expectedIng0 && spag.ingredients[0].per100 > 0;
       recordTest('T-05', '40–80 Recipe Scaling', 'Proportional scaling to 80 portions & per-100 stock factor', `${expectedIng0} ${spag.ingredients[0].unit} @ 80 portions`, `${scaledIng0} ${spag.ingredients[0].unit} (per100: ${spag.ingredients[0].per100})`, t5);
 
-      // Test 6: Bulk Recipe Upsert (Update Existing + Add New)
       const countBefore = state.recipes.length;
       const bulkBlocks = [
         `${spag.name}\nServings: 70\n10 lbs Spaghetti\nDirections:\n1. Updated step.`,
@@ -1454,7 +1447,6 @@
       const t6 = bUpdated === 1 && bAdded === 1 && state.recipes.length === countBefore + 1;
       recordTest('T-06', 'Bulk Recipe Manager', 'Batch update matching title + insert new recipe', '1 updated, 1 added', `${bUpdated} updated, ${bAdded} added`, t6);
 
-      // Test 7: Whole-Case Purchase Order (PO) Guardrails
       const d7 = demandForDays(serviceDaysBetween(localDateStr(), addDays(localDateStr(), 7)));
       const d30 = demandForDays(serviceDaysBetween(localDateStr(), addDays(localDateStr(), 30)));
       const fractionalGapItem = { id: 't-frac', on_hand: 1.5, par: 2, cadence: 'W' };
@@ -1462,9 +1454,8 @@
       const sugFrac = suggestedOrderAmount(fractionalGapItem, d7, d30);
       const sugOut = suggestedOrderAmount(outGapItem, d7, d30);
       const t7 = sugFrac === 0 && sugOut === 2;
-      recordTest('T-07', 'Orders & PO Guardrails', 'Whole-case rounding (suppress <1 case gap; order >=1 when out)', '0 for 0.5 gap; 2 for 0 on-hand', `${sugFrac} cases; ${sugOut} cases`, t7);
+      recordTest('T-07', 'Orders & PO Check-In', 'Whole-case rounding (suppress <1 case gap; order >=1 when out)', '0 for 0.5 gap; 2 for 0 on-hand', `${sugFrac} cases; ${sugOut} cases`, t7);
 
-      // Test 8: Menu Service Deduction & 7-Day Leftover Tagging
       const beefItem = state.items.find(i => i.id === 'item-56') || state.items[0];
       const beefStart = beefItem.on_hand;
       const usedSim = 2;
@@ -1474,7 +1465,6 @@
       const t8 = beefItem.on_hand === Math.round((beefStart - usedSim) * 100) / 100 && state.storageTags[0].use_by_date === '2026-11-29' && state.storageTags.length === tagStart + 1;
       recordTest('T-08', 'Menu & FIFO Date Labels', 'Stock deduction on service & 7-day ServSafe Use-By calculation', `Stock -2 & Use-By 2026-11-29`, `Stock ${beefItem.on_hand} & Use-By ${state.storageTags[0].use_by_date}`, t8);
 
-      // Test 9: 6-Point HACCP Temperature Pass/Fail Rules
       const coolerOk = 38 <= TEMP_CHECKS[0][2];
       const coolerFail = 45 <= TEMP_CHECKS[0][2];
       const hotOk = 140 >= TEMP_CHECKS[4][2];
@@ -1482,13 +1472,11 @@
       const t9 = coolerOk && !coolerFail && hotOk && !hotFail;
       recordTest('T-09', 'HACCP Food Safety', 'Cold (<=41°F), Frozen (<=0°F) & Hot Hold (>=135°F) alerts', '38°F PASS, 45°F FAIL, 140°F PASS, 128°F FAIL', `${coolerOk?'PASS':'FAIL'}, ${coolerFail?'PASS':'FAIL'}, ${hotOk?'PASS':'FAIL'}, ${hotFail?'PASS':'FAIL'}`, t9);
 
-      // Test 10: Patron Forecasting & Federal Holiday Closing Rules
       const thxClosed = forecastWeekday('2026-11-26');
       const openMon = forecastWeekday('2026-11-23');
       const t10 = thxClosed === 0 && openMon >= 10;
       recordTest('T-10', 'Forecasting & Holidays', 'Auto-zero closed federal holidays & predict open service days', 'Nov 26 = 0; Nov 23 >= 10', `Nov 26 = ${thxClosed}; Nov 23 = ${openMon}`, t10);
 
-      // Test 11: 4-Tier Role-Based Access Control (ADMIN / MANAGER / STAFF / VOLUNTEER)
       const adminTabs = getAllowedTabs({ role: 'ADMIN' });
       const mgrTabs = getAllowedTabs({ role: 'MANAGER' });
       const staffTabs = getAllowedTabs({ role: 'STAFF' });
@@ -1496,14 +1484,12 @@
       const t11 = adminTabs.length === 15 && mgrTabs.length === 15 && !staffTabs.includes('users') && !staffTabs.includes('report') && !volTabs.includes('orders') && !volTabs.includes('receive');
       recordTest('T-11', 'RBAC 4-Tier Permissions', 'Enforce ADMIN (15), MANAGER (15), STAFF (13) & VOLUNTEER (10) boundaries', '15 / 15 / 13 / 10 tabs enforced', `${adminTabs.length} / ${mgrTabs.length} / ${staffTabs.length} / ${volTabs.length} tabs`, t11);
 
-      // Test 12: Print Layout & Letter Pagination Rules
       const hasPrintCss = Array.from(document.styleSheets).some(ss => {
         try { return Array.from(ss.cssRules || []).some(r => r.media && r.media.mediaText && r.media.mediaText.includes('print')); }
         catch (e) { return false; }
       });
-      recordTest('T-12', 'Letter Print Formatting', 'Verify @media print Letter pagination, unclipped lists & row break protection', 'Print rules active', hasPrintCss ? 'Letter 0.45in & unclipped scroll active' : 'Missing', hasPrintCss);
+      recordTest('T-12', 'Letter Print & Tax Receipts', 'Verify @media print Letter pagination, unclipped lists & tax receipts', 'Print rules active', hasPrintCss ? 'Letter 0.45in & unclipped scroll active' : 'Missing', hasPrintCss);
 
-      // Test 13: Live Supabase Cloud Connectivity & PIN RPC Check
       let cloudDetail = 'Local offline mode';
       let t13 = false;
       if (sbClient) {
@@ -1745,15 +1731,7 @@
           id: u.id, name: u.name, role: normalizeRole(u.role), initials: u.initials, active: u.active !== false,
           onboarding_completed: !!u.onboarding_completed, completed_training_ids: u.completed_training_ids || [],
           email: u.email || ''
-        })), { onConflict: 'id' }).then(res => {
-          if (res && res.error) {
-            const nowMs = Date.now();
-            if (!window._lastUserSyncErr || nowMs - window._lastUserSyncErr > 15000) {
-              window._lastUserSyncErr = nowMs;
-              showToast('Cloud user sync failed: ' + (res.error.message || 'run updated supabase_setup.sql in Supabase'), 'error');
-            }
-          }
-        }),
+        })), { onConflict: 'id' }),
         sbClient.from('kms_announcements').upsert(state.announcements.map(a => ({
           id: a.id, priority: a.priority, title: a.title, body: a.body, alert_at: a.alert_at || '', repeat_rule: a.repeat_rule || 'none',
           repeat_days: a.repeat_days || [], expires_at: a.expires_at || '', author: a.author || '',
@@ -1788,7 +1766,11 @@
       }
       await sbClient.from('kms_settings').upsert({
         key: 'suggestions',
-        value: { recipeSuggestions: (state.recipeSuggestions || []).slice(0, 50), menuSuggestions: (state.menuSuggestions || []).slice(0, 50) },
+        value: {
+          recipeSuggestions: (state.recipeSuggestions || []).slice(0, 50),
+          menuSuggestions: (state.menuSuggestions || []).slice(0, 50),
+          donations: (state.donations || []).slice(0, 200)
+        },
         updated_at: new Date().toISOString()
       }, { onConflict: 'key' });
     } catch (e) {}
@@ -1853,6 +1835,11 @@
           const sv = setR.data[0].value;
           if (Array.isArray(sv.recipeSuggestions)) state.recipeSuggestions = sv.recipeSuggestions;
           if (Array.isArray(sv.menuSuggestions)) state.menuSuggestions = sv.menuSuggestions;
+          if (Array.isArray(sv.donations)) {
+            const byDon = new Map();
+            [...sv.donations, ...(state.donations || [])].forEach(d => { if (d && d.id && !byDon.has(d.id)) byDon.set(d.id, d); });
+            state.donations = Array.from(byDon.values());
+          }
         }
         if (safR.data) {
           safR.data.forEach(s => { state.safetyLogs[s.log_date] = s; });
@@ -1906,7 +1893,7 @@
     { id: 'stock', label: 'Stock & Orders', tabs: [
       { id: 'stock', label: 'Stock' },
       { id: 'orders', label: 'Orders & POs' },
-      { id: 'receive', label: 'Receive & Scan' },
+      { id: 'receive', label: 'PO Check-In & Donations' },
       { id: 'records', label: 'Blind Count & Waste' }
     ]},
     { id: 'kitchen', label: 'Kitchen & Menu', tabs: [
@@ -1964,7 +1951,7 @@
 
     const dockEl = document.getElementById('mobile-dock');
     const dockTabs = [
-      ['dashboard', 'Home'], ['stock', 'Stock'], ['menu', 'Menu'], ['safety', 'Safety'], ['receive', 'Receive']
+      ['dashboard', 'Home'], ['stock', 'Stock'], ['menu', 'Menu'], ['safety', 'Safety'], ['receive', 'PO & Donations']
     ].filter(([id]) => allowed.includes(id));
     dockEl.innerHTML = dockTabs.map(([id, lbl]) => `
       <button type="button" data-tab="${id}" class="px-2.5 py-1.5 rounded-lg text-xs font-bold ${state.activeTab === id ? 'bg-[#b3122b] text-white' : 'opacity-75'}">${lbl}</button>
@@ -2111,7 +2098,7 @@
     { tab: 'dashboard', title: '1. Home Dashboard & Announcements', desc: 'Your daily command center: see Quick Shift Actions, color-coded Announcements & Reminders, Use-By alerts, Priority Carryover tasks, today\'s meal, and next-service forecast.', tryIt: 'Review any red or amber notices first, or tap a Quick Shift Action button.' },
     { tab: 'stock', title: '2. Living Stock & Bulk Manager', desc: 'Tracks real-time quantities across all 6 storage zones, with individual Edit/Delete buttons and a Bulk Edit / Delete Stock modal.', tryIt: 'Search or filter by zone, tap + / -, or open Bulk Edit / Delete Stock.' },
     { tab: 'orders', title: '3. Orders & Purchase Orders', desc: 'Separates Weekly orders (Marberger Dairy & Produce) from Monthly orders (3rd Friday Jordan Banana). Create Draft POs, approve quantities, and track deliveries.', tryIt: 'Review items below par and create a Draft PO for approval.' },
-    { tab: 'receive', title: '4. Receive & Scan Deliveries', desc: 'Scan barcodes/QR labels with your camera or USB/Bluetooth scanner to check in deliveries or reconcile expected Purchase Orders into Living Stock.', tryIt: 'Scan or select an item and enter packs received.' },
+    { tab: 'receive', title: '4. PO Check-In & Donations (Tax Receipts)', desc: 'Reconcile arriving Purchase Orders into Living Stock and record in-kind food donations with printable IRS tax receipts.', tryIt: 'Check in an expected PO or log a donation and view its tax receipt.' },
     { tab: 'menu', title: '5. Menu Planner & Letter Daily Sheets', desc: 'Schedule meals for Mon/Tue/Wed/Fri service days, print clean 1-page Letter Daily Sheets, and mark Served to deduct stock.', tryIt: 'Select a service date to assign a recipe or print a Daily Sheet.' },
     { tab: 'prep', title: '6. Next-Day Prep List', desc: 'Automatically pulls tomorrow\'s ingredient requirements grouped by storage zone (Cooler, Freezer, Dry Storage) plus FIFO leftovers.', tryIt: 'Check off each ingredient pull as you stage it for service.' },
     { tab: 'recipes', title: '7. Recipes (40–80), Bulk Edit & QR Scan', desc: 'Paste new recipes, bulk add/edit/delete recipes, scan recipe QR cards, drag the 40–80 portion slider, or open the 40–80 Quick-Scan Table.', tryIt: 'Drag the 40–80 slider or click "Bulk Add / Edit".' },
@@ -2160,7 +2147,7 @@
             <div class="font-bold text-sm">System Self-Test &amp; Certification Report</div>
             ${lastDiagnosticReport
               ? `<p class="opacity-80">Last verified <strong>${esc(lastDiagnosticReport.timestamp)}</strong> by ${esc(lastDiagnosticReport.tester)} — <strong>${lastDiagnosticReport.passedCount}/${lastDiagnosticReport.totalCount} checks passed</strong>.</p>`
-              : `<p class="opacity-80">Verify all 13 core subsystems (inventory math, bulk CRUD, 40–80 recipe scaling, PO guardrails, HACCP temps, 4-tier RBAC, Letter print CSS &amp; Supabase sync) and print a PASS report.</p>`}
+              : `<p class="opacity-80">Verify all 13 core subsystems (inventory math, bulk CRUD, 40–80 recipe scaling, PO check-in, donations &amp; tax receipts, HACCP temps, 4-tier RBAC &amp; Supabase sync) and print a PASS report.</p>`}
           </div>
           <div class="flex gap-2 no-print">
             ${lastDiagnosticReport ? `<button type="button" id="btn-view-last-diag" class="kms-btn-navy px-3 py-1.5 text-xs font-semibold">View / Print Report</button>` : ''}
@@ -2175,7 +2162,7 @@
               <h3 class="text-sm font-bold uppercase tracking-wide">"How Do I...?" Instant Task Finder</h3>
               <p class="text-xs opacity-75">Type any question below to get a 1-sentence answer and jump directly to that screen.</p>
             </div>
-            <input id="help-task-search" type="text" value="${esc(state._helpSearch || '')}" placeholder="Search e.g. bulk, recipe, delivery, temp..." class="kms-input text-xs w-64 max-w-full" />
+            <input id="help-task-search" type="text" value="${esc(state._helpSearch || '')}" placeholder="Search e.g. PO, donation, tax, recipe..." class="kms-input text-xs w-64 max-w-full" />
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
             ${!filteredTasks.length ? '<p class="opacity-70 py-2">No matching tasks found.</p>' : filteredTasks.map(t => `
@@ -2197,8 +2184,8 @@
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
             <div class="p-3.5 rounded-lg border border-[var(--line)]">
               <div class="font-bold text-[#b3122b] uppercase">Step 1 &bull; Morning Opening</div>
-              <div class="font-bold text-sm mt-1">Log Temps &amp; Receive Deliveries</div>
-              <p class="opacity-80 mt-1 leading-relaxed">Log Walk-In &amp; Kitchen Cooler (&le;41&deg;F) and Freezer (&le;0&deg;F) temps in <strong>Safety</strong>. Scan or check in vendor deliveries in <strong>Receive</strong>.</p>
+              <div class="font-bold text-sm mt-1">Log Temps &amp; Check In POs</div>
+              <p class="opacity-80 mt-1 leading-relaxed">Log Walk-In &amp; Kitchen Cooler (&le;41&deg;F) and Freezer (&le;0&deg;F) temps in <strong>Safety</strong>. Reconcile arriving POs or log donations in <strong>PO Check-In &amp; Donations</strong>.</p>
               ${goBtn('safety', 'Safety')}
             </div>
             <div class="p-3.5 rounded-lg border border-[var(--line)]">
@@ -2258,10 +2245,10 @@
             <table class="w-full text-left border-collapse text-xs">
               <thead><tr class="border-b border-[var(--line)] uppercase opacity-70"><th class="py-1.5 pr-2">Role</th><th class="py-1.5 pr-2">Visible Tabs</th><th class="py-1.5 pr-2">Allowed Actions</th><th class="py-1.5">Restricted Actions</th></tr></thead>
               <tbody class="divide-y divide-[var(--line)]">
-                <tr><td class="py-2 pr-2 font-bold text-[#b3122b]">ADMIN</td><td class="py-2 pr-2">All 15 Tabs</td><td class="py-2 pr-2">Full system control: manage logins/PINs/roles (up to Admin), announcements, backups, PO approvals/placement, bulk stock/recipe/checklist edits &amp; deletes.</td><td class="py-2 opacity-75">Primary Owner account (usr-1) cannot be deleted or demoted.</td></tr>
-                <tr><td class="py-2 pr-2 font-bold text-[#1b365d]">MANAGER</td><td class="py-2 pr-2">All 15 Tabs</td><td class="py-2 pr-2">Approve/reject/place/edit/delete any PO, access Funding Reports, bulk edit/delete Stock/Recipes/Checklists, reconcile Blind Audits, manage Staff &amp; Volunteer accounts.</td><td class="py-2 opacity-75">Cannot create/edit/delete Admin or peer Manager accounts.</td></tr>
-                <tr><td class="py-2 pr-2 font-bold text-emerald-700">STAFF</td><td class="py-2 pr-2">13 Operational Tabs</td><td class="py-2 pr-2">Create/edit/delete unapproved PO requests, post Delivery Slips, mark Menu Served, suggest Recipes, log Temps, Date Labels, Checklists &amp; Patrons Served.</td><td class="py-2 opacity-75">No Users &amp; Activity or Monthly Funding Reports; cannot approve POs, overwrite Menu schedule, or bulk-delete Recipes/Stock.</td></tr>
-                <tr><td class="py-2 pr-2 font-bold opacity-80">VOLUNTEER</td><td class="py-2 pr-2">10 Floor Tabs</td><td class="py-2 pr-2">Adjust Stock counts, view Menu &amp; scale Recipes (40–80), check off Next-Day Prep &amp; Checklists, log Temps &amp; Date Labels, submit Blind Counts &amp; Waste.</td><td class="py-2 opacity-75">No Orders &amp; POs, Receive &amp; Scan, Monthly Report, or Users &amp; Activity; cannot edit/delete Recipes, Menu schedule, or Checklist templates.</td></tr>
+                <tr><td class="py-2 pr-2 font-bold text-[#b3122b]">ADMIN</td><td class="py-2 pr-2">All 15 Tabs</td><td class="py-2 pr-2">Full system control: manage logins/PINs/roles (up to Admin), announcements, backups, PO approvals/placement, PO check-in &amp; donations, bulk stock/recipe/checklist edits &amp; deletes.</td><td class="py-2 opacity-75">Primary Owner account (usr-1) cannot be deleted or demoted.</td></tr>
+                <tr><td class="py-2 pr-2 font-bold text-[#1b365d]">MANAGER</td><td class="py-2 pr-2">All 15 Tabs</td><td class="py-2 pr-2">Approve/reject/place/edit/delete any PO, check in POs &amp; print Donation Tax Receipts, access Funding Reports, bulk edit/delete Stock/Recipes/Checklists, manage Staff &amp; Volunteer accounts.</td><td class="py-2 opacity-75">Cannot create/edit/delete Admin or peer Manager accounts.</td></tr>
+                <tr><td class="py-2 pr-2 font-bold text-emerald-700">STAFF</td><td class="py-2 pr-2">13 Operational Tabs</td><td class="py-2 pr-2">Create/edit/delete unapproved PO requests, reconcile POs, log Donations &amp; print Tax Receipts, mark Menu Served, suggest Recipes, log Temps, Date Labels, Checklists &amp; Patrons Served.</td><td class="py-2 opacity-75">No Users &amp; Activity or Monthly Funding Reports; cannot approve POs, overwrite Menu schedule, or bulk-delete Recipes/Stock.</td></tr>
+                <tr><td class="py-2 pr-2 font-bold opacity-80">VOLUNTEER</td><td class="py-2 pr-2">10 Floor Tabs</td><td class="py-2 pr-2">Adjust Stock counts, view Menu &amp; scale Recipes (40–80), check off Next-Day Prep &amp; Checklists, log Temps &amp; Date Labels, submit Blind Counts &amp; Waste.</td><td class="py-2 opacity-75">No Orders &amp; POs, PO Check-In &amp; Donations, Monthly Report, or Users &amp; Activity; cannot edit/delete Recipes, Menu schedule, or Checklist templates.</td></tr>
               </tbody>
             </table>
           </div>
@@ -2271,10 +2258,10 @@
           <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
             <div><dt class="font-bold">Living Stock &amp; Par Level</dt><dd class="opacity-75">Real-time food on hand vs. the target amount needed (auto-learned from 8-week usage).</dd></div>
             <div><dt class="font-bold">PO (Purchase Order)</dt><dd class="opacity-75">Draft order list for Marberger (weekly dairy/produce) or Jordan Banana (monthly 3rd Friday dry/frozen).</dd></div>
+            <div><dt class="font-bold">In-Kind Donation Tax Receipt</dt><dd class="opacity-75">Official IRS acknowledgment generated when community donors contribute food items (IRC &sect; 170(f)(8)).</dd></div>
             <div><dt class="font-bold">Blind Audit</dt><dd class="opacity-75">Counting shelves without seeing expected system stock first, keeping counts honest.</dd></div>
             <div><dt class="font-bold">HACCP / Time &amp; Temp</dt><dd class="opacity-75">Daily serving-day temperature checks: Cold &le;41&deg;F, Frozen &le;0&deg;F, Cook &ge;165&deg;F, Hot Hold &ge;135&deg;F.</dd></div>
             <div><dt class="font-bold">FIFO &amp; Use-By Date</dt><dd class="opacity-75">First In, First Out — use oldest dated containers first and discard anything past its Use-By date.</dd></div>
-            <div><dt class="font-bold">Priority Carryover</dt><dd class="opacity-75">Unfinished checklist tasks from yesterday that stay highlighted in red until completed.</dd></div>
           </dl>
         </div>
       </div>
@@ -2309,7 +2296,7 @@
           <div class="text-xs font-bold uppercase opacity-60 mb-2">Quick Shift Actions</div>
           <div class="flex flex-wrap gap-2">
             <button type="button" data-tab="stock" class="kms-btn-navy px-3.5 py-2 text-xs sm:text-sm">Count / Update Stock</button>
-            ${isStaffOrHigher(u) ? `<button type="button" data-tab="receive" class="kms-btn-ok px-3.5 py-2 text-xs sm:text-sm">+ Receive / Scan Delivery</button>` : ''}
+            ${isStaffOrHigher(u) ? `<button type="button" data-tab="receive" class="kms-btn-ok px-3.5 py-2 text-xs sm:text-sm">PO Check-In &amp; Donations</button>` : ''}
             <button type="button" data-tab="safety" class="kms-btn-primary px-3.5 py-2 text-xs sm:text-sm">Log Temps (${tempsDone}/${TEMP_CHECKS.length})</button>
             <button type="button" data-tab="prep" class="kms-btn-alt px-3.5 py-2 text-xs sm:text-sm">Next-Day Prep</button>
             <button type="button" data-tab="storage" class="kms-btn-alt px-3.5 py-2 text-xs sm:text-sm">Date-Label Leftovers</button>
@@ -2613,179 +2600,239 @@
     `;
   }
 
-  // 4. RECEIVE & FAST SCAN TERMINAL
+  // 4. PO CHECK-IN & IN-KIND DONATIONS (WITH PRINTABLE IRS TAX RECEIPT)
+  function showDonationTaxReceiptModal(donId) {
+    const don = (state.donations || []).find(d => d.id === donId);
+    if (!don) return;
+    document.body.classList.add('printing-modal');
+    openModal(`In-Kind Donation Tax Receipt — ${don.receipt_number}`, `
+      <div class="space-y-4 text-xs">
+        <div class="p-4 rounded-xl border border-[var(--line)] space-y-3 print-keep">
+          <div class="flex flex-wrap items-start justify-between gap-2 border-b border-[var(--line)] pb-3">
+            <div>
+              <div class="font-extrabold text-base text-[#1b365d]">THE SALVATION ARMY</div>
+              <div class="font-bold">Butler Worship &amp; Service Center · Community Meals Program</div>
+              <div class="opacity-80">313 West Cunningham Street · Butler, PA 16001</div>
+              <div class="opacity-75 text-[11px]">501(c)(3) Non-Profit Religious &amp; Charitable Organization</div>
+            </div>
+            <div class="text-right">
+              <div class="tag tag-OK">OFFICIAL TAX RECEIPT</div>
+              <div class="font-mono font-bold mt-1">${esc(don.receipt_number)}</div>
+              <div class="opacity-80">Date: <strong>${esc(don.donation_date)}</strong></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-black/5 p-3 rounded-lg">
+            <div>
+              <div class="text-[10px] font-bold uppercase opacity-65">Donor Information</div>
+              <div class="font-bold text-sm mt-0.5">${esc(don.donor_name)}</div>
+              ${don.donor_org ? `<div class="opacity-85">${esc(don.donor_org)}</div>` : ''}
+              ${don.donor_address ? `<div class="opacity-80 whitespace-pre-line">${esc(don.donor_address)}</div>` : ''}
+              ${don.donor_contact ? `<div class="opacity-75 mt-0.5">${esc(don.donor_contact)}</div>` : ''}
+            </div>
+            <div>
+              <div class="text-[10px] font-bold uppercase opacity-65">Donation Purpose &amp; Acknowledgment</div>
+              <div class="mt-0.5">In-Kind Food &amp; Kitchen Supply Contribution for the Butler Community Meals Program.</div>
+              <div class="opacity-75 mt-1">Received By: <strong>${esc(don.received_by || getActiveUser().name)}</strong></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="font-bold uppercase opacity-70 mb-1">Itemized Description of Donated Goods</div>
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                  <th class="py-1.5 px-2">#</th>
+                  <th class="py-1.5 px-2">Item Description</th>
+                  <th class="py-1.5 px-2 text-right">Quantity</th>
+                  <th class="py-1.5 px-2">Condition / Notes</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--line)]">
+                ${(don.items || []).map((it, idx) => `
+                  <tr>
+                    <td class="py-1.5 px-2 font-mono">${idx + 1}</td>
+                    <td class="py-1.5 px-2 font-semibold">${esc(it.name)}</td>
+                    <td class="py-1.5 px-2 text-right font-bold">${fmtNum(it.qty)} ${esc(it.unit)}</td>
+                    <td class="py-1.5 px-2 opacity-75">${esc(it.condition || 'Good / Unopened')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          ${don.notes ? `<div class="text-xs opacity-85"><strong>Notes:</strong> ${esc(don.notes)}</div>` : ''}
+
+          <div class="p-3 rounded-lg border border-[var(--line)] bg-black/5 text-[11px] leading-relaxed space-y-1">
+            <div class="font-bold">IRS Contemporaneous Written Acknowledgment (IRC &sect; 170(f)(8)):</div>
+            <p>Thank you for your generous in-kind contribution to The Salvation Army Community Meals Program in Butler, Pennsylvania. In accordance with Internal Revenue Service guidelines, no goods or services were provided to the donor in exchange for this contribution. Please retain this receipt for your tax records; valuation of non-cash property is the responsibility of the donor.</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-6 pt-4 text-xs">
+            <div class="border-t border-gray-400 pt-1">Authorized Representative: <strong>${esc(don.received_by || getActiveUser().name)}</strong></div>
+            <div class="border-t border-gray-400 pt-1">Date Issued: <strong>${esc(don.donation_date)}</strong></div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 no-print">
+          <button type="button" onclick="window.print()" class="kms-btn-navy flex-1 py-2 text-xs font-semibold">Print / Save PDF Tax Receipt (Letter)</button>
+          <button type="button" data-close-modal="1" class="kms-btn-alt px-4 py-2 text-xs font-semibold">Close</button>
+        </div>
+      </div>
+    `);
+  }
+
   function renderReceive(main) {
     const today = localDateStr();
-    const dated = state.transactions.filter(t => t.tx_type === 'RECEIVE' && t.exp_date && !t.cleared).sort((a, b) => a.exp_date.localeCompare(b.exp_date));
-    const recent = state.transactions.filter(t => t.tx_type === 'RECEIVE').slice(0, 10);
-    const opts = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.sku)} — ${esc(i.name)} (${esc(i.unit)})</option>`).join('');
+    const isMgr = isMgmtOrHigher();
+    const expectedPos = (state.purchaseOrders || []).filter(p => ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(p.status));
+    const donations = state.donations || [];
+    const invOpts = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
 
     main.innerHTML = `
       <div class="space-y-4">
-        <div class="kms-card p-4 space-y-3 no-print">
+        <!-- Section 1: PO Check-In System -->
+        <div class="kms-card p-4 border-l-4 border-l-blue-600 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 class="text-base font-bold">Fast Scan Terminal (QR / Barcode / USB Scanner)</h2>
-              <p class="text-xs opacity-75">Scan a shelf QR label or type a SKU (e.g. STK-101) and press Enter to select the item below.</p>
+              <h2 class="text-base font-bold">1. Purchase Order (PO) Check-In &amp; Reconciliation</h2>
+              <p class="text-xs opacity-75">All vendor deliveries are checked in through the PO system. Verify actual quantities received and match the vendor Invoice / PO # to update Living Stock.</p>
             </div>
-            <div class="flex gap-2">
-              <button type="button" id="btn-start-cam" class="kms-btn-navy px-3 py-1.5 text-xs">Start Camera Scan</button>
-              <button type="button" id="btn-stop-cam" class="kms-btn-primary px-3 py-1.5 text-xs hidden">Stop Camera</button>
-            </div>
+            <button type="button" data-tab="orders" class="kms-btn-alt px-3 py-1.5 text-xs font-semibold no-print">+ Create New PO</button>
           </div>
-          <input id="scan-input" type="text" placeholder="Focus here for barcode scanner or type SKU + Enter..." class="kms-input w-full text-sm" />
-          <div id="cam-wrap" class="hidden max-w-sm mx-auto p-2 border border-[var(--line)] rounded-lg"><div id="cam-reader"></div></div>
+          ${!expectedPos.length ? '<p class="text-xs opacity-70 py-1">No open Purchase Orders waiting for delivery. Create or approve a PO in <strong>Orders &amp; POs</strong> first.</p>' : expectedPos.map(po => `
+            <form class="form-reconcile-po p-3 rounded-lg border border-[var(--line)] bg-black/5 space-y-2.5 print-keep" data-po-id="${esc(po.id)}">
+              <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div class="flex flex-wrap items-center gap-2">
+                  <input type="text" name="recPoNum" value="${esc(po.po_number)}" placeholder="PO #" class="kms-input text-xs font-mono font-bold w-32" title="PO #" />
+                  <span>&middot; <strong>${esc(po.vendor)}</strong></span>
+                  <span class="tag ${po.status === 'requested' ? 'tag-LOW' : 'tag-OK'}">${esc(po.status.toUpperCase())}</span>
+                  <input type="text" name="recInvNum" value="${esc(po.vendor_conf || '')}" placeholder="Vendor Invoice #" class="kms-input text-xs font-mono w-32" title="Vendor Invoice #" />
+                </div>
+                <button type="submit" class="kms-btn-ok px-3 py-1.5 text-xs no-print">Reconcile &amp; Check In PO</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1 pr-2">Item</th><th class="py-1 pr-2">Ordered</th><th class="py-1">Actually Received</th></tr></thead>
+                  <tbody class="divide-y divide-[var(--line)]">
+                    ${(po.lines || []).filter(l => (l.qty || 0) > 0).map(ln => `
+                      <tr>
+                        <td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td>
+                        <td class="py-1.5 pr-2">${ln.qty} ${esc(ln.unit || '')}</td>
+                        <td class="py-1.5"><input type="number" step="1" min="0" name="rec_${esc(ln.item_id)}" value="${Math.max(0, Math.ceil(ln.qty - (ln.received || 0)))}" class="kms-input w-20 text-xs font-bold text-center" /></td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </form>
+          `).join('')}
         </div>
 
-        ${(() => {
-          const expectedPos = (state.purchaseOrders || []).filter(p => ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(p.status));
-          if (!expectedPos.length) return '';
-          return `
-            <div class="kms-card p-4 border-l-4 border-l-blue-600 space-y-3">
-              <div>
-                <h3 class="text-sm font-bold">Expected PO Deliveries (Reconcile from Delivery Slip)</h3>
-                <p class="text-xs opacity-75">Verify actual quantities received and match the vendor Invoice / PO # before updating Living Stock.</p>
-              </div>
-              ${expectedPos.map(po => `
-                <form class="form-reconcile-po p-3 rounded-lg border border-[var(--line)] bg-black/5 space-y-2.5 print-keep" data-po-id="${esc(po.id)}">
-                  <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <input type="text" name="recPoNum" value="${esc(po.po_number)}" placeholder="PO #" class="kms-input text-xs font-mono font-bold w-32" title="PO #" />
-                      <span>&middot; <strong>${esc(po.vendor)}</strong></span>
-                      <span class="tag ${po.status === 'requested' ? 'tag-LOW' : 'tag-OK'}">${esc(po.status.toUpperCase())}</span>
-                      <input type="text" name="recInvNum" value="${esc(po.vendor_conf || '')}" placeholder="Vendor Invoice #" class="kms-input text-xs font-mono w-32" title="Vendor Invoice #" />
-                    </div>
-                    <button type="submit" class="kms-btn-ok px-3 py-1.5 text-xs no-print">Reconcile &amp; Check In PO</button>
-                  </div>
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                      <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1 pr-2">Item</th><th class="py-1 pr-2">Ordered</th><th class="py-1">Actually Received</th></tr></thead>
-                      <tbody class="divide-y divide-[var(--line)]">
-                        ${(po.lines || []).filter(l => (l.qty || 0) > 0).map(ln => `
-                          <tr>
-                            <td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td>
-                            <td class="py-1.5 pr-2">${ln.qty} ${esc(ln.unit || '')}</td>
-                            <td class="py-1.5"><input type="number" step="1" min="0" name="rec_${esc(ln.item_id)}" value="${Math.max(0, Math.ceil(ln.qty - (ln.received || 0)))}" class="kms-input w-20 text-xs font-bold text-center" /></td>
-                          </tr>
-                        `).join('')}
-                      </tbody>
-                    </table>
-                  </div>
-                </form>
-              `).join('')}
-            </div>
-          `;
-        })()}
-
-        <!-- Full Delivery Slip Batch Check-In -->
-        <form id="form-delivery-slip" class="kms-card p-4 space-y-3 no-print">
+        <!-- Section 2: In-Kind Donation Form & Printable Tax Receipt -->
+        <form id="form-log-donation" class="kms-card p-4 border-l-4 border-l-emerald-600 space-y-3 no-print">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 class="text-sm font-bold">Enter Full Delivery Slip / Invoice (Batch Check-In)</h3>
-              <p class="text-xs opacity-75">After manually checking in a paper delivery slip, enter all received quantities at once to update Living Stock.</p>
+              <h2 class="text-base font-bold">2. Record In-Kind Food Donation &amp; Generate Tax Receipt</h2>
+              <p class="text-xs opacity-75">Logs donated food straight into Living Stock and generates a printable IRS tax receipt (<code>IRC &sect; 170(f)(8)</code>) for the donor.</p>
             </div>
-            <div class="flex flex-wrap gap-1.5">
-              <button type="button" data-slip-preset="Marberger" class="kms-btn-alt px-2.5 py-1 text-xs">Load Marberger</button>
-              <button type="button" data-slip-preset="Jordan Banana" class="kms-btn-alt px-2.5 py-1 text-xs">Load Jordan Banana</button>
-              <button type="button" data-slip-preset="LOW" class="kms-btn-alt px-2.5 py-1 text-xs">Load Low-Stock</button>
-              <button type="button" id="btn-add-slip-row" class="kms-btn-navy px-2.5 py-1 text-xs">+ Add Line</button>
+            <button type="button" id="btn-add-don-row" class="kms-btn-navy px-3 py-1.5 text-xs font-semibold">+ Add Donation Line</button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+            <div>
+              <label class="block font-semibold mb-1">Donor Name *</label>
+              <input name="donorName" type="text" required placeholder="e.g. St. Paul Church / Jane Doe" class="kms-input w-full text-xs" />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Organization / Business (Opt.)</label>
+              <input name="donorOrg" type="text" placeholder="Company or group name" class="kms-input w-full text-xs" />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Donation Date *</label>
+              <input name="donationDate" type="date" value="${today}" required class="kms-input w-full text-xs" />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Email or Phone (Opt.)</label>
+              <input name="donorContact" type="text" placeholder="donor@example.com / 724-..." class="kms-input w-full text-xs" />
             </div>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
             <div>
-              <label class="block font-semibold mb-1">Vendor / Source</label>
-              <select name="slipSource" class="kms-input w-full text-xs">
-                <option>Purchased – Marberger</option>
-                <option>Purchased – Jordan Banana</option>
-                <option>Donation</option>
-                <option>Food bank</option>
-              </select>
+              <label class="block font-semibold mb-1">Donor Mailing Address (Printed on Tax Receipt)</label>
+              <input name="donorAddress" type="text" placeholder="Street, City, State, ZIP" class="kms-input w-full text-xs" />
             </div>
             <div>
-              <label class="block font-semibold mb-1">Delivery Date</label>
-              <input name="slipDate" type="date" value="${today}" required class="kms-input w-full text-xs" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-1">Delivery Slip / Invoice # (Optional)</label>
-              <input name="slipRef" type="text" placeholder="e.g. INV-4821" class="kms-input w-full text-xs" />
+              <label class="block font-semibold mb-1">Notes / Food Drive Name (Optional)</label>
+              <input name="notes" type="text" placeholder="e.g. Annual Thanksgiving Food Drive" class="kms-input w-full text-xs" />
             </div>
           </div>
+
           <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
             <table class="w-full text-left text-xs">
               <thead>
                 <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
-                  <th class="p-2">Item</th>
-                  <th class="p-2 w-28">Qty Received</th>
-                  <th class="p-2 w-36">Exp Date (Opt.)</th>
+                  <th class="p-2">Link to Stock Item (Auto-adds to Stock)</th>
+                  <th class="p-2">Or Custom Item Description</th>
+                  <th class="p-2 w-24">Qty</th>
+                  <th class="p-2 w-24">Unit</th>
                   <th class="p-2 w-10"></th>
                 </tr>
               </thead>
-              <tbody id="slip-rows-body" class="divide-y divide-[var(--line)]">
-                ${(() => {
-                  const rows = state._slipPresetItems && state._slipPresetItems.length
-                    ? state._slipPresetItems
-                    : state.items.filter(i => !i.discontinued).slice(0, 4).map(i => i.id);
-                  return rows.map(rid => `
-                    <tr class="slip-row">
-                      <td class="p-1.5">
-                        <select name="slipItemId" class="kms-input w-full text-xs">
-                          <option value="">-- Select Item --</option>
-                          ${state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}" ${i.id === rid ? 'selected' : ''}>${esc(i.name)} (${esc(i.unit)})</option>`).join('')}
-                        </select>
-                      </td>
-                      <td class="p-1.5"><input name="slipQty" type="number" step="0.5" min="0" placeholder="0" class="kms-input w-full text-xs text-center font-bold" /></td>
-                      <td class="p-1.5"><input name="slipExp" type="date" class="kms-input w-full text-xs" /></td>
-                      <td class="p-1.5 text-center"><button type="button" class="btn-rm-slip-row text-rose-600 font-bold text-sm">&times;</button></td>
-                    </tr>
-                  `).join('');
-                })()}
+              <tbody id="don-rows-body" class="divide-y divide-[var(--line)]">
+                ${[0, 1, 2].map(() => `
+                  <tr class="don-row">
+                    <td class="p-1.5">
+                      <select name="donItemId" class="kms-input w-full text-xs">
+                        <option value="">-- Custom / Non-Catalog Item --</option>
+                        ${invOpts}
+                      </select>
+                    </td>
+                    <td class="p-1.5"><input name="donCustomName" type="text" placeholder="e.g. Fresh produce box / Pies" class="kms-input w-full text-xs" /></td>
+                    <td class="p-1.5"><input name="donQty" type="number" step="0.5" min="0" placeholder="0" class="kms-input w-full text-xs text-center font-bold" /></td>
+                    <td class="p-1.5"><input name="donUnit" type="text" value="cases" placeholder="cases, lbs..." class="kms-input w-full text-xs" /></td>
+                    <td class="p-1.5 text-center"><button type="button" class="btn-rm-don-row text-rose-600 font-bold text-sm">&times;</button></td>
+                  </tr>
+                `).join('')}
               </tbody>
             </table>
           </div>
-          <button type="submit" class="kms-btn-ok px-4 py-2 text-sm">Post Delivery Slip &amp; Update Inventory</button>
+
+          <button type="submit" class="kms-btn-ok px-4 py-2 text-sm">Log Donation into Stock &amp; Open Printable Tax Receipt</button>
         </form>
 
-        <form id="form-receive" class="kms-card p-4 space-y-3 no-print">
-          <h3 class="text-sm font-bold">Quick Single-Item Check-In</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <select id="recv-item" name="itemId" required class="kms-input text-sm">${opts}</select>
-            <input name="qty" type="number" step="0.5" min="0.5" required placeholder="Qty received" class="kms-input text-sm" />
-            <select name="source" class="kms-input text-sm">
-              <option>Purchased – Marberger</option>
-              <option>Purchased – Jordan Banana</option>
-              <option>Donation</option>
-              <option>Food bank</option>
-            </select>
-            <input name="expDate" type="date" class="kms-input text-sm" title="Expiration date (optional)" />
-          </div>
-          <button type="submit" class="kms-btn-ok px-4 py-2 text-sm">Add to Stock</button>
-        </form>
-
-        <div class="kms-card p-4 space-y-2">
-          <h3 class="text-sm font-bold">Use First (Expiration Dates)</h3>
-          ${!dated.length ? '<p class="text-xs opacity-70">No dated deliveries logged.</p>' : dated.map(r => {
-            const diff = Math.round((new Date(r.exp_date + 'T12:00:00') - new Date(today + 'T12:00:00')) / 86400000);
-            const cls = diff < 0 ? 'OUT' : diff <= 14 ? 'LOW' : 'OK';
-            return `
-              <div class="p-2.5 rounded-lg border border-[var(--line)] flex items-center justify-between gap-2 text-xs print-keep">
-                <div><strong>${esc(r.item_name)}</strong> – ${r.qty} ${esc(r.unit)} <span class="opacity-70">· Expires ${dLabel(r.exp_date)}</span> <span class="tag tag-${cls}">${diff < 0 ? 'EXPIRED – REMOVE' : diff + ' day(s)'}</span></div>
-                <button type="button" data-clear-exp="${r.id}" class="kms-btn-alt px-2.5 py-1 text-xs no-print">Used up / removed</button>
-              </div>
-            `;
-          }).join('')}
-        </div>
-
-        <div class="kms-card p-4 space-y-2">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold">Recent Deliveries</h3>
-            <button type="button" onclick="window.print()" class="kms-btn-alt px-2.5 py-1 text-xs no-print">Print Log</button>
-          </div>
-          ${!recent.length ? '<p class="text-xs opacity-70">No deliveries logged yet.</p>' : recent.map(r => `
-            <div class="p-2 rounded border border-[var(--line)] text-xs flex justify-between print-keep">
-              <span><strong>${esc(r.item_name)}</strong> +${r.qty} ${esc(r.unit)} (${esc(r.source)})</span>
-              <span class="opacity-70">${esc(r.tx_date)} · ${esc(r.staff_name)}</span>
+        <!-- Section 3: Saved Donation Tax Receipts Archive -->
+        <div class="kms-card p-4 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold">3. Saved Donation Tax Receipts (${donations.length})</h3>
+              <p class="text-xs opacity-75">Click <strong>View / Print Tax Receipt</strong> on any donation to print a Letter-size IRS donor acknowledgment.</p>
             </div>
-          `).join('')}
+            <button type="button" onclick="window.print()" class="kms-btn-alt px-3 py-1.5 text-xs no-print">Print Donation Log</button>
+          </div>
+          ${!donations.length ? '<p class="text-xs opacity-70">No donations logged yet. Use the form above to record a donation and print a tax receipt.</p>' : `
+            <div class="space-y-2">
+              ${donations.map(d => `
+                <div class="p-3 rounded-lg border border-[var(--line)] flex flex-wrap items-center justify-between gap-2 text-xs print-keep">
+                  <div>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <span class="font-mono font-bold text-[#1b365d]">${esc(d.receipt_number)}</span>
+                      <strong class="text-sm">${esc(d.donor_name)}</strong>
+                      ${d.donor_org ? `<span class="opacity-75">(${esc(d.donor_org)})</span>` : ''}
+                      <span class="tag tag-OK">${esc(d.donation_date)}</span>
+                    </div>
+                    <div class="opacity-85 mt-1">${(d.items || []).map(it => `<strong>${fmtNum(it.qty)} ${esc(it.unit)}</strong> ${esc(it.name)}`).join(', ')}</div>
+                    <div class="text-[11px] opacity-60 mt-0.5">Logged by ${esc(d.received_by || 'Staff')}</div>
+                  </div>
+                  <div class="flex items-center gap-1.5 no-print">
+                    <button type="button" data-view-don-receipt="${esc(d.id)}" class="kms-btn-navy px-3 py-1.5 text-xs font-semibold">View / Print Tax Receipt</button>
+                    ${isMgr ? `<button type="button" data-del-don="${esc(d.id)}" class="text-red-600 hover:underline font-semibold px-1.5 py-1 text-xs">Delete</button>` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
         </div>
       </div>
     `;
@@ -4020,7 +4067,7 @@
               <select id="act-cat-filter" class="kms-input text-xs">
                 <option value="ALL" ${(state._actCat || 'ALL') === 'ALL' ? 'selected' : ''}>All Actions</option>
                 <option value="AUTH" ${state._actCat === 'AUTH' ? 'selected' : ''}>Sign-Ins &amp; Log Outs</option>
-                <option value="STOCK" ${state._actCat === 'STOCK' ? 'selected' : ''}>Stock &amp; POs</option>
+                <option value="STOCK" ${state._actCat === 'STOCK' ? 'selected' : ''}>Stock, POs &amp; Donations</option>
                 <option value="RECIPE" ${state._actCat === 'RECIPE' ? 'selected' : ''}>Recipes &amp; Menu</option>
                 <option value="SAFETY" ${state._actCat === 'SAFETY' ? 'selected' : ''}>Safety &amp; Users</option>
               </select>
@@ -4034,7 +4081,7 @@
               const filtered = (state.activityLogs || []).filter(a => {
                 const c = String(a.category || '').toUpperCase();
                 if (cat === 'AUTH' && !/LOGIN|LOGOUT|LOCK|AUTH/.test(c)) return false;
-                if (cat === 'STOCK' && !/STOCK|PO |DELIVERY|RECEIVE|WASTE|AUDIT|PAR/.test(c)) return false;
+                if (cat === 'STOCK' && !/STOCK|PO |DONAT|WASTE|AUDIT|PAR/.test(c)) return false;
                 if (cat === 'RECIPE' && !/RECIPE|MENU|SERVED/.test(c)) return false;
                 if (cat === 'SAFETY' && !/TEMP|CLEANING|USER|ANNOUNCEMENT|CHECKLIST|TAG/.test(c)) return false;
                 if (q && !`${a.actor_name} ${a.category} ${a.detail}`.toLowerCase().includes(q)) return false;
@@ -4333,7 +4380,7 @@
       <div class="space-y-4 text-xs">
         <div class="p-3 rounded-lg border border-[var(--line)] space-y-2">
           <div class="font-bold">1. Download Full JSON Backup</div>
-          <p class="opacity-75">Saves all Butler PA inventory, recipes, photos, menu plans, POs, users, and safety logs to a file.</p>
+          <p class="opacity-75">Saves all Butler PA inventory, recipes, photos, menu plans, POs, donations, users, and safety logs to a file.</p>
           <button type="button" id="btn-dl-json" class="kms-btn-navy px-3.5 py-2 font-semibold">Download JSON Backup</button>
         </div>
         <div class="p-3 rounded-lg border border-[var(--line)] space-y-2">
@@ -4424,6 +4471,55 @@
         navigator.clipboard.writeText(txt).catch(() => {});
       }
       showToast('Copied Verification Report to clipboard');
+      return;
+    }
+
+    // Donations & Tax Receipt Actions
+    if (e.target.id === 'btn-add-don-row') {
+      const tbody = document.getElementById('don-rows-body');
+      if (tbody) {
+        const invOpts = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr class="don-row">
+            <td class="p-1.5">
+              <select name="donItemId" class="kms-input w-full text-xs">
+                <option value="">-- Custom / Non-Catalog Item --</option>
+                ${invOpts}
+              </select>
+            </td>
+            <td class="p-1.5"><input name="donCustomName" type="text" placeholder="e.g. Fresh produce box / Pies" class="kms-input w-full text-xs" /></td>
+            <td class="p-1.5"><input name="donQty" type="number" step="0.5" min="0" placeholder="0" class="kms-input w-full text-xs text-center font-bold" /></td>
+            <td class="p-1.5"><input name="donUnit" type="text" value="cases" placeholder="cases, lbs..." class="kms-input w-full text-xs" /></td>
+            <td class="p-1.5 text-center"><button type="button" class="btn-rm-don-row text-rose-600 font-bold text-sm">&times;</button></td>
+          </tr>
+        `);
+      }
+      return;
+    }
+    if (e.target.classList && e.target.classList.contains('btn-rm-don-row')) {
+      const row = e.target.closest('tr');
+      if (row) row.remove();
+      return;
+    }
+    const viewDonBtn = e.target.closest('[data-view-don-receipt]');
+    if (viewDonBtn) {
+      showDonationTaxReceiptModal(viewDonBtn.dataset.viewDonReceipt);
+      return;
+    }
+    const delDonBtn = e.target.closest('[data-del-don]');
+    if (delDonBtn) {
+      if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can delete donation records', 'warn'); return; }
+      const donId = delDonBtn.dataset.delDon;
+      const dObj = (state.donations || []).find(d => d.id === donId);
+      if (dObj) {
+        askConfirm('Delete Donation Record', `Delete donation receipt ${dObj.receipt_number} from ${dObj.donor_name}?`, () => {
+          state.donations = (state.donations || []).filter(d => d.id !== donId);
+          logActivity('DONATION DELETED', `Deleted ${dObj.receipt_number} (${dObj.donor_name})`);
+          saveState();
+          render();
+          showToast('Donation record deleted');
+        });
+      }
       return;
     }
 
@@ -4789,7 +4885,7 @@
       if (!Array.isArray(state.announcements)) state.announcements = [];
       const annId = 'ann-po-' + po.id;
       const title = `Delivery Expected: ${po.po_number} (${po.vendor})`;
-      const body = `Expected delivery for ${po.po_number} (${(po.lines || []).length} item(s)). Reconcile & check in under Receive & Scan when it arrives.`;
+      const body = `Expected delivery for ${po.po_number} (${(po.lines || []).length} item(s)). Reconcile & check in under PO Check-In & Donations when it arrives.`;
       const idx = state.announcements.findIndex(a => a.id === annId);
       const rec = {
         id: annId, priority: 'reminder', title, body,
@@ -4853,7 +4949,7 @@
         logActivity('PO RECEIVED', po.po_number);
         saveState();
         render();
-        showToast(`Reconciled ${po.po_number} into stock`);
+        showToast(`Reconciled ${po.po_number} into Living Stock`);
       }
       return;
     }
@@ -4873,14 +4969,6 @@
         render();
         showToast('Purchase order deleted');
       });
-      return;
-    }
-
-    // Receive Clear Expiry
-    const clrExp = e.target.closest('[data-clear-exp]');
-    if (clrExp) {
-      const t = state.transactions.find(x => x.id === clrExp.dataset.clearExp);
-      if (t) { t.cleared = true; saveState(); render(); }
       return;
     }
 
@@ -5389,38 +5477,6 @@
       return;
     }
 
-    const slipPresetBtn = e.target.closest('[data-slip-preset]');
-    if (slipPresetBtn) {
-      const p = slipPresetBtn.dataset.slipPreset;
-      if (p === 'LOW') {
-        state._slipPresetItems = state.items.filter(i => !i.discontinued && itemNeed(i) > 0).map(i => i.id);
-      } else {
-        state._slipPresetItems = state.items.filter(i => !i.discontinued && (i.vendor || '').toLowerCase().includes(p.toLowerCase())).map(i => i.id);
-      }
-      if (!state._slipPresetItems.length) showToast(`No ${p} items found`, 'warn');
-      render();
-      return;
-    }
-    if (e.target.id === 'btn-add-slip-row') {
-      const tbody = document.getElementById('slip-rows-body');
-      if (tbody) {
-        const optsHtml = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
-        tbody.insertAdjacentHTML('beforeend', `
-          <tr class="slip-row">
-            <td class="p-1.5"><select name="slipItemId" class="kms-input w-full text-xs"><option value="">-- Select Item --</option>${optsHtml}</select></td>
-            <td class="p-1.5"><input name="slipQty" type="number" step="0.5" min="0" placeholder="0" class="kms-input w-full text-xs text-center font-bold" /></td>
-            <td class="p-1.5"><input name="slipExp" type="date" class="kms-input w-full text-xs" /></td>
-            <td class="p-1.5 text-center"><button type="button" class="btn-rm-slip-row text-rose-600 font-bold text-sm">&times;</button></td>
-          </tr>
-        `);
-      }
-      return;
-    }
-    if (e.target.classList && e.target.classList.contains('btn-rm-slip-row')) {
-      const row = e.target.closest('tr');
-      if (row) row.remove();
-      return;
-    }
     const repRangeBtn = e.target.closest('[data-rep-range]');
     if (repRangeBtn) {
       state.reportRange = repRangeBtn.dataset.repRange;
@@ -5445,29 +5501,6 @@
       a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
       a.download = `executive_restock_needs-${localDateStr()}.csv`;
       a.click();
-      return;
-    }
-    if (e.target.id === 'btn-rec-pending-pos') {
-      const pending = (state.purchaseOrders || []).filter(p => ['requested', 'approved', 'ordered'].includes(p.status));
-      openModal(`Expected & Pending POs (${pending.length})`, `
-        <div class="space-y-3 text-xs">
-          ${!pending.length ? '<p class="opacity-70">No pending or expected purchase orders right now.</p>' : pending.map(po => `
-            <div class="p-3 rounded-lg border border-[var(--line)] space-y-1.5">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div><strong class="font-mono">${esc(po.po_number)}</strong>${po.vendor_conf ? ` <span class="font-mono opacity-75">· Inv ${esc(po.vendor_conf)}</span>` : ''} &middot; <strong>${esc(po.vendor)}</strong></div>
-                <span class="tag ${po.status === 'ordered' || po.status === 'approved' ? 'tag-OK' : 'tag-LOW'}">${esc(po.status.toUpperCase())}</span>
-              </div>
-              <div class="divide-y divide-[var(--line)]">
-                ${(po.lines || []).map(l => `<div class="py-1 flex justify-between"><span>${esc(l.name)}</span><span class="font-bold">${Math.max(1, Math.ceil(l.qty))} ${esc(l.unit)}</span></div>`).join('')}
-              </div>
-            </div>
-          `).join('')}
-          <div class="flex gap-2 pt-1">
-            <button type="button" data-tab="orders" data-close-modal="1" class="kms-btn-navy flex-1 py-2 text-xs">Go to Orders &amp; POs</button>
-            <button type="button" data-tab="receive" data-close-modal="1" class="kms-btn-ok flex-1 py-2 text-xs">Go to Receive / Check-In</button>
-          </div>
-        </div>
-      `);
       return;
     }
     if (e.target.id === 'btn-suggest-menu') {
@@ -5853,24 +5886,6 @@
       });
       return;
     }
-    if (e.target.id === 'btn-start-cam' && window.Html5Qrcode) {
-      document.getElementById('cam-wrap').classList.remove('hidden');
-      document.getElementById('btn-start-cam').classList.add('hidden');
-      document.getElementById('btn-stop-cam').classList.remove('hidden');
-      html5Qr = new window.Html5Qrcode('cam-reader');
-      html5Qr.start({ facingMode: 'environment' }, { fps: 10, qrbox: 200 }, txt => {
-        const m = state.items.find(i => i.sku.toLowerCase() === txt.trim().toLowerCase());
-        if (m) { document.getElementById('recv-item').value = m.id; showToast('Scanned ' + m.name); }
-        if (html5Qr) { html5Qr.stop().catch(() => {}); html5Qr = null; }
-        document.getElementById('cam-wrap').classList.add('hidden');
-      }, () => {}).catch(() => showToast('Camera unavailable in this preview', 'warn'));
-      return;
-    }
-    if (e.target.id === 'btn-stop-cam' && html5Qr) {
-      html5Qr.stop().catch(() => {}); html5Qr = null;
-      document.getElementById('cam-wrap').classList.add('hidden');
-      return;
-    }
   });
 
   document.addEventListener('input', (e) => {
@@ -5962,6 +5977,17 @@
     if (e.target.id === 'fc-whatif-meal') { state._fcMealFilter = e.target.value; render(); return; }
     if (e.target.id === 'fc-whatif-circ') { state._fcCircFilter = e.target.value; render(); return; }
     if (e.target.id === 'rep-month') { state.reportMonth = e.target.value; render(); return; }
+
+    // Auto-fill unit when picking a catalog item on the Donation form
+    if (e.target.name === 'donItemId') {
+      const row = e.target.closest('tr');
+      const x = state.items.find(i => i.id === e.target.value);
+      if (row && x) {
+        const uInp = row.querySelector('[name="donUnit"]');
+        if (uInp) uInp.value = x.unit || 'cases';
+      }
+      return;
+    }
 
     const itemField = e.target.dataset.itemField;
     if (itemField) {
@@ -6140,6 +6166,106 @@
       saveState();
       checkMandatoryModals();
       showToast('Personal PIN saved');
+      return;
+    }
+
+    if (e.target.classList && e.target.classList.contains('form-reconcile-po')) {
+      const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.poId);
+      if (po && ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(po.status)) {
+        const uName = getActiveUser().name;
+        const todayStr = localDateStr();
+        const poNum = String(fd.get('recPoNum') || '').trim();
+        if (poNum) po.po_number = poNum;
+        const invNum = String(fd.get('recInvNum') || '').trim();
+        if (invNum) po.vendor_conf = invNum;
+        let added = 0;
+        (po.lines || []).forEach(ln => {
+          const iid = ln.item_id;
+          const ord = Number(ln.qty || 0);
+          if (ord <= 0) return;
+          const recVal = parseFloat(fd.get('rec_' + iid));
+          const actual = isNaN(recVal) ? ord : Math.max(0, Math.ceil(recVal));
+          ln.received = actual;
+          if (actual <= 0) return;
+          const x = state.items.find(i => i.id === iid);
+          if (!x) return;
+          x.on_hand = Math.round((x.on_hand + actual) * 100) / 100;
+          state.transactions.unshift({
+            id: uid('tx'), tx_date: todayStr, tx_type: 'RECEIVE', item_id: x.id, item_name: x.name,
+            unit: x.unit, qty: actual, source: `PO ${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${po.vendor})`,
+            exp_date: '', cleared: false, staff_name: uName
+          });
+          added++;
+        });
+        po.status = 'closed';
+        po.received_by = uName;
+        logActivity('PO RECEIVED', `${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${added} items checked in)`);
+        saveState();
+        render();
+        showToast(`Reconciled ${po.po_number}: updated ${added} item(s) in Living Stock!`);
+      }
+      return;
+    }
+
+    if (e.target.id === 'form-log-donation') {
+      if (!isStaffOrHigher()) { showToast('Only Staff or Management can log donations', 'warn'); return; }
+      const donorName = String(fd.get('donorName') || '').trim();
+      const donorOrg = String(fd.get('donorOrg') || '').trim();
+      const donationDate = String(fd.get('donationDate') || localDateStr());
+      const donorContact = String(fd.get('donorContact') || '').trim();
+      const donorAddress = String(fd.get('donorAddress') || '').trim();
+      const notes = String(fd.get('notes') || '').trim();
+      const ids = fd.getAll('donItemId');
+      const customNames = fd.getAll('donCustomName');
+      const qtys = fd.getAll('donQty');
+      const units = fd.getAll('donUnit');
+      const donItems = [];
+      const uName = getActiveUser().name;
+
+      ids.forEach((itemId, idx) => {
+        const q = parseFloat(qtys[idx]) || 0;
+        if (q <= 0) return;
+        const inv = itemId ? state.items.find(i => i.id === itemId) : null;
+        const cName = String(customNames[idx] || '').trim();
+        const name = inv ? inv.name : cName;
+        if (!name) return;
+        const unit = inv ? inv.unit : (String(units[idx] || '').trim() || 'cases');
+        if (inv) {
+          inv.on_hand = Math.round((inv.on_hand + q) * 100) / 100;
+          state.transactions.unshift({
+            id: uid('tx'), tx_date: donationDate, tx_type: 'RECEIVE', item_id: inv.id, item_name: inv.name,
+            unit: inv.unit, qty: q, source: `Donation — ${donorName}${donorOrg ? ' (' + donorOrg + ')' : ''}`,
+            exp_date: '', cleared: false, staff_name: uName
+          });
+        }
+        donItems.push({ item_id: inv ? inv.id : '', name, qty: q, unit, condition: 'Good / Unopened' });
+      });
+
+      if (!donorName || !donItems.length) {
+        showToast('Enter donor name and at least one donated item with qty > 0', 'warn');
+        return;
+      }
+
+      state.donations = state.donations || [];
+      const recNum = 'DON-' + donationDate.replace(/-/g, '') + '-' + String(state.donations.length + 101);
+      const donRecord = {
+        id: uid('don'),
+        receipt_number: recNum,
+        donor_name: donorName,
+        donor_org: donorOrg,
+        donor_contact: donorContact,
+        donor_address: donorAddress,
+        donation_date: donationDate,
+        notes,
+        received_by: uName,
+        items: donItems
+      };
+      state.donations.unshift(donRecord);
+      logActivity('DONATION', `${recNum} from ${donorName} (${donItems.length} item(s))`);
+      saveState();
+      render();
+      showToast(`Logged donation ${recNum} & updated Living Stock!`);
+      showDonationTaxReceiptModal(donRecord.id);
       return;
     }
 
@@ -6410,92 +6536,6 @@
         render();
         showToast(`Updated ${po.po_number}`);
       }
-      return;
-    }
-
-    if (e.target.id === 'form-delivery-slip') {
-      const slipDate = String(fd.get('slipDate') || localDateStr());
-      const slipSource = String(fd.get('slipSource') || 'Delivery Slip');
-      const slipRef = String(fd.get('slipRef') || '').trim();
-      const ids = fd.getAll('slipItemId');
-      const qtys = fd.getAll('slipQty');
-      const exps = fd.getAll('slipExp');
-      let count = 0;
-      const uName = getActiveUser().name;
-      ids.forEach((itemId, idx) => {
-        const q = parseFloat(qtys[idx]) || 0;
-        if (!itemId || q <= 0) return;
-        const x = state.items.find(i => i.id === itemId);
-        if (!x) return;
-        x.on_hand = Math.round((x.on_hand + q) * 100) / 100;
-        state.transactions.unshift({
-          id: uid('tx'), tx_date: slipDate, tx_type: 'RECEIVE', item_id: x.id, item_name: x.name,
-          unit: x.unit, qty: q, source: slipSource + (slipRef ? ` (${slipRef})` : ''),
-          exp_date: exps[idx] || '', cleared: false, staff_name: uName
-        });
-        logActivity('DELIVERY SLIP', `+${q} ${x.unit} ${x.name}${slipRef ? ' [' + slipRef + ']' : ''}`);
-        count++;
-      });
-      if (!count) { showToast('Enter a quantity greater than 0 for at least one item', 'warn'); return; }
-      state._slipPresetItems = [];
-      saveState();
-      render();
-      showToast(`Posted delivery slip: updated ${count} inventory item(s)!`);
-      return;
-    }
-
-    if (e.target.classList && e.target.classList.contains('form-reconcile-po')) {
-      const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.poId);
-      if (po && ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(po.status)) {
-        const uName = getActiveUser().name;
-        const todayStr = localDateStr();
-        const poNum = String(fd.get('recPoNum') || '').trim();
-        if (poNum) po.po_number = poNum;
-        const invNum = String(fd.get('recInvNum') || '').trim();
-        if (invNum) po.vendor_conf = invNum;
-        let added = 0;
-        (po.lines || []).forEach(ln => {
-          const iid = ln.item_id;
-          const ord = Number(ln.qty || 0);
-          if (ord <= 0) return;
-          const recVal = parseFloat(fd.get('rec_' + iid));
-          const actual = isNaN(recVal) ? ord : Math.max(0, Math.ceil(recVal));
-          ln.received = actual;
-          if (actual <= 0) return;
-          const x = state.items.find(i => i.id === iid);
-          if (!x) return;
-          x.on_hand = Math.round((x.on_hand + actual) * 100) / 100;
-          state.transactions.unshift({
-            id: uid('tx'), tx_date: todayStr, tx_type: 'RECEIVE', item_id: x.id, item_name: x.name,
-            unit: x.unit, qty: actual, source: `PO ${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${po.vendor})`,
-            exp_date: '', cleared: false, staff_name: uName
-          });
-          added++;
-        });
-        po.status = 'closed';
-        po.received_by = uName;
-        logActivity('PO RECEIVED', `${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${added} items checked in)`);
-        saveState();
-        render();
-        showToast(`Reconciled ${po.po_number}: updated ${added} item(s) in stock!`);
-      }
-      return;
-    }
-
-    if (e.target.id === 'form-receive') {
-      const x = state.items.find(i => i.id === fd.get('itemId'));
-      const q = parseFloat(fd.get('qty')) || 0;
-      if (!x || q <= 0) return;
-      x.on_hand = Math.round((x.on_hand + q) * 100) / 100;
-      state.transactions.unshift({
-        id: uid('tx'), tx_date: localDateStr(), tx_type: 'RECEIVE', item_id: x.id, item_name: x.name,
-        unit: x.unit, qty: q, source: fd.get('source'), exp_date: fd.get('expDate') || '', cleared: false,
-        staff_name: getActiveUser().name
-      });
-      logActivity('RECEIVE', `+${q} ${x.unit} ${x.name}`);
-      saveState();
-      render();
-      showToast(`Received +${q} ${x.unit} ${x.name}`);
       return;
     }
 
@@ -7156,16 +7196,6 @@
       saveState();
       render();
       return;
-    }
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.target && e.target.id === 'scan-input' && e.key === 'Enter') {
-      e.preventDefault();
-      const q = e.target.value.trim().toLowerCase();
-      const m = state.items.find(i => i.sku.toLowerCase() === q || i.name.toLowerCase().includes(q));
-      if (m) { document.getElementById('recv-item').value = m.id; showToast('Selected ' + m.name); e.target.value = ''; }
-      else showToast('No matching SKU or item found', 'warn');
     }
   });
 
