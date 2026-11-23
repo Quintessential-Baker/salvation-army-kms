@@ -5,12 +5,90 @@
 //   2) POST { "url": "https://..." } -> scrapes Schema.org Recipe JSON-LD (with automatic reader-proxy fallback for 403-protected sites)
 // Free tier: included in Supabase Free plan (up to 500,000 invocations/month, no extra API keys needed).
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// SECURITY: requires a signed-in tablet session; refuses localhost / private-network / metadata addresses
+// (SSRF), follows at most 3 redirects (each re-checked), and caps page size.
+// Optional secret: ALLOWED_ORIGIN = https://YOUR-USER.github.io
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") || "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+
+// ---- Shared guard: only a signed-in kitchen-tablet session may call this function ----
+const SB_URL = Deno.env.get("SUPABASE_URL") || "";
+const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY") || "";
+async function isSignedIn(req: Request): Promise<boolean> {
+  const auth = req.headers.get("Authorization") || "";
+  if (!auth.startsWith("Bearer ") || !SB_URL || !SB_ANON) return false;
+  try {
+    const r = await fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_ANON, Authorization: auth } });
+    if (!r.ok) return false;
+    const u = await r.json();
+    return !!(u && u.id);          // the public anon key has no user, so it fails here
+  } catch {
+    return false;
+  }
+}
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
+function isBlockedHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!h || h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal") || !h.includes(".") && !h.includes(":")) return true;
+  if (h.includes(":")) {                       // IPv6 literals: block loopback, link-local, unique-local, mapped
+    return h === "::1" || h === "::" || h.startsWith("fe80") || h.startsWith("fc") || h.startsWith("fd") || h.startsWith("::ffff:");
+  }
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+  }
+  return false;
+}
+
+async function safeFetch(url: string, timeoutMs: number): Promise<Response> {
+  let current = url;
+  for (let hop = 0; hop < 4; hop++) {
+    const u = new URL(current);
+    if (!["http:", "https:"].includes(u.protocol) || isBlockedHost(u.hostname)) {
+      throw new Error("That address is not allowed");
+    }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(u.toString(), { headers: BROWSER_HEADERS, redirect: "manual", signal: ctrl.signal });
+      if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
+        current = new URL(res.headers.get("location") as string, u).toString();
+        continue;
+      }
+      return res;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new Error("Too many redirects");
+}
+
+async function readCapped(res: Response, maxBytes: number): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done || !value) break;
+    total += value.length;
+    if (total > maxBytes) { await reader.cancel(); break; }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
+  let off = 0;
+  for (const c of chunks) { all.set(c, off); off += c.length; }
+  return new TextDecoder().decode(all);
+}
 
 const BROWSER_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -178,7 +256,7 @@ async function fetchViaReaderFallback(targetUrl: string) {
       signal: ctrl.signal,
     });
     if (!res.ok) return null;
-    const text = await res.text();
+    const text = await readCapped(res, 1_500_000);
     return parseMarkdownRecipe(text, targetUrl);
   } catch {
     return null;
@@ -276,10 +354,11 @@ async function searchAllRecipeSources(query: string) {
   return results;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  if (!(await isSignedIn(req))) return json({ ok: false, error: "Sign in required" }, 401);
 
   try {
     const body = await req.json();
@@ -297,19 +376,22 @@ serve(async (req) => {
     try {
       parsedUrl = new URL(target);
     } catch {
-      return new Response(JSON.stringify({ ok: false, error: "Invalid URL" }), {
-        status: 200,
+      return new Response(JSON.stringify({ error: "Invalid URL" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-      return new Response(JSON.stringify({ ok: false, error: "Only http/https URLs are supported" }), {
-        status: 200,
+      return new Response(JSON.stringify({ error: "Only http/https URLs are supported" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const res = await fetch(parsedUrl.toString(), { headers: BROWSER_HEADERS });
+    if (isBlockedHost(parsedUrl.hostname)) {
+      return json({ error: "That address is not allowed" }, 400);
+    }
+    const res = await safeFetch(parsedUrl.toString(), 12000);
     if (!res.ok) {
       if ([401, 403, 429].includes(res.status)) {
         const fallbackRecipe = await fetchViaReaderFallback(parsedUrl.toString());
@@ -323,13 +405,13 @@ serve(async (req) => {
       const msg = res.status === 403
         ? `${parsedUrl.hostname} blocks automated imports (HTTP 403). Copy & paste the recipe text into "Add / Paste a Recipe" below.`
         : `${parsedUrl.hostname} returned HTTP ${res.status}`;
-      return new Response(JSON.stringify({ ok: false, error: msg }), {
-        status: 200,
+      return new Response(JSON.stringify({ error: msg }), {
+        status: res.status === 403 ? 403 : 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const html = await res.text();
+    const html = await readCapped(res, 3_000_000);
     const ldMatches = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
     let recipeObj: Record<string, unknown> | null = null;
     for (const m of ldMatches) {
@@ -350,8 +432,8 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ ok: false, error: "No structured Recipe data found on that page. Copy and paste the recipe text instead." }), {
-        status: 200,
+      return new Response(JSON.stringify({ error: "No structured Recipe data found on that page. Copy and paste the recipe text instead." }), {
+        status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -385,8 +467,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: String(err) }), {
-      status: 200,
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
