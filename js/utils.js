@@ -174,7 +174,7 @@ export function fmtNum(n) {
 // Culinary Conversions & Recipe Helpers
 export const KITCHEN_UNITS = ['tsp', 'tbsp', 'fl oz', 'cups', 'pints', 'quarts', 'gallons', 'oz', 'lbs', 'pieces', 'cans', 'boxes', 'bags', 'packs', 'cases', 'to taste'];
 
-const UNIT_ALIASES = {
+export const UNIT_ALIASES = {
   teaspoon: 'tsp', teaspoons: 'tsp', tsp: 'tsp',
   tablespoon: 'tbsp', tablespoons: 'tbsp', tbsp: 'tbsp', tbs: 'tbsp',
   'fl oz': 'fl oz', floz: 'fl oz', 'fluid oz': 'fl oz',
