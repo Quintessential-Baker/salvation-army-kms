@@ -1831,32 +1831,39 @@ document.addEventListener('click', (e) => {
 
   if (e.target.id === 'btn-print-blind-form') {
     document.body.classList.add('printing-modal');
-    openModal('Printable Blank Zone Blind Count Sheet (Letter)', `
+    openModal('Printable Blank Zone Blind Count Sheet (1 Page Per Zone)', `
       <div class="space-y-4 text-xs">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 print-keep">
-          <div>
-            <div class="font-bold text-sm">The Salvation Army · Butler, PA — Blank Zone Inventory Count</div>
-            <div class="opacity-75">Date: ______________________ &bull; Counted By: ____________________________</div>
-          </div>
-          <button type="button" onclick="window.print()" class="kms-btn-navy px-3.5 py-1.5 text-xs no-print">Print Blank Form (Letter)</button>
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 no-print">
+          <div class="opacity-80">Formatted to print <strong>one full Letter page per storage zone</strong> (${LOCATIONS.length} pages total) with 22 lines per page.</div>
+          <button type="button" onclick="window.print()" class="kms-btn-navy px-4 py-1.5 text-xs font-semibold">Print All ${LOCATIONS.length} Zone Pages (Letter)</button>
         </div>
-        ${LOCATIONS.map(loc => `
-          <div class="border border-[var(--line)] rounded-lg overflow-hidden print-keep">
-            <div class="px-2.5 py-1.5 bg-black/5 font-bold uppercase">${esc(loc)}</div>
+        ${LOCATIONS.map((loc, zIdx) => `
+          <div class="print-page-break border border-[var(--line)] rounded-lg p-3 space-y-2 print-keep">
+            <div class="flex items-start justify-between gap-2 border-b-2 border-[#1b365d] pb-2">
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-[#b3122b]">The Salvation Army · Butler, PA — Blind Physical Inventory</div>
+                <div class="text-base font-extrabold text-[#1b365d]">ZONE: ${esc(loc.toUpperCase())}</div>
+              </div>
+              <div class="text-right text-[11px] space-y-0.5">
+                <div class="font-bold">Page ${zIdx + 1} of ${LOCATIONS.length}</div>
+                <div>Date: ____________________</div>
+                <div>Counted By: ______________________</div>
+              </div>
+            </div>
             <table class="w-full text-left border-collapse text-xs">
               <thead>
-                <tr class="border-b border-[var(--line)] uppercase opacity-70">
-                  <th class="py-1 px-2 w-8">#</th>
-                  <th class="py-1 px-2">Item Name</th>
-                  <th class="py-1 px-2 w-24">Count</th>
-                  <th class="py-1 px-2 w-24">Unit</th>
-                  <th class="py-1 px-2">Condition / Notes</th>
+                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                  <th class="py-1.5 px-2 w-8">#</th>
+                  <th class="py-1.5 px-2">Item Name</th>
+                  <th class="py-1.5 px-2 w-24">Count</th>
+                  <th class="py-1.5 px-2 w-24">Unit</th>
+                  <th class="py-1.5 px-2 w-40">Condition / Notes</th>
                 </tr>
               </thead>
               <tbody>
-                ${Array.from({ length: 6 }, (_, i) => `
+                ${Array.from({ length: 22 }, (_, i) => `
                   <tr class="border-b border-[var(--line)]">
-                    <td class="py-2 px-2 font-mono">${i + 1}</td>
+                    <td class="py-2 px-2 font-mono text-[11px]">${i + 1}</td>
                     <td class="py-2 px-2"></td>
                     <td class="py-2 px-2"></td>
                     <td class="py-2 px-2"></td>
@@ -1865,6 +1872,10 @@ document.addEventListener('click', (e) => {
                 `).join('')}
               </tbody>
             </table>
+            <div class="flex justify-between items-center pt-2 text-[11px] opacity-80">
+              <span>Enter counts into <strong>Stock &amp; Orders &rarr; Blind Count &amp; Waste</strong> for variance check.</span>
+              <span>Manager Approval Initials: ________</span>
+            </div>
           </div>
         `).join('')}
       </div>
