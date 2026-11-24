@@ -225,7 +225,7 @@ export function render() {
     checkMandatoryModals();
     return;
   }
-
+try {
   switch (state.activeTab) {
     case 'dashboard': renderDashboard(main); break;
     case 'stock': renderStock(main); break;
@@ -243,6 +243,10 @@ export function render() {
     case 'users': renderUsers(main); break;
     case 'help': renderHelp(main); break;
     default: renderDashboard(main);
+  }
+    } catch (err) {
+    if (window.kmsReportError) window.kmsReportError(err, { kind: 'render', tab: state.activeTab });
+    main.innerHTML = `<div class="kms-card p-6 text-center space-y-2"><h2 class="text-base font-bold">Something went wrong on this page</h2><p class="text-xs opacity-75">The problem was reported automatically. Try another tab or reload.</p><button type="button" data-tab="dashboard" class="kms-btn-primary px-4 py-2 text-xs">Go to Dashboard</button></div>`;
   }
 
   const guideHtml = renderPageGuideBanner(state.activeTab);
