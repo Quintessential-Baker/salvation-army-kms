@@ -199,10 +199,10 @@ export function renderRecords(main) {
         <div class="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 class="text-base font-bold">Blind Physical Inventory Form (Sectioned by Zone)</h2>
-            <p class="text-xs opacity-75">Walk each storage zone and record what you find on the shelves (or print the blank zone form first). System counts stay hidden until submitted for variance reconciliation and manager approval.</p>
+            <p class="text-xs opacity-75">Walk each storage zone and record what you find on the shelves (or print blank 30-line zone sheets individually or all together). System counts stay hidden until submitted for variance reconciliation and manager approval.</p>
           </div>
           <div class="flex flex-wrap gap-1.5 no-print">
-            <button type="button" id="btn-print-blind-form" class="kms-btn-alt px-3 py-1.5 text-xs">Print Blank Zone Form</button>
+            <button type="button" id="btn-print-blind-form" class="kms-btn-alt px-3 py-1.5 text-xs">Print Blank Zone Forms</button>
             ${totalFilledRows ? `<button type="button" id="btn-clear-blind-form" class="kms-btn-alt px-3 py-1.5 text-xs">Clear Form (${totalFilledRows})</button>` : ''}
             <button type="button" id="btn-submit-blind-form" class="kms-btn-ok px-3.5 py-1.5 text-xs font-semibold">Compare &amp; Submit for Approval (${totalFilledRows})</button>
           </div>
@@ -223,7 +223,8 @@ export function renderRecords(main) {
                     <h3 class="text-sm font-bold text-[#1b365d]">${esc(loc)}</h3>
                     <span class="tag ${filledInZone ? 'tag-OK' : 'tag-LOW'}">${filledInZone} entered</span>
                   </div>
-                  <div class="flex items-center gap-1.5 no-print">
+                  <div class="flex flex-wrap items-center gap-1.5 no-print">
+                    <button type="button" data-print-zone-sheet="${esc(loc)}" class="kms-btn-navy px-2.5 py-1 text-xs">Print Sheet</button>
                     <button type="button" data-add-zone-rows="${esc(loc)}:1" class="kms-btn-alt px-2.5 py-1 text-xs">+ Add Row</button>
                     <button type="button" data-add-zone-rows="${esc(loc)}:5" class="kms-btn-alt px-2.5 py-1 text-xs">+ Add 5 Rows</button>
                   </div>

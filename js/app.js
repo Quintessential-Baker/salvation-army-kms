@@ -640,6 +640,93 @@ function importRecipeFromUrl(targetUrl, btn) {
   });
 }
 
+function showBlindPrintModal(selectedZone = 'ALL', pagesPerZone = 1) {
+  const zoneKey = LOCATIONS.includes(selectedZone) ? selectedZone : 'ALL';
+  const pagesCount = Math.min(4, Math.max(1, parseInt(pagesPerZone, 10) || 1));
+  state._blindPrintZone = zoneKey;
+  state._blindPrintPages = pagesCount;
+
+  const targetZones = zoneKey === 'ALL' ? LOCATIONS : [zoneKey];
+  const linesPerPage = 30;
+  const sheets = [];
+  targetZones.forEach(loc => {
+    for (let p = 1; p <= pagesCount; p++) {
+      sheets.push({
+        loc,
+        zonePageNum: p,
+        zoneTotalPages: pagesCount,
+        startRow: (p - 1) * linesPerPage + 1
+      });
+    }
+  });
+
+  document.body.classList.add('printing-modal');
+  openModal('Printable Blank Zone Blind Count Sheet (30 Lines / Page)', `
+    <div class="space-y-4 text-xs">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2.5 no-print">
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="font-bold">Section:
+            <select id="blind-print-zone-sel" class="kms-input text-xs ml-1">
+              <option value="ALL" ${zoneKey === 'ALL' ? 'selected' : ''}>All Zones (${LOCATIONS.length})</option>
+              ${LOCATIONS.map(l => `<option value="${esc(l)}" ${zoneKey === l ? 'selected' : ''}>${esc(l)} Only</option>`).join('')}
+            </select>
+          </label>
+          <label class="font-bold">Pages / Zone:
+            <select id="blind-print-pages-sel" class="kms-input text-xs ml-1">
+              ${[1, 2, 3, 4].map(n => `<option value="${n}" ${pagesCount === n ? 'selected' : ''}>${n} Page${n > 1 ? 's' : ''} (${n * linesPerPage} lines)</option>`).join('')}
+            </select>
+          </label>
+        </div>
+        <button type="button" onclick="window.print()" class="kms-btn-navy px-4 py-1.5 text-xs font-semibold">
+          Print ${sheets.length} Page${sheets.length > 1 ? 's' : ''} (Letter)
+        </button>
+      </div>
+
+      ${sheets.map((sh, sIdx) => `
+        <div class="print-page-break border border-[var(--line)] rounded-lg p-3 space-y-1.5 print-keep">
+          <div class="flex items-start justify-between gap-2 border-b-2 border-[#1b365d] pb-1.5">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-[#b3122b]">The Salvation Army · Butler, PA — Blind Physical Inventory</div>
+              <div class="text-base font-extrabold text-[#1b365d]">ZONE: ${esc(sh.loc.toUpperCase())}${sh.zoneTotalPages > 1 ? ` (Sheet ${sh.zonePageNum} of ${sh.zoneTotalPages})` : ''}</div>
+            </div>
+            <div class="text-right text-[11px] space-y-0.5">
+              <div class="font-bold">Page ${sIdx + 1} of ${sheets.length}</div>
+              <div>Date: ____________________</div>
+              <div>Counted By: ______________________</div>
+            </div>
+          </div>
+          <table class="w-full text-left border-collapse text-[11px]">
+            <thead>
+              <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                <th class="py-1 px-1.5 w-8">#</th>
+                <th class="py-1 px-1.5">Item Name</th>
+                <th class="py-1 px-1.5 w-20">Count</th>
+                <th class="py-1 px-1.5 w-20">Unit</th>
+                <th class="py-1 px-1.5 w-36">Condition / Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Array.from({ length: linesPerPage }, (_, i) => `
+                <tr class="border-b border-[var(--line)]">
+                  <td class="py-1.5 px-1.5 font-mono text-[10px]">${sh.startRow + i}</td>
+                  <td class="py-1.5 px-1.5"></td>
+                  <td class="py-1.5 px-1.5"></td>
+                  <td class="py-1.5 px-1.5"></td>
+                  <td class="py-1.5 px-1.5"></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="flex justify-between items-center pt-1 text-[10px] opacity-80">
+            <span>Enter counts into <strong>Stock &amp; Orders &rarr; Blind Count &amp; Waste</strong> for variance check.</span>
+            <span>Manager Approval Initials: ________</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `);
+}
+
 function showBlindVarianceModal(subId) {
   const sub = (state.blindReconciliations || []).find(r => r.id === subId);
   if (!sub) return;
@@ -1830,56 +1917,13 @@ document.addEventListener('click', (e) => {
   }
 
   if (e.target.id === 'btn-print-blind-form') {
-    document.body.classList.add('printing-modal');
-    openModal('Printable Blank Zone Blind Count Sheet (1 Page Per Zone)', `
-      <div class="space-y-4 text-xs">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 no-print">
-          <div class="opacity-80">Formatted to print <strong>one full Letter page per storage zone</strong> (${LOCATIONS.length} pages total) with 22 lines per page.</div>
-          <button type="button" onclick="window.print()" class="kms-btn-navy px-4 py-1.5 text-xs font-semibold">Print All ${LOCATIONS.length} Zone Pages (Letter)</button>
-        </div>
-        ${LOCATIONS.map((loc, zIdx) => `
-          <div class="print-page-break border border-[var(--line)] rounded-lg p-3 space-y-2 print-keep">
-            <div class="flex items-start justify-between gap-2 border-b-2 border-[#1b365d] pb-2">
-              <div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-[#b3122b]">The Salvation Army · Butler, PA — Blind Physical Inventory</div>
-                <div class="text-base font-extrabold text-[#1b365d]">ZONE: ${esc(loc.toUpperCase())}</div>
-              </div>
-              <div class="text-right text-[11px] space-y-0.5">
-                <div class="font-bold">Page ${zIdx + 1} of ${LOCATIONS.length}</div>
-                <div>Date: ____________________</div>
-                <div>Counted By: ______________________</div>
-              </div>
-            </div>
-            <table class="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
-                  <th class="py-1.5 px-2 w-8">#</th>
-                  <th class="py-1.5 px-2">Item Name</th>
-                  <th class="py-1.5 px-2 w-24">Count</th>
-                  <th class="py-1.5 px-2 w-24">Unit</th>
-                  <th class="py-1.5 px-2 w-40">Condition / Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${Array.from({ length: 22 }, (_, i) => `
-                  <tr class="border-b border-[var(--line)]">
-                    <td class="py-2 px-2 font-mono text-[11px]">${i + 1}</td>
-                    <td class="py-2 px-2"></td>
-                    <td class="py-2 px-2"></td>
-                    <td class="py-2 px-2"></td>
-                    <td class="py-2 px-2"></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            <div class="flex justify-between items-center pt-2 text-[11px] opacity-80">
-              <span>Enter counts into <strong>Stock &amp; Orders &rarr; Blind Count &amp; Waste</strong> for variance check.</span>
-              <span>Manager Approval Initials: ________</span>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `);
+    showBlindPrintModal('ALL', state._blindPrintPages || 1);
+    return;
+  }
+
+  const printSingleZoneBtn = e.target.closest('[data-print-zone-sheet]');
+  if (printSingleZoneBtn) {
+    showBlindPrintModal(printSingleZoneBtn.dataset.printZoneSheet, state._blindPrintPages || 1);
     return;
   }
 
@@ -2491,6 +2535,12 @@ document.addEventListener('input', (e) => {
 
 // Global Change Listener
 document.addEventListener('change', (e) => {
+  if (e.target.id === 'blind-print-zone-sel' || e.target.id === 'blind-print-pages-sel') {
+    const z = document.getElementById('blind-print-zone-sel')?.value || state._blindPrintZone || 'ALL';
+    const p = document.getElementById('blind-print-pages-sel')?.value || state._blindPrintPages || 1;
+    showBlindPrintModal(z, p);
+    return;
+  }
   if (e.target.id === 'menu-print-ref-date') {
     showMenuPrintSuiteModal(state._menuPrintPeriod || 'weekly', e.target.value || localDateStr());
     return;
