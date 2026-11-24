@@ -37,7 +37,7 @@ import { renderSafety } from './views/safety.js';
 import { renderStorage } from './views/storage.js';
 import { renderChecklists } from './views/checklists.js';
 import { renderForecasting, destroyForecastChart } from './views/forecasting.js';
-import { renderRecords } from './views/records.js';
+import { renderRecords, matchBlindEntry, ensureBlindZoneForm } from './views/records.js';
 import { renderReport } from './views/report.js';
 import { renderUsers } from './views/users.js';
 import {
@@ -638,6 +638,105 @@ function importRecipeFromUrl(targetUrl, btn) {
   }).finally(() => {
     if (btn) { btn.disabled = false; btn.textContent = origTxt; }
   });
+}
+
+function showBlindVarianceModal(subId) {
+  const sub = (state.blindReconciliations || []).find(r => r.id === subId);
+  if (!sub) return;
+  const isMgr = isMgmtOrHigher();
+  const lines = sub.lines || [];
+  const varCount = lines.filter(l => l.variance !== 0 || l.unitStatus === 'MISMATCH' || l.matchType === 'UNMATCHED').length;
+
+  openModal(`Variance Reconciliation & Approval — Sheet #${sub.id.slice(-5).toUpperCase()}`, `
+    <div class="space-y-3 text-xs">
+      <div class="p-3 rounded-lg bg-black/5 border border-[var(--line)] flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div class="font-bold text-sm">Counted by ${esc(sub.submitted_by)} &bull; ${esc(sub.submitted_at)}</div>
+          <div class="opacity-75">Spelling normalization &amp; unit conversions applied automatically. ${isMgr ? 'Review and approve lines below to update Living Stock.' : 'Awaiting Manager/Admin approval.'}</div>
+        </div>
+        <span class="tag ${varCount === 0 ? 'tag-OK' : 'tag-LOW'}">${varCount === 0 ? 'NO VARIANCES' : varCount + ' VARIANCE / FLAG(S)'}</span>
+      </div>
+
+      <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+              ${isMgr ? '<th class="p-2 text-center">Apply</th>' : ''}
+              <th class="p-2">Zone</th>
+              <th class="p-2">Entered &rarr; Catalog Match</th>
+              <th class="p-2">Counted (Unit Check)</th>
+              <th class="p-2 text-right">System</th>
+              <th class="p-2 text-right">Variance</th>
+              ${isMgr ? '<th class="p-2 text-right">Approved Qty</th>' : ''}
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[var(--line)]">
+            ${lines.map(l => {
+              const matchBadge = l.matchType === 'EXACT'
+                ? '<span class="tag tag-OK">EXACT</span>'
+                : l.matchType === 'SPELLING_FIXED'
+                  ? '<span class="tag tag-OK">SPELL-MATCHED</span>'
+                  : l.matchType === 'FUZZY'
+                    ? '<span class="tag tag-LOW">FUZZY MATCH</span>'
+                    : '<span class="tag tag-OUT">NEW ITEM</span>';
+
+              const unitBadge = l.unitStatus === 'MATCH'
+                ? ''
+                : l.unitStatus === 'CONVERTED'
+                  ? `<div class="text-[11px] font-semibold text-emerald-700">Converted &rarr; ${fmtNum(l.comparableCountedQty)} ${esc(l.systemUnit)}</div>`
+                  : l.unitStatus === 'MISMATCH'
+                    ? `<div class="text-[11px] font-bold text-[#b3122b]">Unit mismatch (${esc(l.countedUnit)} vs ${esc(l.systemUnit)})</div>`
+                    : '';
+
+              const varText = l.unitStatus === 'MISMATCH'
+                ? '<span class="text-[#b3122b] font-bold">Verify Qty</span>'
+                : l.matchType === 'UNMATCHED'
+                  ? `<span class="text-emerald-700 font-bold">+${fmtNum(l.countedQty)} (New)</span>`
+                  : l.variance === 0
+                    ? '<span class="text-emerald-700 font-bold">0 (Match)</span>'
+                    : `<span class="text-[#b3122b] font-bold">${l.variance > 0 ? '+' + fmtNum(l.variance) : fmtNum(l.variance)} ${esc(l.systemUnit)}</span>`;
+
+              return `
+                <tr>
+                  ${isMgr ? `<td class="p-2 text-center"><input type="checkbox" id="recon-apply-${l.line_idx}" ${l.unitStatus !== 'MISMATCH' ? 'checked' : ''} class="accent-[#b3122b]" /></td>` : ''}
+                  <td class="p-2">
+                    <div class="font-semibold">${esc(l.zone)}</div>
+                    ${l.zoneMoved && isMgr ? `<label class="inline-flex items-center gap-1 text-[10px] mt-0.5"><input type="checkbox" id="recon-movezone-${l.line_idx}" /> Move zone</label>` : ''}
+                  </td>
+                  <td class="p-2">
+                    <div class="font-bold">${esc(l.enteredName)} ${matchBadge}</div>
+                    ${l.matchedItemName && l.matchedItemName.toLowerCase() !== l.enteredName.toLowerCase()
+                      ? `<div class="text-[11px] opacity-75">Matched: <strong>${esc(l.matchedItemName)}</strong></div>`
+                      : ''}
+                    ${l.note ? `<div class="text-[10px] opacity-70">Note: ${esc(l.note)}</div>` : ''}
+                  </td>
+                  <td class="p-2">
+                    <strong>${fmtNum(l.countedQty)} ${esc(l.countedUnit)}</strong>
+                    ${unitBadge}
+                  </td>
+                  <td class="p-2 text-right">${l.matchType === 'UNMATCHED' ? '—' : `${fmtNum(l.systemQty)} ${esc(l.systemUnit)}`}</td>
+                  <td class="p-2 text-right">${varText}</td>
+                  ${isMgr ? `
+                    <td class="p-2 text-right">
+                      <input type="number" step="0.5" min="0" id="recon-qty-${l.line_idx}" value="${fmtNum(l.comparableCountedQty)}" class="kms-input w-20 text-xs text-center font-bold" />
+                      <span class="text-[10px] opacity-70 ml-0.5">${esc(l.systemUnit)}</span>
+                    </td>
+                  ` : ''}
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex flex-wrap gap-2 pt-1">
+        ${isMgr
+          ? `<button type="button" id="btn-approve-recon" data-recon-id="${esc(sub.id)}" class="kms-btn-ok flex-1 py-2 text-xs font-semibold">Approve Selected &amp; Update Living Stock</button>`
+          : `<div class="flex-1 p-2 rounded bg-amber-50/50 border border-amber-300 font-semibold text-center">Submitted — Awaiting Manager or Admin Approval</div>`}
+        <button type="button" data-close-modal="1" class="kms-btn-alt px-4 py-2 text-xs font-semibold">Close</button>
+      </div>
+    </div>
+  `);
 }
 
 // Global Click Listener
@@ -1650,7 +1749,7 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Checklists Edit/Delete, Forecast Horizon, Blind Count, Exports, Training, Users
+  // Checklists Edit/Delete, Forecast Horizon & Zone Blind Count Controls
   const editChkBtn = e.target.closest('[data-edit-chk]');
   if (editChkBtn) {
     if (!isMgmtOrHigher()) { showToast('Only Management can edit checklist tasks', 'warn'); return; }
@@ -1692,162 +1791,234 @@ document.addEventListener('click', (e) => {
   const hzBtn = e.target.closest('[data-hz]');
   if (hzBtn) { state.horizon = hzBtn.dataset.hz; render(); return; }
 
-  // Section Blind Physical Count Controls
-  const blindZoneBtn = e.target.closest('[data-blind-zone]');
-  if (blindZoneBtn) {
-    if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
-    state.blindDraft.zone = blindZoneBtn.dataset.blindZone;
+  // Blank Zone-Sectioned Blind Inventory Form & Variance Approval Controls
+  const addZoneRowsBtn = e.target.closest('[data-add-zone-rows]');
+  if (addZoneRowsBtn) {
+    const [loc, cntStr] = addZoneRowsBtn.dataset.addZoneRows.split(':');
+    const cnt = Math.max(1, parseInt(cntStr, 10) || 1);
+    const zf = ensureBlindZoneForm();
+    for (let i = 0; i < cnt; i++) zf[loc].push({ name: '', qty: '', unit: 'cases', note: '' });
     saveState();
     render();
     return;
   }
-  const blindModeBtn = e.target.closest('[data-blind-mode]');
-  if (blindModeBtn) {
-    if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
-    state.blindDraft.mode = blindModeBtn.dataset.blindMode;
+
+  const rmZoneRowBtn = e.target.closest('[data-rm-zone-row]');
+  if (rmZoneRowBtn) {
+    const [loc, idxStr] = rmZoneRowBtn.dataset.rmZoneRow.split(':');
+    const idx = parseInt(idxStr, 10);
+    const zf = ensureBlindZoneForm();
+    if (zf[loc] && zf[loc].length > 1) {
+      zf[loc].splice(idx, 1);
+    } else if (zf[loc]) {
+      zf[loc][0] = { name: '', qty: '', unit: 'cases', note: '' };
+    }
     saveState();
     render();
     return;
   }
-  const blindStepBtn = e.target.closest('[data-blind-step]');
-  if (blindStepBtn) {
-    const [id, d] = blindStepBtn.dataset.blindStep.split(':');
-    const delta = Number(d);
-    if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
-    const curRaw = state.blindDraft.counts[id];
-    const curVal = curRaw === undefined || curRaw === '' ? 0 : (parseFloat(curRaw) || 0);
-    const nextVal = Math.max(0, Math.round((curVal + delta) * 100) / 100);
-    state.blindDraft.counts[id] = String(nextVal);
-    saveState();
-    render();
-    return;
-  }
-  if (e.target.id === 'btn-clear-blind-draft') {
-    askConfirm('Clear Blind Count Draft', 'Clear all unsubmitted physical count entries?', () => {
-      state.blindDraft = { zone: (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0], mode: (state.blindDraft && state.blindDraft.mode) || 'live', search: '', revealed: false, counts: {} };
+
+  if (e.target.id === 'btn-clear-blind-form') {
+    askConfirm('Clear Blank Zone Form', 'Clear all entered rows across every storage zone?', () => {
+      state.blindZoneForm = {};
+      ensureBlindZoneForm();
       saveState();
       render();
-      showToast('Blind count draft cleared');
+      showToast('Blind count form cleared');
     });
     return;
   }
-  if (e.target.id === 'btn-print-blind-sheet') {
-    const zone = (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0];
-    const list = state.items.filter(x => !x.discontinued && (zone === 'ALL' || x.location === zone));
+
+  if (e.target.id === 'btn-print-blind-form') {
     document.body.classList.add('printing-modal');
-    openModal(`Printable Hard-Copy Blind Count Sheet — ${zone === 'ALL' ? 'All Sections' : zone}`, `
-      <div class="space-y-3 text-xs">
+    openModal('Printable Blank Zone Blind Count Sheet (Letter)', `
+      <div class="space-y-4 text-xs">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 print-keep">
           <div>
-            <div class="font-bold text-sm">The Salvation Army · Butler, PA — Blind Shelf Count</div>
-            <div class="opacity-75">Section: <strong>${esc(zone === 'ALL' ? 'All Sections' : zone)}</strong> &bull; Date: ______________ &bull; Counter: ______________________</div>
+            <div class="font-bold text-sm">The Salvation Army · Butler, PA — Blank Zone Inventory Count</div>
+            <div class="opacity-75">Date: ______________________ &bull; Counted By: ____________________________</div>
           </div>
-          <button type="button" onclick="window.print()" class="kms-btn-navy px-3.5 py-1.5 text-xs no-print">Print Hard-Copy Sheet (Letter)</button>
+          <button type="button" onclick="window.print()" class="kms-btn-navy px-3.5 py-1.5 text-xs no-print">Print Blank Form (Letter)</button>
         </div>
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
-              <th class="py-1.5 px-2">SKU</th>
-              <th class="py-1.5 px-2">Item Name</th>
-              <th class="py-1.5 px-2">Section</th>
-              <th class="py-1.5 px-2">Unit</th>
-              <th class="py-1.5 px-2 text-right">Physical Count</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[var(--line)]">
-            ${list.map(x => `
-              <tr>
-                <td class="py-1.5 px-2 font-mono">${esc(x.sku)}</td>
-                <td class="py-1.5 px-2 font-semibold">${esc(x.name)}</td>
-                <td class="py-1.5 px-2 opacity-75">${esc(x.location)}</td>
-                <td class="py-1.5 px-2">${esc(normStockUnit(x.unit))}</td>
-                <td class="py-1.5 px-2 text-right font-mono">____________</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `);
-    return;
-  }
-  if (e.target.id === 'btn-review-blind') {
-    const counts = (state.blindDraft && state.blindDraft.counts) || {};
-    const rows = [];
-    state.items.filter(i => !i.discontinued).forEach(x => {
-      const val = counts[x.id];
-      if (val === undefined || val === '') return;
-      const phys = parseFloat(val);
-      if (isNaN(phys) || phys < 0) return;
-      const diff = Math.round((phys - x.on_hand) * 100) / 100;
-      rows.push({ id: x.id, name: x.name, location: x.location, unit: normStockUnit(x.unit), sys: x.on_hand, phys, diff });
-    });
-    if (!rows.length) { showToast('Enter at least one counted amount first', 'warn'); return; }
-    const varCount = rows.filter(r => r.diff !== 0).length;
-    openModal(`Review & Reconcile Blind Count (${rows.length} Items)`, `
-      <div class="space-y-3 text-xs">
-        <div class="p-3 rounded-lg bg-black/5 border border-[var(--line)] flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div class="font-bold text-sm">Variance Check Before Updating Living Stock</div>
-            <div class="opacity-75"><strong>${rows.length}</strong> item(s) counted &bull; <strong>${varCount}</strong> variance(s) detected</div>
-          </div>
-          <span class="tag ${varCount === 0 ? 'tag-OK' : 'tag-LOW'}">${varCount === 0 ? 'EXACT MATCH' : varCount + ' VARIANCE(S)'}</span>
-        </div>
-        <div class="max-h-72 overflow-y-auto border border-[var(--line)] rounded-lg">
-          <table class="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
-                <th class="p-2">Item</th>
-                <th class="p-2">Unit</th>
-                <th class="p-2 text-right">System</th>
-                <th class="p-2 text-right">Counted</th>
-                <th class="p-2 text-right">Variance</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[var(--line)]">
-              ${rows.map(r => `
-                <tr>
-                  <td class="p-2 font-bold">${esc(r.name)} <span class="opacity-60 font-normal">(${esc(r.location)})</span></td>
-                  <td class="p-2">${esc(r.unit)}</td>
-                  <td class="p-2 text-right opacity-75">${fmtNum(r.sys)}</td>
-                  <td class="p-2 text-right font-bold">${fmtNum(r.phys)}</td>
-                  <td class="p-2 text-right font-bold ${r.diff === 0 ? 'text-emerald-700' : 'text-[#b3122b]'}">${r.diff > 0 ? '+' + fmtNum(r.diff) : fmtNum(r.diff)}</td>
+        ${LOCATIONS.map(loc => `
+          <div class="border border-[var(--line)] rounded-lg overflow-hidden print-keep">
+            <div class="px-2.5 py-1.5 bg-black/5 font-bold uppercase">${esc(loc)}</div>
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-[var(--line)] uppercase opacity-70">
+                  <th class="py-1 px-2 w-8">#</th>
+                  <th class="py-1 px-2">Item Name</th>
+                  <th class="py-1 px-2 w-24">Count</th>
+                  <th class="py-1 px-2 w-24">Unit</th>
+                  <th class="py-1 px-2">Condition / Notes</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div class="flex flex-wrap gap-2 pt-1">
-          <button type="button" id="btn-commit-blind" class="kms-btn-ok flex-1 py-2 text-xs font-semibold">Accept &amp; Update Living Stock</button>
-          <button type="button" data-close-modal="1" class="kms-btn-alt px-4 py-2 text-xs font-semibold">Back to Counting</button>
-        </div>
+              </thead>
+              <tbody>
+                ${Array.from({ length: 6 }, (_, i) => `
+                  <tr class="border-b border-[var(--line)]">
+                    <td class="py-2 px-2 font-mono">${i + 1}</td>
+                    <td class="py-2 px-2"></td>
+                    <td class="py-2 px-2"></td>
+                    <td class="py-2 px-2"></td>
+                    <td class="py-2 px-2"></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('')}
       </div>
     `);
     return;
   }
-  if (e.target.id === 'btn-commit-blind') {
-    const counts = (state.blindDraft && state.blindDraft.counts) || {};
-    const zone = (state.blindDraft && state.blindDraft.zone) || 'ALL';
-    const rows = [];
-    snapUndo();
-    state.items.filter(i => !i.discontinued).forEach(x => {
-      const val = counts[x.id];
-      if (val === undefined || val === '') return;
-      const phys = parseFloat(val);
-      if (isNaN(phys) || phys < 0) return;
-      const cleanU = normStockUnit(x.unit);
-      x.unit = cleanU;
-      x.pack_label = cleanU;
-      rows.push({ name: x.name, unit: cleanU, sys: x.on_hand, phys });
-      x.on_hand = Math.round(phys * 100) / 100;
+
+  if (e.target.id === 'btn-submit-blind-form' || e.target.id === 'btn-submit-blind-form-2') {
+    const zf = ensureBlindZoneForm();
+    const matchedLines = [];
+    LOCATIONS.forEach(loc => {
+      (zf[loc] || []).forEach(r => {
+        const rawName = String(r.name || '').trim();
+        if (!rawName || r.qty === '' || r.qty === null || r.qty === undefined) return;
+        const m = matchBlindEntry(rawName, r.qty, r.unit, loc);
+        m.note = String(r.note || '').trim();
+        matchedLines.push(m);
+      });
     });
-    if (!rows.length) { closeModal(); return; }
-    state.blindAudits.unshift({ id: uid('aud'), audit_date: localDateStr(), auditor: getActiveUser().name, zone, rows });
-    state.blindDraft = { zone, mode: (state.blindDraft && state.blindDraft.mode) || 'live', search: '', revealed: false, counts: {} };
-    logActivity('BLIND COUNT', `Reconciled ${rows.length} item(s) in ${zone}`);
+    if (!matchedLines.length) {
+      showToast('Fill in at least one item name and count amount first', 'warn');
+      return;
+    }
+
+    const u = getActiveUser();
+    const submission = {
+      id: uid('recon'),
+      submitted_by: u.name,
+      submitted_role: u.role,
+      submitted_at: nowStamp(),
+      status: 'PENDING',
+      lines: matchedLines.map((l, idx) => ({
+        line_idx: idx,
+        zone: l.zone,
+        enteredName: l.enteredName,
+        cleanedName: l.cleanedName,
+        countedQty: l.countedQty,
+        countedUnit: l.countedUnit,
+        matchedItemId: l.matchedItem ? l.matchedItem.id : '',
+        matchedItemName: l.matchedItem ? l.matchedItem.name : '',
+        matchType: l.matchType,
+        unitStatus: l.unitStatus,
+        comparableCountedQty: l.comparableCountedQty,
+        systemQty: l.systemQty,
+        systemUnit: l.systemUnit,
+        variance: l.variance,
+        zoneMoved: l.zoneMoved,
+        note: l.note || ''
+      }))
+    };
+
+    state.blindReconciliations = state.blindReconciliations || [];
+    state.blindReconciliations.unshift(submission);
+    state.blindZoneForm = {};
+    ensureBlindZoneForm();
+    logActivity('BLIND COUNT SUBMITTED', `Submitted ${matchedLines.length} counted item(s) for variance reconciliation`);
+    saveState();
+    render();
+    showBlindVarianceModal(submission.id);
+    return;
+  }
+
+  const revReconBtn = e.target.closest('[data-review-recon]');
+  if (revReconBtn) {
+    showBlindVarianceModal(revReconBtn.dataset.reviewRecon);
+    return;
+  }
+
+  const rejReconBtn = e.target.closest('[data-reject-recon]');
+  if (rejReconBtn) {
+    if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can dismiss count sheets', 'warn'); return; }
+    const id = rejReconBtn.dataset.rejectRecon;
+    askConfirm('Dismiss Count Sheet', 'Dismiss this submitted count sheet without changing Living Stock?', () => {
+      state.blindReconciliations = (state.blindReconciliations || []).filter(r => r.id !== id);
+      logActivity('BLIND COUNT DISMISSED', `Dismissed count sheet ${id.slice(-5).toUpperCase()}`);
+      saveState();
+      render();
+      showToast('Count sheet dismissed');
+    });
+    return;
+  }
+
+  if (e.target.id === 'btn-approve-recon') {
+    if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can approve and apply inventory variances', 'warn'); return; }
+    const subId = e.target.dataset.reconId;
+    const sub = (state.blindReconciliations || []).find(r => r.id === subId);
+    if (!sub) return;
+
+    snapUndo();
+    let updatedCount = 0;
+    let addedNewCount = 0;
+    const auditRows = [];
+
+    (sub.lines || []).forEach(ln => {
+      const chk = document.getElementById(`recon-apply-${ln.line_idx}`);
+      if (!chk || !chk.checked) return;
+
+      const overrideQtyInp = document.getElementById(`recon-qty-${ln.line_idx}`);
+      const finalQty = overrideQtyInp ? Math.max(0, parseFloat(overrideQtyInp.value) || 0) : ln.comparableCountedQty;
+
+      if (ln.matchedItemId) {
+        const item = state.items.find(i => i.id === ln.matchedItemId);
+        if (item) {
+          auditRows.push({ name: item.name, unit: item.unit, sys: item.on_hand, phys: finalQty });
+          item.on_hand = Math.round(finalQty * 100) / 100;
+          if (document.getElementById(`recon-movezone-${ln.line_idx}`)?.checked) {
+            item.location = ln.zone;
+          }
+          updatedCount++;
+        }
+      } else {
+        const prefix = /freezer/i.test(ln.zone) ? 'FRZ' : /cooler/i.test(ln.zone) ? 'CLR' : /kitchen dry/i.test(ln.zone) ? 'KDG' : 'STK';
+        const newItem = normalizeInventoryItem({
+          id: uid('item'),
+          sku: prefix + '-' + String(state.items.length + 101),
+          name: ln.cleanedName,
+          location: ln.zone,
+          category: 'General',
+          unit: ln.countedUnit,
+          pack_label: ln.countedUnit,
+          units_per_pack: 1,
+          on_hand: Math.round(finalQty * 100) / 100,
+          par: Math.max(1, Math.ceil(finalQty)),
+          par_manual: false,
+          par_learned: false,
+          cadence: 'M',
+          vendor: 'Jordan Banana',
+          unit_price: null,
+          usage_log: [],
+          discontinued: false
+        });
+        state.items.push(newItem);
+        auditRows.push({ name: newItem.name, unit: newItem.unit, sys: 0, phys: newItem.on_hand });
+        addedNewCount++;
+      }
+    });
+
+    sub.status = 'APPROVED';
+    sub.approved_by = getActiveUser().name;
+    sub.approved_at = nowStamp();
+    state.blindAudits = state.blindAudits || [];
+    state.blindAudits.unshift({
+      id: uid('aud'),
+      audit_date: localDateStr(),
+      auditor: `${sub.submitted_by} (Approved by ${getActiveUser().name})`,
+      zone: 'Zone Form',
+      rows: auditRows
+    });
+
+    logActivity('BLIND COUNT APPROVED', `Approved ${updatedCount} stock update(s)${addedNewCount ? ` & added ${addedNewCount} new item(s)` : ''}`);
     closeModal();
     saveState();
     render();
-    showToast(`Reconciled physical count for ${rows.length} item(s) into Living Stock!`);
+    showToast(`Approved & updated ${updatedCount + addedNewCount} item(s) in Living Stock!`);
     return;
   }
 
@@ -2283,12 +2454,14 @@ document.addEventListener('click', (e) => {
 document.addEventListener('input', (e) => {
   if (e.target.id === 'help-task-search') { state._helpSearch = e.target.value; render(); const el = document.getElementById('help-task-search'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
   if (e.target.id === 'stock-search') { state._stockSearch = e.target.value; render(); const el = document.getElementById('stock-search'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
-  if (e.target.id === 'blind-search-inp') {
-    if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
-    state.blindDraft.search = e.target.value;
-    render();
-    const el = document.getElementById('blind-search-inp');
-    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  if (e.target.matches('[data-zform]')) {
+    const [loc, idxStr, field] = e.target.dataset.zform.split(':');
+    const idx = parseInt(idxStr, 10);
+    const zf = ensureBlindZoneForm();
+    if (zf[loc] && zf[loc][idx]) {
+      zf[loc][idx][field] = e.target.value;
+      saveState();
+    }
     return;
   }
   if (e.target.id === 'rec-scale-inp' || e.target.id === 'rec-scale-slider') { state.recipeScale = Math.max(1, parseFloat(e.target.value) || 1); render(); return; }
@@ -2301,12 +2474,6 @@ document.addEventListener('input', (e) => {
     render();
     const el = document.getElementById('rec-search-inp');
     if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
-    return;
-  }
-  if (e.target.matches('[data-blind-id]')) {
-    if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
-    state.blindDraft.counts[e.target.dataset.blindId] = e.target.value;
-    saveState();
     return;
   }
 });
@@ -3197,7 +3364,7 @@ document.addEventListener('submit', (e) => {
           });
         }
         if (djRes.status === 'fulfilled' && Array.isArray(djRes.value.recipes)) {
-          djRes.status === 'fulfilled' && djRes.value.recipes.forEach(d => {
+          djRes.value.recipes.forEach(d => {
             const key = String(d.name || '').toLowerCase();
             if (!key || seen.has(key)) return;
             seen.add(key);
