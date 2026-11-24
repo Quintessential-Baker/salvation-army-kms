@@ -333,3 +333,52 @@ export function askConfirm(title, message, onConfirm) {
   document.getElementById('cf-cancel').onclick = closeModal;
   document.getElementById('cf-yes').onclick = () => { closeModal(); onConfirm(); };
 }
+
+
+// ---- Announcement helpers ----
+const ANN_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function annStartDate(a) {
+  const src = String((a && (a.alert_at || a.created_at)) || '').slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(src) ? src : '';
+}
+
+export function formatRepeatLabel(a) {
+  if (!a) return '';
+  const rule = String(a.repeat_rule || 'none');
+  const days = (Array.isArray(a.repeat_days) ? a.repeat_days : [])
+    .map(Number).filter(n => n >= 0 && n <= 6).sort((x, y) => x - y)
+    .map(n => ANN_DOW[n]).join(', ');
+  if (rule === 'daily') return 'Repeats daily';
+  if (rule === 'weekly') return days ? `Repeats weekly (${days})` : 'Repeats weekly';
+  if (rule === 'biweekly') return days ? `Repeats every 2 weeks (${days})` : 'Repeats every 2 weeks';
+  if (rule === 'monthly') {
+    const s = annStartDate(a);
+    return s ? `Repeats monthly (day ${parseInt(s.slice(8, 10), 10)})` : 'Repeats monthly';
+  }
+  return '';
+}
+
+export function isAnnouncementActiveToday(a, now) {
+  if (!a) return false;
+  const todayStr = localDateStr(now instanceof Date ? now : new Date());
+  if (a.expires_at && String(a.expires_at).slice(0, 10) < todayStr) return false;
+  const start = annStartDate(a);
+  if (a.alert_at && start && todayStr < start) return false;
+  const rule = String(a.repeat_rule || 'none');
+  if (rule === 'none' || rule === 'daily') return true;
+  const dow = new Date(todayStr + 'T12:00:00').getDay();
+  const days = (Array.isArray(a.repeat_days) ? a.repeat_days : []).map(Number);
+  if (rule === 'weekly') return days.length ? days.includes(dow) : true;
+  if (rule === 'biweekly') {
+    if (days.length && !days.includes(dow)) return false;
+    if (!start) return true;
+    const weeks = Math.floor((new Date(getWeekMonday(todayStr) + 'T12:00:00') - new Date(getWeekMonday(start) + 'T12:00:00')) / (7 * 86400000));
+    return weeks % 2 === 0;
+  }
+  if (rule === 'monthly') {
+    if (!start) return true;
+    return parseInt(todayStr.slice(8, 10), 10) === parseInt(start.slice(8, 10), 10);
+  }
+  return true;
+}
