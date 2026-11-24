@@ -143,7 +143,7 @@ function renderNav() {
     const visTabs = g.tabs.filter(t => allowed.includes(t.id));
     if (!visTabs.length) return '';
     const isOn = g.id === activeGrp.id;
-    return `<button type="button" data-grp="${g.id}" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition ${isOn ? 'bg-[#b3122b] text-white shadow' : 'text-white/80 hover:bg-white/10'}">${g.label}</button>`;
+    return `<button type="button" data-grp="${g.id}" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition ${isOn ? 'bg-[#b3122b] text-white shadow ring-1 ring-white/40' : 'bg-white/10 text-white hover:bg-white/20'}">${g.label}</button>`;
   }).join('');
 
   const subEl = document.getElementById('nav-subtabs');
@@ -151,7 +151,7 @@ function renderNav() {
   subEl.classList.toggle('hidden', visSub.length <= 1);
   subEl.innerHTML = visSub.map(t => {
     const isOn = t.id === state.activeTab;
-    return `<button type="button" data-tab="${t.id}" class="px-3 py-1 rounded-md text-xs font-semibold transition ${isOn ? 'bg-white text-[#1b365d] shadow-sm' : 'text-white/85 hover:bg-white/15'}">${t.label}</button>`;
+    return `<button type="button" data-tab="${t.id}" class="px-3 py-1.5 rounded-md text-xs font-bold transition ${isOn ? 'bg-white text-[#162d4e] shadow-sm' : 'bg-white/10 text-white hover:bg-white/25'}">${t.label}</button>`;
   }).join('');
 
   const dockEl = document.getElementById('mobile-dock');
@@ -159,7 +159,7 @@ function renderNav() {
     ['dashboard', 'Home'], ['stock', 'Stock'], ['menu', 'Menu'], ['safety', 'Safety'], ['receive', 'PO & Donations']
   ].filter(([id]) => allowed.includes(id));
   dockEl.innerHTML = dockTabs.map(([id, lbl]) => `
-    <button type="button" data-tab="${id}" class="px-2.5 py-1.5 rounded-lg text-xs font-bold ${state.activeTab === id ? 'bg-[#b3122b] text-white' : 'opacity-75'}">${lbl}</button>
+    <button type="button" data-tab="${id}" class="px-2.5 py-1.5 rounded-lg text-xs font-bold ${state.activeTab === id ? 'bg-[#b3122b] text-white' : 'kms-btn-alt'}">${lbl}</button>
   `).join('');
 }
 
@@ -225,7 +225,7 @@ export function render() {
     checkMandatoryModals();
     return;
   }
-try {
+
   switch (state.activeTab) {
     case 'dashboard': renderDashboard(main); break;
     case 'stock': renderStock(main); break;
@@ -243,10 +243,6 @@ try {
     case 'users': renderUsers(main); break;
     case 'help': renderHelp(main); break;
     default: renderDashboard(main);
-  }
-    } catch (err) {
-    if (window.kmsReportError) window.kmsReportError(err, { kind: 'render', tab: state.activeTab });
-    main.innerHTML = `<div class="kms-card p-6 text-center space-y-2"><h2 class="text-base font-bold">Something went wrong on this page</h2><p class="text-xs opacity-75">The problem was reported automatically. Try another tab or reload.</p><button type="button" data-tab="dashboard" class="kms-btn-primary px-4 py-2 text-xs">Go to Dashboard</button></div>`;
   }
 
   const guideHtml = renderPageGuideBanner(state.activeTab);
@@ -2470,7 +2466,7 @@ document.addEventListener('change', (e) => {
     return;
   }
   if (e.target.dataset.recIng) {
-    if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can edit recipe ingredients', 'warn'); render(); return; }
+    if (!isMgmtOrHigher()) { showToast('Only ADMIN or MANAGER can edit recipe ingredients', 'warn'); return; }
     const [rid, idx, f] = e.target.dataset.recIng.split(':');
     const r = state.recipes.find(x => x.id === rid);
     if (r && r.ingredients[idx]) {
@@ -3201,7 +3197,7 @@ document.addEventListener('submit', (e) => {
           });
         }
         if (djRes.status === 'fulfilled' && Array.isArray(djRes.value.recipes)) {
-          djRes.value.recipes.forEach(d => {
+          djRes.status === 'fulfilled' && djRes.value.recipes.forEach(d => {
             const key = String(d.name || '').toLowerCase();
             if (!key || seen.has(key)) return;
             seen.add(key);

@@ -11,28 +11,32 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <style>
     :root {
-      --bg: #f6f4f0;
+      --bg: #f4f2ed;
       --card: #ffffff;
-      --ink: #1d2430;
-      --mute: #667085;
-      --line: #d9d5cc;
+      --ink: #141b24;
+      --mute: #475467;
+      --line: #cbd2dc;
       --red: #b3122b;
       --navy: #1b365d;
-      --ok: #1f7a3d;
-      --low: #b45309;
-      --out: #b3122b;
+      --ok: #166534;
+      --low: #9a3412;
+      --out: #991b1b;
+      --surface-soft: #eef2f6;
+      --menu-hover: #e2e8f0;
     }
     [data-theme="dark"] {
-      --bg: #14181f;
-      --card: #1d232d;
-      --ink: #eef0f3;
-      --mute: #9aa4b2;
-      --line: #364050;
+      --bg: #0f141c;
+      --card: #1a222e;
+      --ink: #f8fafc;
+      --mute: #cbd5e1;
+      --line: #3b4759;
       --red: #ff6b7d;
-      --navy: #8fb3e8;
-      --ok: #5fd38a;
-      --low: #f3b45a;
-      --out: #ff6b7d;
+      --navy: #93c5fd;
+      --ok: #6ee7b7;
+      --low: #fcd34d;
+      --out: #fca5a5;
+      --surface-soft: #242f3f;
+      --menu-hover: #2d3b4e;
     }
     * { box-sizing: border-box; }
     body {
@@ -42,26 +46,69 @@
       font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
       line-height: 1.45;
     }
-    .kms-header { background: #1b365d; color: #fff; }
-    .kms-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
-    .kms-btn-primary { background: #b3122b; color: #fff; font-weight: 600; border-radius: 8px; }
-    .kms-btn-primary:hover { background: #930e23; }
-    .kms-btn-navy { background: #1b365d; color: #fff; font-weight: 600; border-radius: 8px; }
-    .kms-btn-navy:hover { background: #142947; }
-    .kms-btn-ok { background: #1f7a3d; color: #fff; font-weight: 600; border-radius: 8px; }
-    .kms-btn-ok:hover { background: #175d2e; }
-    .kms-btn-alt { background: var(--card); color: var(--navy); border: 1.5px solid var(--navy); font-weight: 600; border-radius: 8px; }
-    .kms-input {
+    .kms-header { background: #162d4e; color: #ffffff; border-bottom: 2px solid #b3122b; }
+    .kms-card { background: var(--card); color: var(--ink); border: 1.5px solid var(--line); border-radius: 12px; }
+    .kms-btn-primary { background: #b3122b; color: #ffffff; font-weight: 700; border-radius: 8px; }
+    .kms-btn-primary:hover { background: #8f0e22; }
+    .kms-btn-navy { background: #1b365d; color: #ffffff; font-weight: 700; border-radius: 8px; }
+    .kms-btn-navy:hover { background: #122542; }
+    .kms-btn-ok { background: #166534; color: #ffffff; font-weight: 700; border-radius: 8px; }
+    .kms-btn-ok:hover { background: #114f28; }
+    .kms-btn-alt {
+      background: var(--card);
+      color: var(--navy);
+      border: 1.5px solid var(--navy);
+      font-weight: 700;
+      border-radius: 8px;
+    }
+    .kms-btn-alt:hover { background: var(--menu-hover); }
+    .kms-input, select.kms-input {
       color: var(--ink);
       background: var(--card);
-      border: 1px solid var(--line);
+      border: 1.5px solid var(--line);
       border-radius: 8px;
       padding: 6px 10px;
+      font-weight: 500;
     }
-    .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; display: inline-block; }
+    select.kms-input option {
+      background: var(--card);
+      color: var(--ink);
+    }
+    /* High-contrast Tools dropdown that never clips */
+    #tools-menu {
+      background: var(--card);
+      color: var(--ink);
+      border: 2px solid var(--navy);
+      z-index: 60;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    #tools-menu button {
+      color: var(--ink);
+      border-bottom: 1px solid var(--line);
+    }
+    #tools-menu button:last-child { border-bottom: none; }
+    #tools-menu button:hover { background: var(--menu-hover); }
+    /* Dark-mode safe overrides for soft tint utility classes */
+    [data-theme="dark"] .bg-black\/5,
+    [data-theme="dark"] .bg-black\/\[0\.02\] { background-color: var(--surface-soft) !important; }
+    [data-theme="dark"] .bg-white { background-color: var(--card) !important; color: var(--ink) !important; }
+    [data-theme="dark"] .text-slate-700,
+    [data-theme="dark"] .text-emerald-700,
+    [data-theme="dark"] .text-emerald-800 { color: var(--ink) !important; }
+    [data-theme="dark"] .bg-red-50\/40 { background-color: rgba(185, 28, 28, 0.22) !important; }
+    [data-theme="dark"] .bg-amber-50\/40,
+    [data-theme="dark"] .bg-amber-50\/50 { background-color: rgba(180, 83, 9, 0.22) !important; }
+    [data-theme="dark"] .bg-sky-50\/40 { background-color: rgba(3, 105, 161, 0.22) !important; }
+    [data-theme="dark"] .bg-emerald-50\/30,
+    [data-theme="dark"] .bg-emerald-50\/40,
+    [data-theme="dark"] .bg-emerald-50\/60,
+    [data-theme="dark"] .bg-emerald-50 { background-color: rgba(21, 128, 61, 0.22) !important; }
+    .tag { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; border: 1.5px solid currentColor; display: inline-block; letter-spacing: 0.02em; }
     .tag-OK { color: var(--ok); }
     .tag-LOW { color: var(--low); }
     .tag-OUT { color: var(--out); }
+    .opacity-60, .opacity-65, .opacity-70, .opacity-75, .opacity-80, .opacity-85 { color: var(--mute); opacity: 1; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
@@ -154,16 +201,16 @@
         <button id="btn-switch-user" type="button" class="px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold">Switch User</button>
         <button id="btn-lock-app" type="button" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold">Lock</button>
         <div class="relative">
-          <button id="btn-tools" type="button" class="px-2.5 py-1.5 rounded-lg bg-white text-[#1b365d] text-xs font-bold">Tools &#9662;</button>
-          <div id="tools-menu" class="hidden absolute right-0 mt-1.5 w-52 kms-card shadow-xl py-1.5 z-40 text-xs">
-            <button id="btn-start-tour" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-bold text-[#b3122b]">Interactive Guided Tour</button>
-            <button id="btn-run-selftest" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-bold text-[#1f7a3d]">Run System Self-Test &amp; Report</button>
-            <button id="btn-undo" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Undo Last Stock Change</button>
-            <button id="btn-text-size" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Bigger Text</button>
-            <button id="btn-theme-toggle" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Toggle Dark Mode</button>
-            <button id="btn-print-qr" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Print QR Bin Labels</button>
-            <button id="btn-print-page" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Print Current View (Letter)</button>
-            <button id="btn-backup" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Backup / Restore</button>
+          <button id="btn-tools" type="button" class="px-3 py-1.5 rounded-lg bg-white text-[#162d4e] hover:bg-slate-100 text-xs font-extrabold shadow-sm">Tools &#9662;</button>
+          <div id="tools-menu" class="hidden absolute right-0 mt-1.5 w-60 kms-card shadow-2xl py-1 text-xs">
+            <button id="btn-start-tour" type="button" class="w-full text-left px-3.5 py-2.5 font-extrabold" style="color: var(--red);">Interactive Guided Tour</button>
+            <button id="btn-run-selftest" type="button" class="w-full text-left px-3.5 py-2.5 font-extrabold" style="color: var(--ok);">Run System Self-Test &amp; Report</button>
+            <button id="btn-undo" type="button" class="w-full text-left px-3.5 py-2.5 font-semibold">Undo Last Stock Change</button>
+            <button id="btn-text-size" type="button" class="w-full text-left px-3.5 py-2.5 font-semibold">Bigger Text (A+)</button>
+            <button id="btn-theme-toggle" type="button" class="w-full text-left px-3.5 py-2.5 font-semibold">Toggle Light / Dark Mode</button>
+            <button id="btn-print-qr" type="button" class="w-full text-left px-3.5 py-2.5 font-semibold">Print QR Bin Labels</button>
+            <button id="btn-print-page" type="button" class="w-full text-left px-3.5 py-2.5 font-semibold">Print Current View (Letter)</button>
+            <button id="btn-backup" type="button" class="w-full text-left px-3.5 py-2.5 font-semibold">Backup / Restore</button>
           </div>
         </div>
       </div>
@@ -230,7 +277,6 @@
   </div>
 
   <!-- ES Module Entry Point -->
-  <script src="js/errors.js"></script>
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
