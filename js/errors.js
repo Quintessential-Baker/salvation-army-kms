@@ -13,6 +13,16 @@
   var sent = 0;
   var seen = {};
 
+  // Anonymous per-browser id so we can tell "one tablet" from "everyone".
+  var deviceId = '';
+  try {
+    deviceId = localStorage.getItem('kms_device_id') || '';
+    if (!deviceId) {
+      deviceId = 'd-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+      localStorage.setItem('kms_device_id', deviceId);
+    }
+  } catch (e) { deviceId = 'd-unknown'; }
+
   function clip(v, n) {
     v = v == null ? '' : String(v);
     return v.length > n ? v.slice(0, n) : v;
@@ -31,6 +41,7 @@
       page_url: clip(location.href.split('#')[0], 300),
       user_agent: clip(navigator.userAgent, 300),
       app_version: APP_VERSION,
+      device_id: deviceId,
       context: {
         tab: ctx.tab || null,
         online: navigator.onLine,
