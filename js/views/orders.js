@@ -19,21 +19,28 @@ export function renderOrders(main) {
 
   main.innerHTML = `
     <div class="space-y-4">
-      <div class="kms-card p-4 space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 class="text-base font-bold">Meal Forecast &amp; Shortages</h2>
-            <p class="text-xs opacity-75">Checks upcoming planned recipes against current stock.</p>
+
+      <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Purchasing &amp; Vendor Orders</div>
+              <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Meal Forecast Shortages &amp; Purchase Orders</h2>
+              <div class="text-xs text-white/85 mt-0.5">Checks upcoming planned recipes against current Living Stock &amp; Par levels.</div>
+            </div>
           </div>
-          <div class="flex items-center gap-2 no-print">
-            <button type="button" onclick="window.print()" class="kms-btn-alt px-3 py-1.5 text-xs">Print Orders</button>
-            <select id="order-hz" class="kms-input text-xs font-semibold">
-              <option value="1" ${hz === 1 ? 'selected' : ''}>Next Service Day</option>
-              <option value="7" ${hz === 7 ? 'selected' : ''}>Next 7 Days</option>
-              <option value="30" ${hz === 30 ? 'selected' : ''}>Next 30 Days</option>
-            </select>
-          </div>
+          <div class="flex flex-wrap items-center gap-1.5 no-print"><button type="button" onclick="document.body.classList.remove('printing-modal'); window.print();" class="px-3.5 py-1.5 rounded-lg bg-white text-[#1b365d] text-xs font-extrabold shadow hover:bg-slate-100">Print Orders (Letter)</button>
+       <select id="order-hz" class="px-2.5 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold">
+         <option value="1" ${hz === 1 ? 'selected' : ''}>Next Service Day</option>
+         <option value="7" ${hz === 7 ? 'selected' : ''}>Next 7 Days</option>
+         <option value="30" ${hz === 30 ? 'selected' : ''}>Next 30 Days</option>
+       </select></div>
         </div>
+      </div>
+    
+      <div class="kms-card p-4 space-y-2.5">
+        <h3 class="text-sm font-extrabold uppercase tracking-wider text-[#1b365d]">Upcoming Recipe Ingredient Shortages</h3>
         ${!shortItems.length ? '<p class="text-xs opacity-70">No ingredient shortages for planned meals in this window.</p>' : `
           <div class="space-y-1.5">
             ${shortItems.map(x => `<div class="p-2 rounded-lg border border-amber-300 bg-amber-50/50 text-xs flex justify-between print-keep"><strong>${esc(x.name)}</strong><span>Need ${fmtNum(dd[x.id])}, Have ${x.on_hand} ${esc(x.unit)}</span></div>`).join('')}

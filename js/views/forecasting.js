@@ -56,6 +56,20 @@ export function renderForecasting(main) {
 
   main.innerHTML = `
     <div class="space-y-4">
+      <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Attendance Analytics &amp; Demand</div>
+              <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Patrons Served History &amp; Attendance Forecast</h2>
+              <div class="text-xs text-white/85 mt-0.5">Analyze historical meal turnout by weekday, menu entrée, and weather/outreach circumstances.</div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    
       <form id="form-log-served" class="kms-card p-4 space-y-3 no-print">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>

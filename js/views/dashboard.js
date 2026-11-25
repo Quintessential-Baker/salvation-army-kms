@@ -30,8 +30,23 @@ export function renderDashboard(main) {
 
   main.innerHTML = `
     <div class="space-y-4">
+      
+      <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Operations Command Center</div>
+              <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Kitchen &amp; Community Meals Overview — ${dLabel(today)}</h2>
+              <div class="text-xs text-white/85 mt-0.5">Signed in as <strong>${esc(u.name)}</strong> (${esc(u.role)}) &bull; Lunch Service: Mon, Tue, Wed &amp; Fri 11:30 AM – 12:30 PM</div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    
       <div class="kms-card p-4 no-print">
-        <div class="text-xs font-bold uppercase opacity-60 mb-2">Quick Shift Actions</div>
+        <div class="text-xs font-extrabold uppercase tracking-wider text-[#1b365d] mb-2">Quick Shift Actions</div>
         <div class="flex flex-wrap gap-2">
           <button type="button" data-tab="stock" class="kms-btn-navy px-3.5 py-2 text-xs sm:text-sm">Count / Update Stock</button>
           ${isStaffOrHigher(u) ? `<button type="button" data-tab="receive" class="kms-btn-ok px-3.5 py-2 text-xs sm:text-sm">PO Check-In &amp; Donations</button>` : ''}

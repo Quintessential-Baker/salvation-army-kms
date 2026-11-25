@@ -93,6 +93,20 @@ export function renderReceive(main) {
 
   main.innerHTML = `
     <div class="space-y-4">
+      <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Receiving &amp; Donor Stewardship</div>
+              <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">PO Check-In &amp; In-Kind Food Donations</h2>
+              <div class="text-xs text-white/85 mt-0.5">Verify incoming vendor deliveries into Living Stock and issue IRS 501(c)(3) donation receipts.</div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    
       <!-- Section 1: PO Check-In System -->
       <div class="kms-card p-4 border-l-4 border-l-blue-600 space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-2">

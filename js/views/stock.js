@@ -10,19 +10,25 @@ export function renderStock(main) {
   const canEdit = isStaffOrHigher();
   main.innerHTML = `
     <div class="space-y-4">
-      <div class="kms-card p-4 space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 class="text-base font-bold">Living Stock (Butler, PA)</h2>
-            <p class="text-xs opacity-75">${learnMessage()}</p>
+
+      <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Inventory Control</div>
+              <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Living Stock &amp; Par Levels</h2>
+              <div class="text-xs text-white/85 mt-0.5">${learnMessage()}</div>
+            </div>
           </div>
-          <div class="flex flex-wrap gap-2 no-print">
-            <button type="button" onclick="window.print()" class="kms-btn-alt px-3 py-1.5 text-xs">Print Stock Sheet</button>
-            <button type="button" id="btn-stock-undo" class="kms-btn-alt px-3 py-1.5 text-xs">Undo − / +</button>
-            ${isMgr ? `<button type="button" id="btn-bulk-stock" class="kms-btn-navy px-3 py-1.5 text-xs">Bulk Edit / Delete Stock</button>` : ''}
-            ${canEdit ? `<button type="button" id="btn-add-item-modal" class="kms-btn-primary px-3 py-1.5 text-xs">+ Add Item</button>` : ''}
-          </div>
+          <div class="flex flex-wrap items-center gap-1.5 no-print"><button type="button" onclick="document.body.classList.remove('printing-modal'); window.print();" class="px-3 py-1.5 rounded-lg bg-white text-[#1b365d] text-xs font-extrabold shadow hover:bg-slate-100">Print Stock Sheet</button>
+       <button type="button" id="btn-stock-undo" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold">Undo − / +</button>
+       ${isMgr ? `<button type="button" id="btn-bulk-stock" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold">Bulk Edit / Delete</button>` : ''}
+       ${canEdit ? `<button type="button" id="btn-add-item-modal" class="px-3 py-1.5 rounded-lg bg-[#b3122b] hover:bg-[#910d22] text-white text-xs font-bold">+ Add Item</button>` : ''}</div>
         </div>
+      </div>
+    
+      <div class="kms-card p-3.5 no-print">
         <div class="flex flex-wrap gap-2 no-print">
           <input id="stock-search" type="text" value="${esc(state._stockSearch || '')}" placeholder="Search item name or SKU..." class="kms-input flex-1 min-w-[180px] text-sm" />
           <select id="stock-loc" class="kms-input text-sm">

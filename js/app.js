@@ -1357,7 +1357,7 @@ document.addEventListener('click', (e) => {
     render();
     return;
   }
-  if (e.target.id === 'btn-print-recipe-sheet') {
+  if (e.target.closest('#btn-print-recipe-sheet')) {
     const rec = state.recipes.find(r => r.id === state.selectedRecipeId) || state.recipes[0];
     if (!rec) return;
     const scale = Number(state.recipeScale || rec.base_servings || 65);
@@ -1473,7 +1473,7 @@ document.addEventListener('click', (e) => {
     `);
     return;
   }
-  if (e.target.id === 'btn-print-rec-modal-now') {
+  if (e.target.closest('#btn-print-rec-modal-now')) {
     window.print();
     return;
   }

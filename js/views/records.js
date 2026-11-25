@@ -39,19 +39,25 @@ export function renderRecords(main) {
 
   main.innerHTML = `
     <div class="space-y-4">
-      <!-- Section Blind Physical Count -->
-      <div class="kms-card p-4 border-l-4 border-l-[#1b365d] space-y-3">
-        <div class="flex flex-wrap justify-between items-start gap-2">
-          <div>
-            <h2 class="text-base font-bold">Blind Physical Inventory Count (By Section — 30-Line Blank Form)</h2>
-            <p class="text-xs opacity-75">True blind count: select a storage section to print a 30-line blank form or enter counted items directly without seeing expected catalog numbers.</p>
+
+      <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Physical Inventory Audit</div>
+              <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Blind Physical Inventory Count (30-Line Blank Form)</h2>
+              <div class="text-xs text-white/85 mt-0.5">Select a storage section to print a 1-page 30-line blank sheet or reconcile shelf counts into Living Stock.</div>
+            </div>
           </div>
-          <div class="flex flex-wrap gap-1.5 no-print">
-            <button type="button" id="btn-print-blind-sheet" class="kms-btn-alt px-3 py-1.5 text-xs font-semibold">Print Blank 30-Line Sheet (${esc(selZone === 'ALL' ? 'All Sections' : selZone)})</button>
-            ${totalEntered ? `<button type="button" id="btn-clear-blind-draft" class="kms-btn-alt px-3 py-1.5 text-xs">Clear Draft (${totalEntered})</button>` : ''}
-            <button type="button" id="btn-review-blind" class="kms-btn-ok px-3.5 py-1.5 text-xs font-semibold">Review &amp; Reconcile Count (${totalEntered})</button>
-          </div>
+          <div class="flex flex-wrap items-center gap-1.5 no-print"><button type="button" id="btn-print-blind-sheet" class="px-3.5 py-1.5 rounded-lg bg-white text-[#1b365d] text-xs font-extrabold shadow hover:bg-slate-100">Print Blank 30-Line Sheet (${esc(selZone === 'ALL' ? 'All Sections' : selZone)})</button>
+       ${totalEntered ? `<button type="button" id="btn-clear-blind-draft" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold">Clear Draft (${totalEntered})</button>` : ''}
+       <button type="button" id="btn-review-blind" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Review &amp; Reconcile (${totalEntered})</button></div>
         </div>
+      </div>
+    
+      <!-- Section Blind Physical Count -->
+      <div class="kms-card p-4 space-y-3">
 
         <!-- Section Selector Tabs -->
         <div class="flex flex-wrap items-center gap-1.5 text-xs no-print">
