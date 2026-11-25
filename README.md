@@ -1,8 +1,3 @@
-### 1. Complete `README.md` (Ready to Paste into Your Repository)
-
-Copy the entire Markdown block below into your `README.md` file in the root of `/workspaces/salvation-army-kms`. It documents the architecture, all 15 operational modules, Supabase backend setup, GitHub Pages deployment, security rules, and daily staff workflows.
-
-```markdown
 # Community Meals KMS — The Salvation Army (Butler, PA)
 
 **An end-to-end Kitchen Management System (KMS) and Operations Suite built for The Salvation Army Butler Worship & Service Center (313 W. Cunningham St., Butler, PA).**
@@ -276,4 +271,3 @@ cat << 'EOF' > docs/OPERATIONS_QUICKSTART.md
 * **3rd Friday of the Month:** Generate and review the monthly vendor requisition order under **Stock & Orders**.
 EOF
 
-```
