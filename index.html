@@ -108,6 +108,50 @@
       justify-content: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
+
+    /* Crisp High-Contrast Top Navigation & Solid Scroll Layering */
+    header {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 50 !important;
+      background-color: #1b365d !important;
+      color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18) !important;
+    }
+    header nav button, header .kms-nav-btn, [data-nav] {
+      color: rgba(255, 255, 255, 0.92) !important;
+      font-weight: 700 !important;
+      opacity: 1 !important;
+      padding: 6px 12px !important;
+      border-radius: 8px !important;
+      transition: background-color 0.15s, color 0.15s !important;
+    }
+    header nav button:hover, header .kms-nav-btn:hover, [data-nav]:hover {
+      background-color: rgba(255, 255, 255, 0.14) !important;
+      color: #ffffff !important;
+    }
+    header nav button.active, header .kms-nav-btn.active, [data-nav].bg-\[\#b3122b\], [data-nav][aria-current="page"] {
+      background-color: #b3122b !important;
+      color: #ffffff !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+    }
+    /* Solid Sub-Navigation Bar so scrolling content never bleeds through */
+    #sub-nav, .kms-subnav {
+      background-color: #ffffff !important;
+      border-bottom: 1px solid #cbd5e1 !important;
+      position: relative !important;
+      z-index: 40 !important;
+    }
+    /* Keep page banners and cards strictly below the sticky header during scroll */
+    #app-main, .sa-hero-banner, .kms-card {
+      position: relative;
+      z-index: 1;
+    }
+    body {
+      font-size: 14.5px;
+      line-height: 1.45;
+    }
+
     @media print {
       @page { size: letter portrait; margin: 0.38in; }
       .no-print, header, nav, #mobile-dock, #toast-container, #pin-change-backdrop, #training-backdrop, #page-guide-banner { display: none !important; }
@@ -188,7 +232,7 @@
 <body class="min-h-screen flex flex-col">
 
   <!-- Top Header -->
-  <header class="kms-header sticky top-0 z-30 shadow-sm no-print">
+  <header class="kms-header sticky top-0  shadow-sm no-print z-50 shadow-md">
     <div class="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2.5">
         <div class="w-9 h-9 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-extrabold text-sm shadow">SA</div>
