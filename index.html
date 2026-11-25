@@ -168,6 +168,67 @@
       color: #ffffff;
       font-weight: 700;
     }
+
+    /* Keep Signature Salvation Army Navy Header Crisp & Legible in Both Light & Dark Modes */
+    header {
+      background-color: #1b365d !important;
+      color: #ffffff !important;
+    }
+    header h1, header p, header #hdr-user {
+      color: #ffffff !important;
+    }
+    header #btn-sync-pill, header #btn-open-chat, header #btn-switch-user, header #btn-lock-app {
+      background-color: rgba(255, 255, 255, 0.14) !important;
+      color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    }
+    header #btn-sync-pill:hover, header #btn-open-chat:hover, header #btn-switch-user:hover, header #btn-lock-app:hover {
+      background-color: rgba(255, 255, 255, 0.24) !important;
+    }
+    /* Crisp, High-Contrast Light Mode Cards, Sub-Tabs & Controls */
+    html:not([data-theme="dark"]) body {
+      background-color: #eef2f6 !important;
+      color: #0f172a !important;
+    }
+    html:not([data-theme="dark"]) header nav {
+      background-color: #f8fafc !important;
+      border-top: 3px solid #b3122b !important;
+      border-bottom: 1px solid #cbd5e1 !important;
+    }
+    html:not([data-theme="dark"]) #nav-subtabs {
+      background-color: #ffffff !important;
+      border-top: 1px solid #e2e8f0 !important;
+    }
+    html:not([data-theme="dark"]) .kms-card {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      border: 1px solid #cbd5e1 !important;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07) !important;
+    }
+    html:not([data-theme="dark"]) .kms-btn-alt {
+      background-color: #f8fafc !important;
+      color: #1b365d !important;
+      border: 1px solid #94a3b8 !important;
+      font-weight: 700 !important;
+    }
+    html:not([data-theme="dark"]) .kms-btn-alt:hover {
+      background-color: #e2e8f0 !important;
+    }
+    html:not([data-theme="dark"]) button:disabled,
+    html:not([data-theme="dark"]) .opacity-50,
+    html:not([data-theme="dark"]) .opacity-60,
+    html:not([data-theme="dark"]) .opacity-65,
+    html:not([data-theme="dark"]) .opacity-70,
+    html:not([data-theme="dark"]) .opacity-75 {
+      opacity: 0.88 !important;
+      color: #334155 !important;
+    }
+    html:not([data-theme="dark"]) .kms-input {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      border: 1.5px solid #94a3b8 !important;
+    }
+
     @media print {
       @page { size: letter portrait; margin: 0.38in; }
       .no-print, header, nav, #mobile-dock, #toast-container, #pin-change-backdrop, #training-backdrop, #page-guide-banner { display: none !important; }
