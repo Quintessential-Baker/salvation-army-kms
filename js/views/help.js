@@ -1,4 +1,4 @@
-// js/views/help.js — Page Quick Guides, Task Finder, Guided Tour & Automated 13-Point Diagnostics
+// js/views/help.js — Page Quick Guides, Task Finder, Guided Tour & Automated 14-Point Diagnostics
 
 import {
   TEMP_CHECKS, localDateStr, addDays, nowStamp,
@@ -12,6 +12,10 @@ import {
   demandForDays, suggestedOrderAmount, forecastWeekday,
   logActivity, saveState
 } from '../state.js';
+import {
+  relearnPortionBaseline, roundUpToNearest5,
+  computeRefinedBufferFactor, forecastPlannedPortionsForDate
+} from '../november_menu_import.js';
 
 export const PAGE_GUIDES = {
   dashboard: {
@@ -301,31 +305,53 @@ export async function runSystemDiagnostics() {
     const t10 = thxClosed === 0 && openMon >= 10;
     recordTest('T-10', 'Forecasting & Holidays', 'Auto-zero closed federal holidays & predict open service days', 'Nov 26 = 0; Nov 23 >= 10', `Nov 26 = ${thxClosed}; Nov 23 = ${openMon}`, t10);
 
+    // T-11: Self-Learning Portion Baseline & Nearest-5 Waste Control
+    state.menuPlan = Array.from({ length: 12 }, (_, idx) => ({
+      id: `sim-mp-${idx}`,
+      service_date: addDays('2026-10-01', idx * 2),
+      status: 'SERVED',
+      circumstance: 'Normal Day',
+      planned_portions: 35,
+      served_portions: 32
+    }));
+    const learnedInfo = relearnPortionBaseline('2026-12-01');
+    const rounded33 = roundUpToNearest5(33);
+    const decForecast = forecastPlannedPortionsForDate('2026-12-02', 1.0, false);
+    const t11 = learnedInfo.learnedBaseline === 32 && rounded33 === 35 && decForecast.plannedPortions === 35;
+    recordTest(
+      'T-11',
+      'Self-Learning Portion Baseline',
+      'Phase out 65 seed on ~32 avg & round 33 -> 35 nearest-5 waste buffer',
+      'Baseline 32; 33 -> 35; Dec plan 35',
+      `Baseline ${learnedInfo.learnedBaseline}; 33 -> ${rounded33}; Dec plan ${decForecast.plannedPortions}`,
+      t11
+    );
+
     const adminTabs = getAllowedTabs({ role: 'ADMIN' });
     const mgrTabs = getAllowedTabs({ role: 'MANAGER' });
     const staffTabs = getAllowedTabs({ role: 'STAFF' });
     const volTabs = getAllowedTabs({ role: 'VOLUNTEER' });
-    const t11 = adminTabs.length === 15 && mgrTabs.length === 15 && !staffTabs.includes('users') && !staffTabs.includes('report') && !volTabs.includes('orders') && !volTabs.includes('receive');
-    recordTest('T-11', 'RBAC 4-Tier Permissions', 'Enforce ADMIN (15), MANAGER (15), STAFF (13) & VOLUNTEER (10) boundaries', '15 / 15 / 13 / 10 tabs enforced', `${adminTabs.length} / ${mgrTabs.length} / ${staffTabs.length} / ${volTabs.length} tabs`, t11);
+    const t12 = adminTabs.length === 15 && mgrTabs.length === 15 && !staffTabs.includes('users') && !staffTabs.includes('report') && !volTabs.includes('orders') && !volTabs.includes('receive');
+    recordTest('T-12', 'RBAC 4-Tier Permissions', 'Enforce ADMIN (15), MANAGER (15), STAFF (13) & VOLUNTEER (10) boundaries', '15 / 15 / 13 / 10 tabs enforced', `${adminTabs.length} / ${mgrTabs.length} / ${staffTabs.length} / ${volTabs.length} tabs`, t12);
 
     const hasPrintCss = Array.from(document.styleSheets).some(ss => {
       try { return Array.from(ss.cssRules || []).some(r => r.media && r.media.mediaText && r.media.mediaText.includes('print')); }
       catch (e) { return false; }
     });
-    recordTest('T-12', 'Letter Print & Menus', 'Verify @media print Letter pagination, unclipped lists & menu sheets', 'Print rules active', hasPrintCss ? 'Letter 0.45in & unclipped scroll active' : 'Missing', hasPrintCss);
+    recordTest('T-13', 'Letter Print & Menus', 'Verify @media print Letter pagination, unclipped lists & menu sheets', 'Print rules active', hasPrintCss ? 'Letter 0.45in & unclipped scroll active' : 'Missing', hasPrintCss);
 
     let cloudDetail = 'Local offline mode';
-    let t13 = false;
+    let t14 = false;
     if (sbClient) {
       const { error } = await sbClient.from('kms_users').select('id').limit(1);
       if (!error) {
-        t13 = true;
+        t14 = true;
         cloudDetail = 'Connected & verified (kms_users reachable)';
       } else {
         cloudDetail = 'Supabase error: ' + error.message;
       }
     }
-    recordTest('T-13', 'Supabase Cloud Sync', 'Live PostgreSQL database connection & table read check', 'Live connection OK', cloudDetail, t13);
+    recordTest('T-14', 'Supabase Cloud Sync', 'Live PostgreSQL database connection & table read check', 'Live connection OK', cloudDetail, t14);
   } finally {
     const restored = JSON.parse(backupJson);
     Object.keys(state).forEach(k => delete state[k]);
@@ -430,11 +456,11 @@ export function renderHelp(main) {
           <div class="font-bold text-sm">System Self-Test &amp; Certification Report</div>
           ${lastDiagnosticReport
             ? `<p class="opacity-80">Last verified <strong>${esc(lastDiagnosticReport.timestamp)}</strong> by ${esc(lastDiagnosticReport.tester)} — <strong>${lastDiagnosticReport.passedCount}/${lastDiagnosticReport.totalCount} checks passed</strong>.</p>`
-            : `<p class="opacity-80">Verify all 13 core subsystems (inventory math, bulk CRUD, 40–80 recipe scaling, PO check-in, donations &amp; tax receipts, HACCP temps, 4-tier RBAC &amp; Supabase sync) and print a PASS report.</p>`}
+            : `<p class="opacity-80">Verify all 14 core subsystems (inventory math, bulk CRUD, 40–80 recipe scaling, self-learning nearest-5 portion baseline, PO check-in, HACCP temps, 4-tier RBAC &amp; Supabase sync) and print a PASS report.</p>`}
         </div>
         <div class="flex gap-2 no-print">
           ${lastDiagnosticReport ? `<button type="button" id="btn-view-last-diag" class="kms-btn-navy px-3 py-1.5 text-xs font-semibold">View / Print Report</button>` : ''}
-          <button type="button" id="btn-run-selftest-2" class="kms-btn-ok px-3.5 py-1.5 text-xs font-semibold">${lastDiagnosticReport ? 'Re-Run All 13 Tests' : 'Run All 13 Tests Now'}</button>
+          <button type="button" id="btn-run-selftest-2" class="kms-btn-ok px-3.5 py-1.5 text-xs font-semibold">${lastDiagnosticReport ? 'Re-Run All 14 Tests' : 'Run All 14 Tests Now'}</button>
         </div>
       </div>
 
