@@ -16,14 +16,29 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
   state._menuPrintPeriod = period;
   state._menuPrintDate = refDate;
 
+  const SERVICE_DOWS = new Set([1, 2, 3, 5]); // Mon, Tue, Wed, Fri
+
   const getMealEntry = (ds) => {
     const hol = getFederalHoliday(ds);
+    const dow = new Date(ds + 'T12:00:00').getDay();
+    const isServiceDay = SERVICE_DOWS.has(dow);
     const mp = (state.menuPlan || []).find(m => m.service_date === ds);
     const rec = mp && mp.recipe_id ? state.recipes.find(r => r.id === mp.recipe_id) : null;
-    const title = (rec ? rec.name : (mp ? mp.custom_title : '')) || (hol ? `Closed (${hol})` : '');
-    const status = mp ? mp.status : (hol ? 'CLOSED' : 'PLANNED');
-    const portions = mp ? (status === 'SERVED' ? mp.served_portions : mp.planned_portions) : (hol ? 0 : forecastWeekday(ds));
-    return { ds, hol, mp, rec, title, status, portions, note: (mp && mp.note) || '' };
+    let title = (rec ? rec.name : (mp ? mp.custom_title : '')) || '';
+    let status = mp ? mp.status : 'PLANNED';
+    if (!title) {
+      if (hol) {
+        title = `Closed — ${hol}`;
+        status = 'CLOSED';
+      } else if (!isServiceDay) {
+        title = dow === 4 ? 'No Hot Lunch Service (Prep, Pantry & Outreach Day)' : 'Weekend — No Community Lunch Service';
+        status = 'NON_SERVICE';
+      }
+    }
+    const portions = mp
+      ? (status === 'SERVED' ? mp.served_portions : mp.planned_portions)
+      : (hol || !isServiceDay ? 0 : forecastWeekday(ds));
+    return { ds, dow, isServiceDay, hol, mp, rec, title, status, portions, note: (mp && mp.note) || '' };
   };
 
   let bodyHtml = '';
@@ -31,38 +46,47 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
 
   if (period === 'daily') {
     const e = getMealEntry(refDate);
-    const n = e.portions || predictedPortions(refDate);
+    const isOff = e.status === 'CLOSED' || e.status === 'NON_SERVICE' || !!e.hol;
+    const n = isOff ? 0 : (e.portions || predictedPortions(refDate));
     const f = e.rec ? (n / (e.rec.base_servings || 65)) : 1;
     subtitle = `Daily Kitchen & Dining Menu — ${dLabel(refDate)}`;
     bodyHtml = `
       <div class="space-y-3">
-        <div class="p-3 rounded-lg bg-black/5 border border-[var(--line)] print-keep">
-          <div class="text-lg font-extrabold text-[#1b365d]">${esc(e.title || 'No Meal Scheduled')}</div>
-          <div class="text-xs opacity-80 mt-0.5">
-            Service Date: <strong>${dLabel(refDate)}</strong> &bull;
-            ${e.status === 'SERVED' ? `Served: <strong>${e.portions}</strong>` : `Planned Portions: <strong>${n}</strong>`}
-            ${e.rec && (e.rec.allergens || []).length ? ` &bull; <span class="text-[#b3122b] font-bold">Allergens: ${esc(e.rec.allergens.join(', '))}</span>` : ''}
+        <div class="p-4 rounded-xl border-2 ${isOff ? 'border-slate-300 bg-slate-50' : 'border-[#1b365d] bg-gradient-to-r from-[#1b365d]/5 via-white to-[#b3122b]/5'} print-keep">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${isOff ? 'bg-slate-200 text-slate-700' : 'bg-[#b3122b] text-white'}">
+              ${isOff ? 'Non-Service / Closed Day' : 'Hot Community Lunch • 11:30 AM – 12:30 PM'}
+            </span>
+            <span class="text-xs font-mono font-bold opacity-70">${esc(refDate)}</span>
           </div>
-          ${e.note ? `<div class="text-xs opacity-75 mt-1">Notes: ${esc(e.note)}</div>` : ''}
+          <div class="text-xl font-black text-[#1b365d] mt-1.5">${esc(e.title || 'Menu To Be Announced')}</div>
+          ${!isOff ? `
+            <div class="text-xs opacity-85 mt-1">
+              ${e.status === 'SERVED' ? `Actual Served: <strong>${e.portions}</strong>` : `Planned Portions: <strong>${n}</strong>`}
+              &bull; Includes Daily Salad Bar, Fresh Bread &amp; Beverage
+              ${e.rec && (e.rec.allergens || []).length ? ` &bull; <span class="text-[#b3122b] font-bold">Allergens: ${esc(e.rec.allergens.join(', '))}</span>` : ''}
+            </div>
+          ` : ''}
+          ${e.note ? `<div class="text-xs opacity-75 mt-1 italic">Note: ${esc(e.note)}</div>` : ''}
         </div>
-        ${e.rec ? `
+        ${e.rec && !isOff ? `
           <div>
-            <div class="font-bold uppercase opacity-70 mb-1">Scaled Ingredients (${n} Portions)</div>
-            <table class="w-full text-left border-collapse text-xs">
-              <thead><tr class="border-b border-[var(--line)] bg-black/5 uppercase"><th class="py-1.5 px-2">Ingredient</th><th class="py-1.5 px-2 text-right">Amount Needed</th></tr></thead>
+            <div class="font-bold uppercase tracking-wider text-[11px] text-[#1b365d] mb-1">Scaled Kitchen Pull &amp; Ingredients (${n} Portions)</div>
+            <table class="w-full text-left border-collapse text-xs border border-[var(--line)]">
+              <thead><tr class="bg-[#1b365d] text-white uppercase text-[10px]"><th class="py-1.5 px-2.5">Ingredient</th><th class="py-1.5 px-2.5 text-right">Amount Needed</th></tr></thead>
               <tbody class="divide-y divide-[var(--line)]">
-                ${(e.rec.ingredients || []).map(g => `<tr><td class="py-1.5 px-2">&#9744; ${esc(g.name)}</td><td class="py-1.5 px-2 text-right font-bold">${esc(formatKitchenAmt((g.qty || 0) * f, g.unit))}</td></tr>`).join('')}
+                ${(e.rec.ingredients || []).map(g => `<tr><td class="py-1.5 px-2.5">&#9744; ${esc(g.name)}</td><td class="py-1.5 px-2.5 text-right font-bold">${esc(formatKitchenAmt((g.qty || 0) * f, g.unit))}</td></tr>`).join('')}
               </tbody>
             </table>
           </div>
           ${(e.rec.steps || []).length ? `
-            <div class="p-2.5 rounded bg-black/5 space-y-1 print-keep">
-              <div class="font-bold uppercase opacity-70">Preparation Directions</div>
+            <div class="p-3 rounded-xl bg-black/5 border border-[var(--line)] space-y-1 print-keep">
+              <div class="font-bold uppercase tracking-wider text-[11px] text-[#1b365d]">Preparation &amp; HACCP Directions</div>
               <ol class="list-decimal list-inside space-y-1 leading-relaxed">${e.rec.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
             </div>
           ` : ''}
-        ` : '<p class="text-xs opacity-75">Custom menu entry (no linked recipe ingredients).</p>'}
-        <div class="p-2.5 rounded border border-[var(--line)] text-[11px] flex justify-between print-keep">
+        ` : (!isOff ? '<p class="text-xs opacity-75">Custom menu entry (no linked recipe ingredients).</p>' : '')}
+        <div class="p-3 rounded-xl border border-[var(--line)] bg-black/5 text-[11px] flex flex-wrap justify-between gap-2 print-keep">
           <span>Cook / Lead: ________________________</span>
           <span>Actual Served: ________</span>
           <span>Use Leftovers By: <strong>${dLabel(addDays(refDate, 6))}</strong></span>
@@ -71,48 +95,56 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
     `;
   } else if (period === 'weekly') {
     const mon = getWeekMonday(refDate);
-    const fri = addDays(mon, 4);
-    const weekDays = [0, 1, 2, 4].map(offset => addDays(mon, offset));
-    subtitle = `Weekly Service Menu — Week of ${dLabel(mon)} to ${dLabel(fri)}`;
+    const sun = addDays(mon, 6);
+    const weekDays = [0, 1, 2, 3, 4, 5, 6].map(offset => addDays(mon, offset));
+    subtitle = `Full 7-Day Weekly Menu — ${dLabel(mon)} to ${dLabel(sun)}`;
     bodyHtml = `
       <div class="space-y-2.5">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b-2 border-[#1b365d] bg-black/5 uppercase">
-              <th class="py-2 px-2.5 w-36">Service Day</th>
-              <th class="py-2 px-2.5">Menu Entr&eacute;e &amp; Sides</th>
-              <th class="py-2 px-2.5 text-center w-24">Portions</th>
-              <th class="py-2 px-2.5 w-36">Allergens / Notes</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[var(--line)]">
-            ${weekDays.map(ds => {
-              const e = getMealEntry(ds);
-              const isClosed = e.status === 'CLOSED' || !!e.hol;
-              return `
-                <tr class="${isClosed ? 'bg-red-50/40' : ''}">
-                  <td class="py-2.5 px-2.5 font-bold align-top">
-                    <div>${dLabel(ds)}</div>
-                    <div class="text-[10px] font-mono opacity-65">${esc(ds)}</div>
-                  </td>
-                  <td class="py-2.5 px-2.5 align-top">
-                    <div class="font-bold text-sm ${isClosed ? 'text-[#b3122b]' : ''}">${esc(e.title || '— Menu TBD —')}</div>
-                    ${!isClosed ? `<div class="text-[11px] opacity-75 mt-0.5">Served with Daily Salad Bar, Bread &amp; Beverage</div>` : ''}
-                  </td>
-                  <td class="py-2.5 px-2.5 text-center align-top font-bold">
-                    ${isClosed ? 'CLOSED' : (e.status === 'SERVED' ? `${e.portions} served` : `${e.portions || 65} plan`)}
-                  </td>
-                  <td class="py-2.5 px-2.5 align-top text-[11px] opacity-80">
-                    ${e.rec && (e.rec.allergens || []).length ? `<div class="font-bold text-[#b3122b]">Allergens: ${esc(e.rec.allergens.join(', '))}</div>` : ''}
-                    ${esc(e.note)}
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-        <div class="text-[11px] opacity-75 pt-1 flex justify-between print-keep">
-          <span>Lunch Service: Monday, Tuesday, Wednesday &amp; Friday &bull; 11:30 AM – 12:30 PM</span>
+        <div class="grid grid-cols-1 gap-2">
+          ${weekDays.map(ds => {
+            const e = getMealEntry(ds);
+            const isClosed = e.status === 'CLOSED' || !!e.hol;
+            const isNonService = e.status === 'NON_SERVICE' && !e.mp;
+            const badgeCls = isClosed
+              ? 'bg-[#b3122b] text-white'
+              : isNonService
+                ? 'bg-slate-200 text-slate-700'
+                : 'bg-[#1b365d] text-white';
+            const cardCls = isClosed
+              ? 'border-[#b3122b]/40 bg-red-50/40'
+              : isNonService
+                ? 'border-slate-200 bg-slate-50/70'
+                : 'border-[#1b365d]/30 bg-white shadow-xs';
+            return `
+              <div class="p-2.5 rounded-xl border ${cardCls} flex flex-wrap items-center justify-between gap-3 print-keep">
+                <div class="flex items-center gap-3 min-w-[165px]">
+                  <span class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold uppercase tracking-wide ${badgeCls} text-center min-w-[96px]">
+                    ${dLabel(ds).split(',')[0]}
+                  </span>
+                  <div>
+                    <div class="font-bold text-xs">${dLabel(ds)}</div>
+                    <div class="text-[10px] font-mono opacity-60">${esc(ds)}</div>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                  <div class="font-extrabold text-sm ${isClosed ? 'text-[#b3122b]' : isNonService ? 'text-slate-600' : 'text-[#1b365d]'}">${esc(e.title || '— Menu TBD —')}</div>
+                  ${!isClosed && !isNonService ? `<div class="text-[11px] opacity-75">Served with Daily Salad Bar, Fresh Bread &amp; Beverage</div>` : ''}
+                  ${e.rec && (e.rec.allergens || []).length ? `<div class="text-[10px] font-bold text-[#b3122b]">Allergens: ${esc(e.rec.allergens.join(', '))}</div>` : ''}
+                  ${e.note ? `<div class="text-[10px] opacity-75 italic">${esc(e.note)}</div>` : ''}
+                </div>
+                <div class="text-right shrink-0">
+                  ${isClosed
+                    ? '<span class="px-2.5 py-1 rounded-full bg-[#b3122b]/10 text-[#b3122b] font-extrabold text-[11px]">CLOSED</span>'
+                    : isNonService
+                      ? '<span class="px-2.5 py-1 rounded-full bg-slate-200/80 text-slate-600 font-bold text-[10px]">NO LUNCH SERVICE</span>'
+                      : `<span class="px-2.5 py-1 rounded-full bg-emerald-600/10 text-emerald-800 font-extrabold text-xs">${e.status === 'SERVED' ? `${e.portions} Served` : `${e.portions || 65} Portions`}</span>`}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="text-[11px] opacity-80 pt-1.5 border-t border-[var(--line)] flex flex-wrap justify-between gap-2 print-keep">
+          <span><strong>Hot Community Lunch:</strong> Mon, Tue, Wed &amp; Fri &bull; 11:30 AM – 12:30 PM (No Lunch Thu/Sat/Sun)</span>
           <span>Menu subject to change based on donations</span>
         </div>
       </div>
@@ -122,48 +154,54 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
     const [yr, mo] = ym.split('-').map(Number);
     const monthName = new Date(yr, mo - 1, 1, 12).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
     const lastDay = new Date(yr, mo, 0).getDate();
-    const firstIso = `${ym}-01`;
-    const lastIso = `${ym}-${String(lastDay).padStart(2, '0')}`;
-    const serviceDays = allMonTueWedFriBetween(firstIso, lastIso);
+    const firstDow = new Date(yr, mo - 1, 1, 12).getDay(); // 0=Sun..6=Sat
+    const mondayOffset = firstDow === 0 ? 6 : firstDow - 1; // Mon=0..Sun=6
+    const cells = [];
+    for (let i = 0; i < mondayOffset; i++) cells.push(null);
+    for (let d = 1; d <= lastDay; d++) {
+      const ds = `${ym}-${String(d).padStart(2, '0')}`;
+      cells.push(getMealEntry(ds));
+    }
+    while (cells.length % 7 !== 0) cells.push(null);
     const weeks = [];
-    let curWeek = null;
-    serviceDays.forEach(ds => {
-      const wMon = getWeekMonday(ds);
-      if (!curWeek || curWeek.mon !== wMon) {
-        curWeek = { mon: wMon, slots: { 1: null, 2: null, 3: null, 5: null } };
-        weeks.push(curWeek);
-      }
-      const dow = new Date(ds + 'T12:00:00').getDay();
-      curWeek.slots[dow] = getMealEntry(ds);
-    });
-    subtitle = `Monthly Community Meals Menu — ${monthName}`;
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+
+    subtitle = `Full 7-Day Monthly Calendar — ${monthName}`;
     bodyHtml = `
       <div class="space-y-2">
         <table class="w-full text-left border-collapse text-xs table-fixed">
           <thead>
-            <tr class="border-b-2 border-[#1b365d] bg-[#1b365d] text-white uppercase">
-              <th class="py-2 px-2 w-1/4">Monday</th>
-              <th class="py-2 px-2 w-1/4">Tuesday</th>
-              <th class="py-2 px-2 w-1/4">Wednesday</th>
-              <th class="py-2 px-2 w-1/4">Friday</th>
+            <tr class="bg-[#1b365d] text-white uppercase text-[10px]">
+              <th class="py-1.5 px-1.5 border border-slate-400">Mon (Lunch)</th>
+              <th class="py-1.5 px-1.5 border border-slate-400">Tue (Lunch)</th>
+              <th class="py-1.5 px-1.5 border border-slate-400">Wed (Lunch)</th>
+              <th class="py-1.5 px-1.5 border border-slate-400 bg-slate-700">Thu</th>
+              <th class="py-1.5 px-1.5 border border-slate-400">Fri (Lunch)</th>
+              <th class="py-1.5 px-1.5 border border-slate-400 bg-slate-700">Sat</th>
+              <th class="py-1.5 px-1.5 border border-slate-400 bg-slate-700">Sun</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-[var(--line)]">
+          <tbody>
             ${weeks.map(w => `
               <tr>
-                ${[1, 2, 3, 5].map(dow => {
-                  const cell = w.slots[dow];
-                  if (!cell) return `<td class="p-2 border border-[var(--line)] bg-black/5 align-top h-20"></td>`;
+                ${w.map(cell => {
+                  if (!cell) return `<td class="p-1.5 border border-slate-300 bg-slate-100/70 align-top h-20"></td>`;
                   const dayNum = parseInt(cell.ds.slice(8, 10), 10);
                   const isClosed = cell.status === 'CLOSED' || !!cell.hol;
+                  const isNonService = cell.status === 'NON_SERVICE' && !cell.mp;
+                  const tdCls = isClosed
+                    ? 'bg-red-50/70'
+                    : isNonService
+                      ? 'bg-slate-50 text-slate-500'
+                      : 'bg-white';
                   return `
-                    <td class="p-2 border border-[var(--line)] align-top h-20 menu-cal-cell ${isClosed ? 'bg-red-50/40' : ''}">
-                      <div class="flex items-center justify-between text-[11px] font-bold border-b border-[var(--line)]/60 pb-0.5 mb-1">
-                        <span>${mo}/${dayNum}</span>
-                        <span class="opacity-65 font-normal">${isClosed ? 'CLOSED' : (cell.status === 'SERVED' ? cell.portions + ' srv' : (cell.portions || 65) + ' port')}</span>
+                    <td class="p-1.5 border border-slate-300 align-top h-20 menu-cal-cell ${tdCls}">
+                      <div class="flex items-center justify-between text-[10px] font-bold border-b border-slate-200 pb-0.5 mb-1">
+                        <span class="${isClosed ? 'text-[#b3122b]' : isNonService ? 'text-slate-500' : 'text-[#1b365d]'}">${mo}/${dayNum}</span>
+                        <span class="font-semibold text-[9px]">${isClosed ? 'CLOSED' : isNonService ? 'Off' : (cell.status === 'SERVED' ? cell.portions + ' srv' : (cell.portions || 65) + ' port')}</span>
                       </div>
-                      <div class="font-semibold leading-snug ${isClosed ? 'text-[#b3122b]' : ''}">${esc(cell.title || 'TBD')}</div>
-                      ${cell.note ? `<div class="text-[10px] opacity-70 mt-0.5">${esc(cell.note)}</div>` : ''}
+                      <div class="text-[10px] font-semibold leading-tight ${isClosed ? 'text-[#b3122b] font-bold' : ''}">${esc(cell.title || 'TBD')}</div>
+                      ${cell.note ? `<div class="text-[9px] opacity-70 mt-0.5 leading-tight">${esc(cell.note)}</div>` : ''}
                     </td>
                   `;
                 }).join('')}
@@ -171,9 +209,9 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
             `).join('')}
           </tbody>
         </table>
-        <div class="text-[11px] opacity-75 pt-1 flex justify-between print-keep">
-          <span>The Salvation Army &bull; 313 W. Cunningham St., Butler, PA &bull; Free Community Lunch (Mon/Tue/Wed/Fri)</span>
-          <span>Daily Salad Bar included with every meal</span>
+        <div class="text-[11px] opacity-80 pt-1 flex flex-wrap justify-between gap-2 print-keep">
+          <span><strong>The Salvation Army · 313 W. Cunningham St., Butler, PA</strong> &bull; Free Hot Lunch: Mon/Tue/Wed/Fri (11:30 AM – 12:30 PM)</span>
+          <span>Daily Salad Bar included with every lunch service</span>
         </div>
       </div>
     `;
@@ -184,7 +222,7 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
     <div class="space-y-3 text-xs">
       <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-black/5 border border-[var(--line)] no-print">
         <div class="flex flex-wrap items-center gap-1.5">
-          ${[['daily', 'Daily Sheet'], ['weekly', 'Weekly Menu'], ['monthly', 'Monthly Calendar']].map(([k, lbl]) => `
+          ${[['daily', 'Daily Sheet'], ['weekly', 'Weekly 7-Day Menu'], ['monthly', 'Monthly 7-Day Calendar']].map(([k, lbl]) => `
             <button type="button" data-menu-print-period="${k}" class="px-3 py-1.5 rounded-lg font-bold border ${period === k ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] kms-btn-alt'}">${lbl}</button>
           `).join('')}
         </div>
@@ -196,18 +234,23 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
         </div>
       </div>
 
-      <div class="p-4 rounded-xl border border-[var(--line)] space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#b3122b] pb-2 print-keep">
-          <div>
-            <div class="text-[11px] font-bold uppercase tracking-wider text-[#b3122b]">The Salvation Army · Butler Worship &amp; Service Center</div>
-            <h2 class="text-base sm:text-lg font-extrabold text-[#1b365d]">${esc(subtitle)}</h2>
+      <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2 border-b-4 border-[#b3122b] print-keep">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler Worship &amp; Service Center</div>
+              <h2 class="text-base sm:text-lg font-black tracking-tight">${esc(subtitle)}</h2>
+            </div>
           </div>
-          <div class="text-right text-[11px] opacity-75">
-            <div>313 West Cunningham St. · Butler, PA</div>
-            <div>Community Meals Program</div>
+          <div class="text-right text-[11px] text-white/90">
+            <div class="font-bold">313 West Cunningham St. &bull; Butler, PA</div>
+            <div>Community Meals &amp; Outreach Program</div>
           </div>
         </div>
-        ${bodyHtml}
+        <div class="p-4 bg-white text-slate-900">
+          ${bodyHtml}
+        </div>
       </div>
     </div>
   `);
