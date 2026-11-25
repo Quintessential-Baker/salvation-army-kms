@@ -984,22 +984,28 @@ document.addEventListener('click', (e) => {
     syncToSupabase().then(() => showToast('Pushed local data to Supabase cloud!'));
     return;
   }
-  if (e.target.id === 'btn-undo' || e.target.id === 'btn-stock-undo') { doUndo(); return; }
-  if (e.target.id === 'btn-print-qr') { showQrLabelsModal(); return; }
-  if (e.target.id === 'btn-print-page') { window.print(); return; }
-  if (e.target.id === 'btn-text-size') {
+  const closeToolsMenu = () => { const tm = document.getElementById('tools-menu'); if (tm) tm.classList.add('hidden'); };
+  if (e.target.closest('#btn-undo') || e.target.closest('#btn-stock-undo')) { closeToolsMenu(); doUndo(); return; }
+  if (e.target.closest('#btn-print-qr')) { closeToolsMenu(); showQrLabelsModal(); return; }
+  if (e.target.closest('#btn-print-page')) { closeToolsMenu(); setTimeout(() => window.print(), 60); return; }
+  if (e.target.closest('#btn-text-size')) {
+    closeToolsMenu();
     state.textZoom = ((state.textZoom || 0) + 1) % 3;
+    const labels = ['Normal Text (100%)', 'Large Text (112.5%)', 'Extra Large Text (125%)'];
     document.documentElement.style.fontSize = ['100%', '112.5%', '125%'][state.textZoom];
     saveState();
+    showToast('Text size: ' + labels[state.textZoom]);
     return;
   }
-  if (e.target.id === 'btn-theme-toggle') {
+  if (e.target.closest('#btn-theme-toggle')) {
+    closeToolsMenu();
     state.theme = state.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', state.theme);
     saveState();
+    showToast(state.theme === 'dark' ? 'Dark Mode enabled' : 'Light Mode enabled');
     return;
   }
-  if (e.target.id === 'btn-backup' || e.target.id === 'btn-open-restore') { showBackupRestoreModal(); return; }
+  if (e.target.closest('#btn-backup') || e.target.closest('#btn-open-restore')) { closeToolsMenu(); showBackupRestoreModal(); return; }
   if (e.target.id === 'btn-dl-json') {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');

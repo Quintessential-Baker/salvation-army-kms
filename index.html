@@ -15,143 +15,159 @@
       --sa-red-dark: #8f0e22;
       --sa-navy: #1b365d;
       --sa-navy-dark: #122644;
-      --sa-gold: #f59e0b;
-      --bg: #f4f6f9;
+      --bg: #f1f5f9;
       --card: #ffffff;
       --ink: #0f172a;
-      --muted: #475569;
+      --muted: #334155;
       --line: #cbd5e1;
+    }
+    html[data-theme="dark"] {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --ink: #f8fafc;
+      --muted: #cbd5e1;
+      --line: #334155;
     }
     body {
       background-color: var(--bg);
       color: var(--ink);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      line-height: 1.45;
       -webkit-font-smoothing: antialiased;
     }
-    /* Unified Cards & Inputs */
+    /* Sticky Top Header & Clean White Sub-Navigation */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background-color: #1b365d;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+    }
+    header nav {
+      background-color: #ffffff;
+      border-top: 3px solid #b3122b;
+      border-bottom: 1px solid #cbd5e1;
+      color: #1b365d;
+    }
+    html[data-theme="dark"] header nav {
+      background-color: #1e293b;
+      border-bottom-color: #334155;
+      color: #f8fafc;
+    }
+    #nav-groups button, #nav-subtabs button {
+      color: #1b365d !important;
+      background-color: transparent;
+      font-weight: 700 !important;
+      padding: 6px 12px !important;
+      border-radius: 8px !important;
+      border: 1px solid transparent;
+      transition: background-color 0.15s, color 0.15s;
+    }
+    html[data-theme="dark"] #nav-groups button,
+    html[data-theme="dark"] #nav-subtabs button {
+      color: #e2e8f0 !important;
+    }
+    #nav-groups button:hover, #nav-subtabs button:hover {
+      background-color: #f1f5f9 !important;
+      border-color: #cbd5e1;
+    }
+    html[data-theme="dark"] #nav-groups button:hover,
+    html[data-theme="dark"] #nav-subtabs button:hover {
+      background-color: #334155 !important;
+    }
+    #nav-groups button.bg-\[\#b3122b\], #nav-groups button.active {
+      background-color: #b3122b !important;
+      color: #ffffff !important;
+    }
+    #nav-subtabs {
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0 !important;
+    }
+    html[data-theme="dark"] #nav-subtabs {
+      background-color: #0f172a;
+      border-top-color: #334155 !important;
+    }
+    #nav-subtabs button.bg-white, #nav-subtabs button.active {
+      background-color: #1b365d !important;
+      color: #ffffff !important;
+    }
+    #tools-menu {
+      z-index: 60 !important;
+      background-color: var(--card) !important;
+      color: var(--ink) !important;
+      border: 1px solid var(--line) !important;
+    }
+    #tools-menu button:hover {
+      background-color: rgba(27, 54, 93, 0.08) !important;
+    }
+    /* Cards, Inputs & High-Legibility Buttons */
     .kms-card {
-      background: var(--card);
+      background-color: var(--card);
+      color: var(--ink);
       border: 1px solid var(--line);
       border-radius: 12px;
       box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
     }
     .kms-input {
-      background: #ffffff;
+      background-color: var(--card);
+      color: var(--ink);
       border: 1px solid #94a3b8;
       border-radius: 8px;
       padding: 6px 10px;
-      color: var(--ink);
-      transition: border-color 0.15s, box-shadow 0.15s;
     }
     .kms-input:focus {
       outline: none;
-      border-color: var(--sa-navy);
-      box-shadow: 0 0 0 2px rgba(27, 54, 93, 0.15);
+      border-color: #1b365d;
+      box-shadow: 0 0 0 2px rgba(27, 54, 93, 0.18);
     }
-    /* Unified Button Hierarchy */
     .kms-btn-primary {
-      background: var(--sa-red);
+      background-color: #b3122b;
       color: #ffffff;
       font-weight: 700;
       border-radius: 8px;
-      border: 1px solid var(--sa-red-dark);
-      transition: background 0.15s;
+      border: 1px solid #8f0e22;
     }
-    .kms-btn-primary:hover { background: var(--sa-red-dark); }
+    .kms-btn-primary:hover { background-color: #8f0e22; }
     .kms-btn-navy {
-      background: var(--sa-navy);
+      background-color: #1b365d;
       color: #ffffff;
       font-weight: 700;
       border-radius: 8px;
-      border: 1px solid var(--sa-navy-dark);
-      transition: background 0.15s;
+      border: 1px solid #122644;
     }
-    .kms-btn-navy:hover { background: var(--sa-navy-dark); }
+    .kms-btn-navy:hover { background-color: #122644; }
     .kms-btn-ok {
-      background: #15803d;
+      background-color: #15803d;
       color: #ffffff;
       font-weight: 700;
       border-radius: 8px;
-      transition: background 0.15s;
     }
-    .kms-btn-ok:hover { background: #166534; }
+    .kms-btn-ok:hover { background-color: #166534; }
     .kms-btn-alt {
-      background: #ffffff;
-      color: var(--sa-navy);
+      background-color: var(--card);
+      color: var(--ink);
       font-weight: 700;
-      border: 1px solid var(--line);
+      border: 1px solid #94a3b8;
       border-radius: 8px;
-      transition: background 0.15s, border-color 0.15s;
     }
-    .kms-btn-alt:hover { background: #f1f5f9; border-color: #94a3b8; }
-    /* Unified Table Headers */
-    .kms-table thead th, table thead th {
-      background-color: var(--sa-navy);
-      color: #ffffff;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-    }
-    /* Unified View Hero Banner */
+    .kms-btn-alt:hover { background-color: rgba(27, 54, 93, 0.06); }
     .sa-hero-banner {
-      background: linear-gradient(135deg, var(--sa-navy) 0%, var(--sa-navy-dark) 100%);
-      color: #ffffff;
-      border-bottom: 4px solid var(--sa-red);
+      background-color: var(--card);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-left: 5px solid #b3122b;
       border-radius: 12px;
     }
-    .sa-shield-badge {
-      background: var(--sa-red);
+    .sa-hero-banner h2 { color: #1b365d; }
+    html[data-theme="dark"] .sa-hero-banner h2 { color: #f8fafc; }
+    .sa-hero-banner .text-amber-300 { color: #b3122b; }
+    .sa-hero-banner .text-white\/90, .sa-hero-banner .opacity-85 { color: var(--muted); }
+    table thead th {
+      background-color: #1b365d;
       color: #ffffff;
-      font-weight: 900;
-      border-radius: 8px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      font-weight: 700;
     }
-
-    /* Crisp High-Contrast Top Navigation & Solid Scroll Layering */
-    header {
-      position: sticky !important;
-      top: 0 !important;
-      z-index: 50 !important;
-      background-color: #1b365d !important;
-      color: #ffffff !important;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18) !important;
-    }
-    header nav button, header .kms-nav-btn, [data-nav] {
-      color: rgba(255, 255, 255, 0.92) !important;
-      font-weight: 700 !important;
-      opacity: 1 !important;
-      padding: 6px 12px !important;
-      border-radius: 8px !important;
-      transition: background-color 0.15s, color 0.15s !important;
-    }
-    header nav button:hover, header .kms-nav-btn:hover, [data-nav]:hover {
-      background-color: rgba(255, 255, 255, 0.14) !important;
-      color: #ffffff !important;
-    }
-    header nav button.active, header .kms-nav-btn.active, [data-nav].bg-\[\#b3122b\], [data-nav][aria-current="page"] {
-      background-color: #b3122b !important;
-      color: #ffffff !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
-    }
-    /* Solid Sub-Navigation Bar so scrolling content never bleeds through */
-    #sub-nav, .kms-subnav {
-      background-color: #ffffff !important;
-      border-bottom: 1px solid #cbd5e1 !important;
-      position: relative !important;
-      z-index: 40 !important;
-    }
-    /* Keep page banners and cards strictly below the sticky header during scroll */
-    #app-main, .sa-hero-banner, .kms-card {
-      position: relative;
-      z-index: 1;
-    }
-    body {
-      font-size: 14.5px;
-      line-height: 1.45;
-    }
-
     @media print {
       @page { size: letter portrait; margin: 0.38in; }
       .no-print, header, nav, #mobile-dock, #toast-container, #pin-change-backdrop, #training-backdrop, #page-guide-banner { display: none !important; }
