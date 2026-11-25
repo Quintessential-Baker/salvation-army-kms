@@ -1987,10 +1987,6 @@ document.addEventListener('click', (e) => {
             </div>
           </div>
         `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `).join('')}
       </div>
     `);
     return;
