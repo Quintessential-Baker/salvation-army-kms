@@ -16,7 +16,7 @@ export function renderSafety(main) {
     <div class="space-y-4">
       <!-- SA Header Banner -->
       <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
-        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
+        <div class="sa-hero-banner px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div>

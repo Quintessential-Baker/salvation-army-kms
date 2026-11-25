@@ -11,63 +11,102 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <style>
     :root {
-      --bg: #f6f4f0;
+      --sa-red: #b3122b;
+      --sa-red-dark: #8f0e22;
+      --sa-navy: #1b365d;
+      --sa-navy-dark: #122644;
+      --sa-gold: #f59e0b;
+      --bg: #f4f6f9;
       --card: #ffffff;
-      --ink: #1d2430;
-      --mute: #667085;
-      --line: #d9d5cc;
-      --red: #b3122b;
-      --navy: #1b365d;
-      --ok: #1f7a3d;
-      --low: #b45309;
-      --out: #b3122b;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #cbd5e1;
     }
-    [data-theme="dark"] {
-      --bg: #14181f;
-      --card: #1d232d;
-      --ink: #eef0f3;
-      --mute: #9aa4b2;
-      --line: #364050;
-      --red: #ff6b7d;
-      --navy: #8fb3e8;
-      --ok: #5fd38a;
-      --low: #f3b45a;
-      --out: #ff6b7d;
-    }
-    * { box-sizing: border-box; }
     body {
-      margin: 0;
-      background: var(--bg);
+      background-color: var(--bg);
       color: var(--ink);
-      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-      line-height: 1.45;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
-    .kms-header { background: #1b365d; color: #fff; }
-    .kms-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
-    .kms-btn-primary { background: #b3122b; color: #fff; font-weight: 600; border-radius: 8px; }
-    .kms-btn-primary:hover { background: #930e23; }
-    .kms-btn-navy { background: #1b365d; color: #fff; font-weight: 600; border-radius: 8px; }
-    .kms-btn-navy:hover { background: #142947; }
-    .kms-btn-ok { background: #1f7a3d; color: #fff; font-weight: 600; border-radius: 8px; }
-    .kms-btn-ok:hover { background: #175d2e; }
-    .kms-btn-alt { background: var(--card); color: var(--navy); border: 1.5px solid var(--navy); font-weight: 600; border-radius: 8px; }
-    .kms-input {
-      color: var(--ink);
+    /* Unified Cards & Inputs */
+    .kms-card {
       background: var(--card);
       border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+    .kms-input {
+      background: #ffffff;
+      border: 1px solid #94a3b8;
       border-radius: 8px;
       padding: 6px 10px;
+      color: var(--ink);
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; display: inline-block; }
-    .tag-OK { color: var(--ok); }
-    .tag-LOW { color: var(--low); }
-    .tag-OUT { color: var(--out); }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
-    @media (pointer: coarse) {
-      button, select, input:not([type="checkbox"]):not([type="radio"]) { min-height: 42px; }
-      input[type="checkbox"], input[type="radio"] { width: 1.25rem; height: 1.25rem; }
+    .kms-input:focus {
+      outline: none;
+      border-color: var(--sa-navy);
+      box-shadow: 0 0 0 2px rgba(27, 54, 93, 0.15);
+    }
+    /* Unified Button Hierarchy */
+    .kms-btn-primary {
+      background: var(--sa-red);
+      color: #ffffff;
+      font-weight: 700;
+      border-radius: 8px;
+      border: 1px solid var(--sa-red-dark);
+      transition: background 0.15s;
+    }
+    .kms-btn-primary:hover { background: var(--sa-red-dark); }
+    .kms-btn-navy {
+      background: var(--sa-navy);
+      color: #ffffff;
+      font-weight: 700;
+      border-radius: 8px;
+      border: 1px solid var(--sa-navy-dark);
+      transition: background 0.15s;
+    }
+    .kms-btn-navy:hover { background: var(--sa-navy-dark); }
+    .kms-btn-ok {
+      background: #15803d;
+      color: #ffffff;
+      font-weight: 700;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .kms-btn-ok:hover { background: #166534; }
+    .kms-btn-alt {
+      background: #ffffff;
+      color: var(--sa-navy);
+      font-weight: 700;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .kms-btn-alt:hover { background: #f1f5f9; border-color: #94a3b8; }
+    /* Unified Table Headers */
+    .kms-table thead th, table thead th {
+      background-color: var(--sa-navy);
+      color: #ffffff;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    /* Unified View Hero Banner */
+    .sa-hero-banner {
+      background: linear-gradient(135deg, var(--sa-navy) 0%, var(--sa-navy-dark) 100%);
+      color: #ffffff;
+      border-bottom: 4px solid var(--sa-red);
+      border-radius: 12px;
+    }
+    .sa-shield-badge {
+      background: var(--sa-red);
+      color: #ffffff;
+      font-weight: 900;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     @media print {
       @page { size: letter portrait; margin: 0.38in; }
@@ -76,7 +115,7 @@
         height: auto !important;
         min-height: 0 !important;
         overflow: visible !important;
-        background: #fff !important;
+        background: #ffffff !important;
         color: #0f172a !important;
         font-size: 9.5pt !important;
         line-height: 1.3 !important;
@@ -88,29 +127,32 @@
         max-height: none !important;
         overflow: visible !important;
       }
-      /* Unified SA Letterhead & Print Card Styling */
-      .sa-print-shell {
+      .sa-print-shell, .sa-hero-banner {
         border: 2px solid #1b365d !important;
         border-radius: 8px !important;
-        background: #fff !important;
+        background: #ffffff !important;
+        color: #1b365d !important;
         box-shadow: none !important;
-        margin: 0 !important;
-        page-break-after: avoid !important;
-        break-after: avoid !important;
+        margin-bottom: 8px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
-      .sa-print-banner {
+      .sa-print-banner, .sa-hero-banner {
         background: #f8fafc !important;
         color: #1b365d !important;
         border-bottom: 3px solid #b3122b !important;
         padding: 8px 12px !important;
       }
-      .sa-print-banner h2, .sa-print-banner .sa-title { color: #1b365d !important; }
-      .sa-print-banner .sa-sub { color: #b3122b !important; }
-      .sa-print-banner .sa-meta { color: #334155 !important; }
+      .sa-print-banner *, .sa-hero-banner * { color: #1b365d !important; }
+      .sa-print-banner .sa-sub, .sa-hero-banner .text-amber-300 { color: #b3122b !important; }
+      .sa-shield-badge, .sa-print-banner .bg-\[\#b3122b\], .sa-hero-banner .bg-\[\#b3122b\] {
+        background: #b3122b !important;
+        color: #ffffff !important;
+      }
       .kms-card {
         border: 1px solid #cbd5e1 !important;
         box-shadow: none !important;
-        background: #fff !important;
+        background: #ffffff !important;
         color: #0f172a !important;
         padding: 8px 10px !important;
         margin-bottom: 8px !important;
@@ -128,8 +170,9 @@
       h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
       table { width: 100% !important; border-collapse: collapse !important; }
       thead { display: table-header-group; }
-      thead tr { background: #1b365d !important; color: #fff !important; }
-      th, td { border-bottom: 1px solid #cbd5e1 !important; padding: 4px 6px !important; }
+      thead tr, thead th { background: #1b365d !important; color: #ffffff !important; }
+      th, td { border: 1px solid #cbd5e1 !important; padding: 4px 6px !important; }
+      tbody tr:nth-child(even) { background: #f8fafc !important; }
       input, select, textarea {
         border: none !important;
         background: transparent !important;
@@ -139,45 +182,6 @@
         appearance: none !important;
         -webkit-appearance: none !important;
       }
-      .qr-print-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
-      body:not(.printing-modal) #modal-backdrop { display: none !important; }
-      body.printing-modal #app-main { display: none !important; }
-      body.printing-modal #modal-backdrop { position: static !important; inset: auto !important; display: block !important; background: transparent !important; padding: 0 !important; overflow: visible !important; }
-      body.printing-modal #modal-box { position: static !important; max-width: 100% !important; width: 100% !important; max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; background: #fff !important; color: #000 !important; padding: 0 !important; }
-      body.printing-modal #modal-close, body.printing-modal #modal-box > div:first-child { display: none !important; }
-    }
-  
-  /* Light & Dark Mode Contrast Hardening ([data-theme="dark"] + Light :root) */
-    #tools-menu {
-      background: var(--card) !important;
-      color: var(--ink) !important;
-      border: 1px solid var(--line) !important;
-    }
-    #tools-menu button {
-      color: var(--ink) !important;
-    }
-    #tools-menu #btn-start-tour {
-      color: var(--red) !important;
-    }
-    #tools-menu #btn-run-selftest {
-      color: var(--ok) !important;
-    }
-    #tools-menu button:hover {
-      background: rgba(127, 127, 127, 0.12) !important;
-    }
-    .kms-card, #modal-box {
-      background: var(--card);
-      color: var(--ink);
-    }
-    input, select, textarea {
-      color: var(--ink);
-    }
-    /* Unified SA Design System Polish */
-    .kms-card {
-      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-    }
-    .kms-card h2, .kms-card h3 {
-      letter-spacing: -0.01em;
     }
   </style>
 </head>
