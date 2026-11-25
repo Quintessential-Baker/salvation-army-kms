@@ -160,7 +160,7 @@ export function renderRecipes(main) {
               <div class="flex flex-wrap gap-1 no-print">
                 <button type="button" data-rec-preset="${predToday}" class="px-2.5 py-1 rounded-md font-bold ${scale === predToday ? 'bg-emerald-700 text-white' : 'bg-emerald-50 border border-emerald-300 text-emerald-800'}">Predicted (${predToday})</button>
                 ${[40, 45, 50, 55, 60, 65, 70, 75, 80].map(p => `
-                  <button type="button" data-rec-preset="${p}" class="px-2 py-1 rounded-md font-semibold border ${scale === p ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}">${p}</button>
+                  <button type="button" data-rec-preset="${p}" class="px-2 py-1 rounded-md font-semibold border ${scale === p ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'kms-btn-alt'}">${p}</button>
                 `).join('')}
               </div>
             </div>

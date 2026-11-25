@@ -185,7 +185,7 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
       <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-black/5 border border-[var(--line)] no-print">
         <div class="flex flex-wrap items-center gap-1.5">
           ${[['daily', 'Daily Sheet'], ['weekly', 'Weekly Menu'], ['monthly', 'Monthly Calendar']].map(([k, lbl]) => `
-            <button type="button" data-menu-print-period="${k}" class="px-3 py-1.5 rounded-lg font-bold border ${period === k ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] bg-white text-slate-700'}">${lbl}</button>
+            <button type="button" data-menu-print-period="${k}" class="px-3 py-1.5 rounded-lg font-bold border ${period === k ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] kms-btn-alt'}">${lbl}</button>
           `).join('')}
         </div>
         <div class="flex items-center gap-2">

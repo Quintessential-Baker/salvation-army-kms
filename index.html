@@ -126,29 +126,32 @@
       body.printing-modal #modal-close { display: none !important; }
     }
   
-  /* Light & Dark Mode Contrast Hardening */
-  #tools-menu {
-    background-color: var(--card, #ffffff) !important;
-    color: var(--ink, #1e293b) !important;
-    border: 1px solid var(--line, #cbd5e1) !important;
-  }
-  #tools-menu button {
-    color: inherit;
-  }
-  html:not(.dark) #tools-menu button:not(.text-\[\#b3122b\]):not(.text-\[\#1f7a3d\]) {
-    color: #1e293b !important;
-  }
-  html.dark #tools-menu button:not(.text-\[\#b3122b\]):not(.text-\[\#1f7a3d\]) {
-    color: #f1f5f9 !important;
-  }
-  html:not(.dark) .kms-card {
-    color: #1e293b;
-  }
-  html:not(.dark) input, html:not(.dark) select, html:not(.dark) textarea {
-    color: #0f172a;
-  }
-
-</style>
+  /* Light & Dark Mode Contrast Hardening ([data-theme="dark"] + Light :root) */
+    #tools-menu {
+      background: var(--card) !important;
+      color: var(--ink) !important;
+      border: 1px solid var(--line) !important;
+    }
+    #tools-menu button {
+      color: var(--ink) !important;
+    }
+    #tools-menu #btn-start-tour {
+      color: var(--red) !important;
+    }
+    #tools-menu #btn-run-selftest {
+      color: var(--ok) !important;
+    }
+    #tools-menu button:hover {
+      background: rgba(127, 127, 127, 0.12) !important;
+    }
+    .kms-card, #modal-box {
+      background: var(--card);
+      color: var(--ink);
+    }
+    input, select, textarea {
+      color: var(--ink);
+    }
+  </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
