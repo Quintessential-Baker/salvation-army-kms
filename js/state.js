@@ -412,6 +412,7 @@ export function parsePastedRecipe(raw) {
   const steps = [];
   let mode = 'ing';
   lines.slice(1).forEach(ln => {
+    if (/^(servings?|portions?|yield|makes|prep(?:\s+time)?|cook(?:\s+time)?|total(?:\s+time)?)\s*[:\-]/i.test(ln.trim())) return;
     if (/^(directions|instructions|steps|method)/i.test(ln)) { mode = 'step'; return; }
     if (/^(ingredients)/i.test(ln)) { mode = 'ing'; return; }
     if (mode === 'step' || /^\d+[\.\)]\s/.test(ln)) {
