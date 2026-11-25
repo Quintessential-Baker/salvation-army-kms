@@ -44,12 +44,12 @@ export function renderPrep(main) {
   main.innerHTML = `
     <div class="space-y-4">
       <!-- Top Control & Print Banner -->
-      <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
-        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
+      <div class="sa-print-shell rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="sa-print-banner bg-[#1b365d] text-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div>
-              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Kitchen Prep Sheet</div>
+              <div class="sa-sub text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Kitchen Prep Sheet</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight">
                 ${nextMeal ? `Next-Day Prep Pulls — ${dLabel(nextMeal.service_date)}` : 'Next-Day Prep Pulls'}
               </h2>

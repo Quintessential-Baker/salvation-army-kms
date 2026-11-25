@@ -90,9 +90,9 @@ document.addEventListener('click', (e) => {
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
                 <div class="min-w-0">
-                  <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Standardized Recipe Card</div>
+                  <div class="sa-sub text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Standardized Recipe Card</div>
                   <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">${esc(rNorm.name)}</h2>
-                  <div class="text-[11px] text-white/90 mt-0.5">
+                  <div class="sa-meta text-[11px] text-white/90 mt-0.5">
                     Category: <strong>${esc(rNorm.category || 'Main')}</strong> &bull;
                     Prep: <strong>${rNorm.prep_min || 20}m</strong> &bull;
                     Cook: <strong>${rNorm.cook_min || 35}m</strong> &bull;
@@ -1510,9 +1510,9 @@ document.addEventListener('click', (e) => {
           <button type="button" id="btn-print-rec-modal-now" class="kms-btn-navy px-4 py-1.5 text-xs font-semibold">Print Recipe Sheet (Letter)</button>
         </div>
 
-        <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="sa-print-shell rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
           <!-- SA Navy/Red Header -->
-          <div class="bg-[#1b365d] text-white px-4 py-3 flex items-center justify-between gap-3 border-b-4 border-[#b3122b] print-keep">
+          <div class="sa-print-banner bg-[#1b365d] text-white px-4 py-2.5 flex items-center justify-between gap-3 border-b-4 border-[#b3122b] print-keep">
             <div class="flex items-center gap-3 min-w-0">
               <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
               <div class="min-w-0">
@@ -1942,41 +1942,51 @@ document.addEventListener('click', (e) => {
           <button type="button" onclick="window.print()" class="kms-btn-navy px-4 py-1.5 text-xs font-semibold">Print Blank 30-Line Sheet(s)</button>
         </div>
         ${zonesToPrint.map((z, zIdx) => `
-          <div class="w-full" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
-            <div class="flex items-end justify-between gap-3 border-b-2 border-[#1b365d] pb-1.5 mb-1.5 print-keep">
-              <div>
-                <div class="text-[10px] font-bold uppercase tracking-wider text-[#b3122b]">The Salvation Army · Butler, PA · Community Meals KMS</div>
-                <div class="text-sm font-extrabold">BLIND PHYSICAL INVENTORY SHEET — <span class="underline">${esc(z.toUpperCase())}</span></div>
+          <div class="sa-print-shell w-full overflow-hidden" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
+            <div class="sa-print-banner flex items-center justify-between gap-3 print-keep">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-md bg-[#b3122b] text-white flex items-center justify-center font-black text-sm shrink-0">SA</div>
+                <div>
+                  <div class="sa-sub text-[9.5px] font-extrabold uppercase tracking-wider text-[#b3122b]">The Salvation Army &bull; Butler, PA &bull; Community Meals KMS</div>
+                  <div class="sa-title text-sm font-black text-[#1b365d]">BLIND PHYSICAL INVENTORY SHEET — <span class="underline">${esc(z.toUpperCase())}</span></div>
+                </div>
               </div>
-              <div class="text-right text-[11px] font-semibold">
-                Page ${zIdx + 1} of ${zonesToPrint.length} &bull; 30 Lines
+              <div class="sa-meta text-right text-[10px] font-bold text-slate-700">
+                <div>Page ${zIdx + 1} of ${zonesToPrint.length} &bull; 30 Lines</div>
+                <div class="font-normal text-slate-500">313 W. Cunningham St.</div>
               </div>
             </div>
-            <div class="grid grid-cols-3 gap-3 text-[11px] font-semibold mb-2 print-keep">
-              <div class="border-b border-slate-500 pb-0.5">Date:</div>
-              <div class="border-b border-slate-500 pb-0.5">Counted By:</div>
-              <div class="border-b border-slate-500 pb-0.5">Verified By:</div>
-            </div>
-            <table class="w-full text-left border-collapse border border-slate-400" style="font-size: 9.5pt; table-layout: fixed;">
-              <thead>
-                <tr class="bg-[#1b365d] text-white uppercase" style="font-size: 8.5pt;">
-                  <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 6%;">#</th>
-                  <th class="border border-slate-400 py-1 px-2" style="width: 48%;">Item Name / Description</th>
-                  <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 14%;">Unit</th>
-                  <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 14%;">Counted Qty</th>
-                  <th class="border border-slate-400 py-1 px-2" style="width: 18%;">Notes / Exp.</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${blankLines.map(num => `
-                  <tr style="height: 24px;">
-                    <td class="border border-slate-400 px-1 text-center font-mono font-bold text-slate-600">${num}</td>
-                    <td class="border border-slate-400 px-2"></td>
-                    <td class="border border-slate-400 px-1.5"></td>
-                    <td class="border border-slate-400 px-1.5"></td>
-                    <td class="border border-slate-400 px-2"></td>
+            <div class="p-2.5 bg-white">
+              <div class="grid grid-cols-3 gap-3 text-[10.5px] font-bold text-[#1b365d] mb-2 print-keep">
+                <div class="border-b border-slate-400 pb-0.5">Date:</div>
+                <div class="border-b border-slate-400 pb-0.5">Counted By:</div>
+                <div class="border-b border-slate-400 pb-0.5">Verified By:</div>
+              </div>
+              <table class="w-full text-left border-collapse border border-slate-400" style="font-size: 9pt; table-layout: fixed;">
+                <thead>
+                  <tr class="bg-[#1b365d] text-white uppercase" style="font-size: 8pt;">
+                    <th class="border border-slate-400 py-1 px-1 text-center" style="width: 6%;">#</th>
+                    <th class="border border-slate-400 py-1 px-2" style="width: 48%;">Item Name / Description</th>
+                    <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 14%;">Unit</th>
+                    <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 14%;">Counted Qty</th>
+                    <th class="border border-slate-400 py-1 px-2" style="width: 18%;">Notes / Exp.</th>
                   </tr>
-                `).join('')}
+                </thead>
+                <tbody>
+                  ${blankLines.map((num, idx) => `
+                    <tr class="${idx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'}" style="height: 21px;">
+                      <td class="border border-slate-300 px-1 text-center font-mono font-bold text-slate-600">${num}</td>
+                      <td class="border border-slate-300 px-2"></td>
+                      <td class="border border-slate-300 px-1.5"></td>
+                      <td class="border border-slate-300 px-1.5"></td>
+                      <td class="border border-slate-300 px-2"></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `).join('')}
               </tbody>
             </table>
           </div>
