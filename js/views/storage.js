@@ -60,7 +60,7 @@ export function renderStorage(main) {
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div>
-              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; ServSafe 7-Day Rule</div>
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; ServSafe 7-Day Rule</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight">FIFO Date-Label &amp; Shelf-Life Tracking Log — ${dLabel(today)}</h2>
             </div>
           </div>

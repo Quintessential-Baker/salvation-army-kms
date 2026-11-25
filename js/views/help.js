@@ -498,7 +498,7 @@ export function showDiagnosticModal() {
     <div class="space-y-3 text-xs">
       <div class="p-3.5 rounded-xl border ${rep.allPassed ? 'border-emerald-500 bg-emerald-50/60' : 'border-amber-500 bg-amber-50/60'} flex flex-wrap items-center justify-between gap-2 print-keep">
         <div>
-          <div class="text-[11px] font-bold uppercase opacity-70">The Salvation Army · Butler, PA · Community Meals KMS</div>
+          <div class="text-[11px] font-bold uppercase opacity-70">Community Kitchen KMS · Community Meals KMS</div>
           <div class="text-base font-extrabold mt-0.5">${rep.allPassed ? 'ALL SYSTEMS VERIFIED & PASSED' : 'DIAGNOSTIC COMPLETED WITH WARNINGS'} (${rep.passedCount}/${rep.totalCount})</div>
           <div class="opacity-80 mt-0.5">Verified by <strong>${esc(rep.tester)}</strong> on <strong>${esc(rep.timestamp)}</strong> &bull; Non-destructive sandbox (live data untouched)</div>
         </div>
@@ -557,7 +557,7 @@ export function renderHelp(main) {
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div class="min-w-0">
-              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Training &amp; System Health</div>
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Training &amp; System Health</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Staff Onboarding, Role Guides &amp; Self-Test Diagnostics</h2>
               <div class="text-xs text-white/85 mt-0.5">Launch the interactive guided tour, review role workflows, or run the 14-point system self-test.</div>
             </div>

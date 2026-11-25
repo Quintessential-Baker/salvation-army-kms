@@ -45,7 +45,7 @@ export function renderRecords(main) {
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div class="min-w-0">
-              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Physical Inventory Audit</div>
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Physical Inventory Audit</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Blind Physical Inventory Count (30-Line Blank Form)</h2>
               <div class="text-xs text-white/85 mt-0.5">Select a storage section to print a 1-page 30-line blank sheet or reconcile shelf counts into Living Stock.</div>
             </div>

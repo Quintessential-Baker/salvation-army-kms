@@ -1,6 +1,6 @@
 // js/views/users.js — Team Roster, PIN Resets, Announcements Admin & Accountability Feed
 
-import { localDateStr, esc, formatRepeatLabel } from '../utils.js';
+import { localDateStr, esc, formatRepeatLabel , applyOrgTheme } from '../utils.js';
 import {
   state, getActiveUser, ROLE_RANK, normalizeRole, sortUsersByRoleAndName,
   isAdminRole, canManageUserAccount, isMgmtOrHigher, getAutoHolidayAndOrderAnnouncements
@@ -18,12 +18,70 @@ export function renderUsers(main) {
 
   main.innerHTML = `
     <div class="space-y-4">
+
+      <!-- White-Label Organization & Branding Customizer -->
+      <div class="kms-card p-4 space-y-3 border-t-4 border-t-[var(--sa-navy)]">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
+          <div>
+            <h3 class="text-sm font-extrabold">Organization Branding &amp; White-Label Customization</h3>
+            <p class="text-xs opacity-75">Personalize organization identity, colors, schedule, and export/import turnkey client profiles.</p>
+          </div>
+          <div class="flex gap-1.5">
+            <button type="button" id="btn-export-org-profile" class="kms-btn-alt px-3 py-1.5 text-xs">Export Profile (.json)</button>
+            <label class="kms-btn-alt px-3 py-1.5 text-xs cursor-pointer">Import Profile<input type="file" id="inp-import-org-profile" accept=".json" class="hidden" /></label>
+          </div>
+        </div>
+        <form id="form-org-branding" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          <label class="font-bold">Organization Name
+            <input name="orgName" value="${esc((state.orgConfig && state.orgConfig.orgName) || 'Community Kitchen KMS')}" required class="kms-input w-full mt-1" />
+          </label>
+          <label class="font-bold">Location / Program Subtitle
+            <input name="orgSubtitle" value="${esc((state.orgConfig && state.orgConfig.orgSubtitle) || 'Meal & Pantry Operations')}" class="kms-input w-full mt-1" />
+          </label>
+          <label class="font-bold">Street Address (Receipts &amp; Menus)
+            <input name="orgAddress" value="${esc((state.orgConfig && state.orgConfig.orgAddress) || '')}" class="kms-input w-full mt-1" />
+          </label>
+          <label class="font-bold">Shield / Badge Initials (2–3 chars)
+            <input name="badgeText" maxlength="3" value="${esc((state.orgConfig && state.orgConfig.badgeText) || 'CK')}" class="kms-input w-full mt-1 uppercase" />
+          </label>
+          <label class="font-bold">Custom Logo URL (Optional)
+            <input name="logoUrl" placeholder="https://..." value="${esc((state.orgConfig && state.orgConfig.logoUrl) || '')}" class="kms-input w-full mt-1" />
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="font-bold">Primary Header
+              <input type="color" name="primaryColor" value="${esc((state.orgConfig && state.orgConfig.primaryColor) || '#1b365d')}" class="w-full h-9 mt-1 rounded cursor-pointer border border-[var(--line)]" />
+            </label>
+            <label class="font-bold">Accent Color
+              <input type="color" name="accentColor" value="${esc((state.orgConfig && state.orgConfig.accentColor) || '#b3122b')}" class="w-full h-9 mt-1 rounded cursor-pointer border border-[var(--line)]" />
+            </label>
+          </div>
+          <label class="font-bold">Service Days
+            <input name="serviceDays" value="${esc((state.orgConfig && state.orgConfig.serviceDays) || 'Mon / Tue / Wed / Fri')}" class="kms-input w-full mt-1" />
+          </label>
+          <label class="font-bold">Service Hours
+            <input name="serviceHours" value="${esc((state.orgConfig && state.orgConfig.serviceHours) || '11:30 AM – 12:30 PM')}" class="kms-input w-full mt-1" />
+          </label>
+          <label class="font-bold">Recipe Portion Presets (comma-separated)
+            <input name="portionPresets" value="${esc(((state.orgConfig && state.orgConfig.portionPresets) || [40,50,60,70,80]).join(', '))}" class="kms-input w-full mt-1" />
+          </label>
+          <div class="sm:col-span-2 lg:col-span-3 flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" data-theme-preset="#1b365d,#b3122b" class="kms-btn-alt px-2.5 py-1 text-[11px]">Classic Navy &amp; Crimson</button>
+              <button type="button" data-theme-preset="#14532d,#d97706" class="kms-btn-alt px-2.5 py-1 text-[11px]">Forest &amp; Gold</button>
+              <button type="button" data-theme-preset="#1e293b,#0284c7" class="kms-btn-alt px-2.5 py-1 text-[11px]">Slate &amp; Cobalt</button>
+              <button type="button" data-theme-preset="#4c1d95,#db2777" class="kms-btn-alt px-2.5 py-1 text-[11px]">Royal &amp; Berry</button>
+            </div>
+            <button type="submit" class="kms-btn-primary px-4 py-2 text-xs">Save Branding &amp; Apply Theme</button>
+          </div>
+        </form>
+      </div>
+
       <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
         <div class="sa-hero-banner px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div class="min-w-0">
-              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Team &amp; Accountability</div>
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Team &amp; Accountability</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Users, Announcements &amp; Activity Audit Log</h2>
               <div class="text-xs text-white/85 mt-0.5">Manage volunteer/staff roles and PINs, post shift alerts, and review system audit history.</div>
             </div>

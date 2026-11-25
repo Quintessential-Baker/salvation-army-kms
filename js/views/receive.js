@@ -14,7 +14,7 @@ export function showDonationTaxReceiptModal(donId) {
           <div>
             <div class="font-extrabold text-base text-[#1b365d]">THE SALVATION ARMY</div>
             <div class="font-bold">Butler Worship &amp; Service Center · Community Meals Program</div>
-            <div class="opacity-80">313 West Cunningham Street · Butler, PA 16001</div>
+            <div class="opacity-80">123 Main Street, Suite 100reet · Butler, PA 16001</div>
             <div class="opacity-75 text-[11px]">501(c)(3) Non-Profit Religious &amp; Charitable Organization</div>
           </div>
           <div class="text-right">
@@ -98,7 +98,7 @@ export function renderReceive(main) {
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div class="min-w-0">
-              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Receiving &amp; Donor Stewardship</div>
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Receiving &amp; Donor Stewardship</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">PO Check-In &amp; In-Kind Food Donations</h2>
               <div class="text-xs text-white/85 mt-0.5">Verify incoming vendor deliveries into Living Stock and issue IRS 501(c)(3) donation receipts.</div>
             </div>

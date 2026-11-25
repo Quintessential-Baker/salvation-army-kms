@@ -372,3 +372,30 @@ export function askConfirm(title, message, onConfirm) {
   document.getElementById('cf-cancel').onclick = closeModal;
   document.getElementById('cf-yes').onclick = () => { closeModal(); onConfirm(); };
 }
+export function applyOrgTheme(cfg = {}) {
+  const root = document.documentElement;
+  const primary = cfg.primaryColor || '#1b365d';
+  const accent = cfg.accentColor || '#b3122b';
+  root.style.setProperty('--sa-navy', primary);
+  root.style.setProperty('--sa-red', accent);
+  if (cfg.orgName) {
+    document.title = cfg.orgName + ' — Kitchen Management System';
+    const h1 = document.querySelector('header h1');
+    if (h1) h1.textContent = cfg.orgName;
+  }
+  const sub = document.querySelector('header p');
+  if (sub && cfg.orgSubtitle) {
+    const userSpan = document.getElementById('hdr-user');
+    const userTxt = userSpan ? userSpan.textContent : 'Signed out';
+    sub.innerHTML = esc(cfg.orgSubtitle) + ' · <span id="hdr-user">' + esc(userTxt) + '</span>';
+  }
+  const badge = document.querySelector('header .bg-\[\#b3122b\], header .sa-shield-badge');
+  if (badge) {
+    badge.style.backgroundColor = accent;
+    badge.innerHTML = cfg.logoUrl
+      ? '<img src="' + esc(cfg.logoUrl) + '" alt="Logo" class="w-full h-full object-contain rounded" />'
+      : esc(cfg.badgeText || 'CK');
+  }
+  const hdr = document.querySelector('header');
+  if (hdr) hdr.style.backgroundColor = primary;
+}

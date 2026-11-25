@@ -1,3 +1,17 @@
+export const DEFAULT_ORG_CONFIG = {
+  orgName: 'Community Kitchen KMS',
+  orgSubtitle: 'Meal & Pantry Operations',
+  orgAddress: '123 Main Street, Suite 100',
+  badgeText: 'CK',
+  logoUrl: '',
+  primaryColor: '#1b365d',
+  accentColor: '#b3122b',
+  serviceDays: 'Mon / Tue / Wed / Fri',
+  serviceHours: '11:30 AM – 12:30 PM',
+  portionPresets: [40, 50, 60, 70, 80],
+  storageZones: ['Walk-In Cooler', 'Walk-In Freezer', 'Dry Stockroom', 'Kitchen Cooler', 'Kitchen Freezer', 'Kitchen Dry Goods']
+};
+
 // js/state.js — Core State, Seed Data, RBAC, Forecasting, PIN Security & Supabase Cloud Sync
 
 import {

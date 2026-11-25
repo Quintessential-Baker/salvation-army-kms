@@ -210,7 +210,7 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
           </tbody>
         </table>
         <div class="text-[11px] opacity-80 pt-1 flex flex-wrap justify-between gap-2 print-keep">
-          <span><strong>The Salvation Army · 313 W. Cunningham St., Butler, PA</strong> &bull; Free Hot Lunch: Mon/Tue/Wed/Fri (11:30 AM – 12:30 PM)</span>
+          <span><strong>The Salvation Army · 123 Main Street, Suite 100</strong> &bull; Free Hot Lunch: Mon/Tue/Wed/Fri (11:30 AM – 12:30 PM)</span>
           <span>Daily Salad Bar included with every lunch service</span>
         </div>
       </div>
@@ -239,12 +239,12 @@ export function showMenuPrintSuiteModal(initialPeriod, initialRefDate) {
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div>
-              <div class="sa-sub text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Community Meals KMS</div>
+              <div class="sa-sub text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Community Meals KMS</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight">${esc(subtitle)}</h2>
             </div>
           </div>
           <div class="sa-meta text-right text-[11px] text-white/90">
-            <div class="font-bold">313 West Cunningham St. &bull; Butler, PA</div>
+            <div class="font-bold">123 Main Street, Suite 100 &bull; Butler, PA</div>
             <div>Community Meals &amp; Outreach Program</div>
           </div>
         </div>
@@ -421,7 +421,7 @@ export function renderMenu(main) {
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div class="min-w-0">
-              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Menu Planning &amp; Service Log</div>
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Menu Planning &amp; Service Log</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Community Meals Menu &amp; Attendance Tracker</h2>
               <div class="text-xs text-white/85 mt-0.5">Plan Mon/Tue/Wed/Fri hot lunches, log actual served portions, and print Daily, 7-Day Weekly, or Monthly menus.</div>
             </div>

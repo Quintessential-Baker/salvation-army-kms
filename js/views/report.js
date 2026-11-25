@@ -125,7 +125,7 @@ export function renderReport(main) {
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div>
-              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler Worship &amp; Service Center &bull; Management Report</div>
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Management Report</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight">Executive, Funding &amp; Donation Report — ${esc(periodLabel)}</h2>
             </div>
           </div>
@@ -136,7 +136,7 @@ export function renderReport(main) {
           </div>
         </div>
         <div class="p-3 kms-card rounded-none border-0 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span class="opacity-80">313 West Cunningham St., Butler, PA &bull; Community Meals Program &bull; Generated ${esc(today)}</span>
+          <span class="opacity-80">123 Main Street, Suite 100 &bull; Community Meals Program &bull; Generated ${esc(today)}</span>
           <div class="flex flex-wrap items-center gap-1.5 no-print">
             ${[['month', 'By Month'], ['30d', 'Last 30 Days'], ['90d', 'Last 90 Days'], ['ytd', 'Year-to-Date'], ['365d', 'Last 12 Months']].map(([k, lbl]) => `
               <button type="button" data-rep-range="${k}" class="px-2.5 py-1 rounded-lg border font-semibold ${rangeMode === k ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">${lbl}</button>

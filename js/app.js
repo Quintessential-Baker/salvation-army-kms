@@ -7,7 +7,7 @@ import {
   parseFlexibleDate, allMonTueWedFriBetween, serviceDaysBetween,
   isAnnouncementActiveToday, nowStamp, uid, esc, fmtNum,
   showToast, openModal, closeModal, askConfirm
-, formatKitchenAmt } from './utils.js';
+, formatKitchenAmt , applyOrgTheme } from './utils.js';
 
 import {
   STORAGE_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, WEAK_PINS,
@@ -90,7 +90,7 @@ document.addEventListener('click', (e) => {
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
                 <div class="min-w-0">
-                  <div class="sa-sub text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Standardized Recipe Card</div>
+                  <div class="sa-sub text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Standardized Recipe Card</div>
                   <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">${esc(rNorm.name)}</h2>
                   <div class="sa-meta text-[11px] text-white/90 mt-0.5">
                     Category: <strong>${esc(rNorm.category || 'Main')}</strong> &bull;
@@ -1522,7 +1522,7 @@ document.addEventListener('click', (e) => {
             <div class="flex items-center gap-3 min-w-0">
               <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
               <div class="min-w-0">
-                <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Standardized Recipe Card</div>
+                <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Standardized Recipe Card</div>
                 <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">${esc(rNorm.name)}</h2>
                 <div class="text-[11px] text-white/90 mt-0.5">
                   Category: <strong>${esc(rNorm.category || 'Main')}</strong> &bull;
@@ -1953,13 +1953,13 @@ document.addEventListener('click', (e) => {
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-md bg-[#b3122b] text-white flex items-center justify-center font-black text-sm shrink-0">SA</div>
                 <div>
-                  <div class="sa-sub text-[9.5px] font-extrabold uppercase tracking-wider text-[#b3122b]">The Salvation Army &bull; Butler, PA &bull; Community Meals KMS</div>
+                  <div class="sa-sub text-[9.5px] font-extrabold uppercase tracking-wider text-[#b3122b]">Community Kitchen KMS &bull; Community Meals KMS</div>
                   <div class="sa-title text-sm font-black text-[#1b365d]">BLIND PHYSICAL INVENTORY SHEET — <span class="underline">${esc(z.toUpperCase())}</span></div>
                 </div>
               </div>
               <div class="sa-meta text-right text-[10px] font-bold text-slate-700">
                 <div>Page ${zIdx + 1} of ${zonesToPrint.length} &bull; 30 Lines</div>
-                <div class="font-normal text-slate-500">313 W. Cunningham St.</div>
+                <div class="font-normal text-slate-500">123 Main Street, Suite 100</div>
               </div>
             </div>
             <div class="p-2.5 bg-white">
@@ -2859,6 +2859,32 @@ document.addEventListener('change', (e) => {
 
 // Global Form Submit Listener
 document.addEventListener('submit', (e) => {
+
+  if (e.target.id === 'form-org-branding') {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const presets = String(fd.get('portionPresets') || '40,50,60,70,80')
+      .split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+    state.orgConfig = {
+      ...(state.orgConfig || {}),
+      orgName: String(fd.get('orgName') || 'Community Kitchen KMS').trim(),
+      orgSubtitle: String(fd.get('orgSubtitle') || '').trim(),
+      orgAddress: String(fd.get('orgAddress') || '').trim(),
+      badgeText: String(fd.get('badgeText') || 'CK').trim().toUpperCase(),
+      logoUrl: String(fd.get('logoUrl') || '').trim(),
+      primaryColor: String(fd.get('primaryColor') || '#1b365d'),
+      accentColor: String(fd.get('accentColor') || '#b3122b'),
+      serviceDays: String(fd.get('serviceDays') || '').trim(),
+      serviceHours: String(fd.get('serviceHours') || '').trim(),
+      portionPresets: presets.length ? presets : [40, 50, 60, 70, 80]
+    };
+    saveState();
+    applyOrgTheme(state.orgConfig);
+    showToast('Organization branding saved & applied!');
+    render();
+    return;
+  }
+
   e.preventDefault();
   if (state.isLocked && e.target.id !== 'form-unlock') return;
   const fd = new FormData(e.target);
