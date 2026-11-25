@@ -1726,7 +1726,7 @@ document.addEventListener('click', (e) => {
   }
   if (e.target.id === 'btn-clear-blind-draft') {
     askConfirm('Clear Blind Count Draft', 'Clear all unsubmitted physical count entries?', () => {
-      state.blindDraft = { zone: (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0], mode: (state.blindDraft && state.blindDraft.mode) || 'live', search: '', revealed: false, counts: {} };
+      state.blindDraft = { zone: (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0], mode: (state.blindDraft && state.blindDraft.mode) || 'blank30', search: '', revealed: false, counts: {}, blankRowsByZone: {} };
       saveState();
       render();
       showToast('Blind count draft cleared');
@@ -1735,66 +1735,92 @@ document.addEventListener('click', (e) => {
   }
   if (e.target.id === 'btn-print-blind-sheet') {
     const zone = (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0];
-    const list = state.items.filter(x => !x.discontinued && (zone === 'ALL' || x.location === zone));
+    const zonesToPrint = zone === 'ALL' ? LOCATIONS : [zone];
+    const blankLines = Array.from({ length: 30 }, (_, idx) => idx + 1);
     document.body.classList.add('printing-modal');
-    openModal(`Printable Hard-Copy Blind Count Sheet — ${zone === 'ALL' ? 'All Sections' : zone}`, `
-      <div class="space-y-3 text-xs">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 print-keep">
-          <div>
-            <div class="font-bold text-sm">The Salvation Army · Butler, PA — Blind Shelf Count</div>
-            <div class="opacity-75">Section: <strong>${esc(zone === 'ALL' ? 'All Sections' : zone)}</strong> &bull; Date: ______________ &bull; Counter: ______________________</div>
-          </div>
-          <button type="button" onclick="window.print()" class="kms-btn-navy px-3.5 py-1.5 text-xs no-print">Print Hard-Copy Sheet (Letter)</button>
+    openModal(`Printable Blank 30-Line Blind Count Sheet — ${zone === 'ALL' ? 'All Sections (30 Lines Each)' : zone}`, `
+      <div class="space-y-5 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 no-print">
+          <div class="opacity-80">Prints <strong>30 numbered blank lines</strong> per section on Letter paper so shelf counts are 100% unbiased.</div>
+          <button type="button" onclick="window.print()" class="kms-btn-navy px-3.5 py-1.5 text-xs font-semibold">Print Blank 30-Line Sheet(s)</button>
         </div>
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
-              <th class="py-1.5 px-2">SKU</th>
-              <th class="py-1.5 px-2">Item Name</th>
-              <th class="py-1.5 px-2">Section</th>
-              <th class="py-1.5 px-2">Unit</th>
-              <th class="py-1.5 px-2 text-right">Physical Count</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-[var(--line)]">
-            ${list.map(x => `
-              <tr>
-                <td class="py-1.5 px-2 font-mono">${esc(x.sku)}</td>
-                <td class="py-1.5 px-2 font-semibold">${esc(x.name)}</td>
-                <td class="py-1.5 px-2 opacity-75">${esc(x.location)}</td>
-                <td class="py-1.5 px-2">${esc(normStockUnit(x.unit))}</td>
-                <td class="py-1.5 px-2 text-right font-mono">____________</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+        ${zonesToPrint.map((z, zIdx) => `
+          <div class="${zIdx > 0 ? 'pt-4 border-t-2 border-dashed border-[var(--line)]' : ''}" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 mb-2 print-keep">
+              <div>
+                <div class="font-bold text-sm">The Salvation Army · Butler, PA — Blank Blind Inventory Sheet (30 Lines)</div>
+                <div class="opacity-85 mt-0.5">Section: <strong>${esc(z)}</strong> &bull; Date: ________________ &bull; Counter: ______________________ &bull; Verified By: ________________</div>
+              </div>
+            </div>
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                  <th class="py-1 px-2 w-10">#</th>
+                  <th class="py-1 px-2">Item Name / Description</th>
+                  <th class="py-1 px-2 w-28">Unit</th>
+                  <th class="py-1 px-2 w-28 text-right">Counted Qty</th>
+                  <th class="py-1 px-2 w-32">Notes / Exp.</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--line)]">
+                ${blankLines.map(num => `
+                  <tr>
+                    <td class="py-1.5 px-2 font-mono font-bold opacity-70">${num}</td>
+                    <td class="py-1.5 px-2">__________________________________________</td>
+                    <td class="py-1.5 px-2">____________</td>
+                    <td class="py-1.5 px-2 text-right font-mono">____________</td>
+                    <td class="py-1.5 px-2">______________</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('')}
       </div>
     `);
     return;
   }
   if (e.target.id === 'btn-review-blind') {
-    const counts = (state.blindDraft && state.blindDraft.counts) || {};
+    const mode = (state.blindDraft && state.blindDraft.mode) || 'blank30';
     const rows = [];
-    state.items.filter(i => !i.discontinued).forEach(x => {
-      const val = counts[x.id];
-      if (val === undefined || val === '') return;
-      const phys = parseFloat(val);
-      if (isNaN(phys) || phys < 0) return;
-      const diff = Math.round((phys - x.on_hand) * 100) / 100;
-      rows.push({ id: x.id, name: x.name, location: x.location, unit: normStockUnit(x.unit), sys: x.on_hand, phys, diff });
-    });
-    if (!rows.length) { showToast('Enter at least one counted amount first', 'warn'); return; }
+    if (mode === 'blank30') {
+      const byZone = (state.blindDraft && state.blindDraft.blankRowsByZone) || {};
+      Object.entries(byZone).forEach(([zName, zRows]) => {
+        (zRows || []).forEach(r => {
+          if (!r || !r.name.trim() || r.qty === '' || r.qty === undefined) return;
+          const phys = parseFloat(r.qty);
+          if (isNaN(phys) || phys < 0) return;
+          const qName = r.name.trim().toLowerCase();
+          const match = state.items.find(i => !i.discontinued && i.location === zName && i.name.trim().toLowerCase() === qName) ||
+                        state.items.find(i => !i.discontinued && i.name.trim().toLowerCase() === qName);
+          const sys = match ? match.on_hand : 0;
+          const unit = normStockUnit(r.unit.trim() || (match ? match.unit : 'cases'));
+          const diff = Math.round((phys - sys) * 100) / 100;
+          rows.push({ id: match ? match.id : null, isNew: !match, name: match ? match.name : r.name.trim(), location: zName, unit, sys, phys, diff });
+        });
+      });
+    } else {
+      const counts = (state.blindDraft && state.blindDraft.counts) || {};
+      state.items.filter(i => !i.discontinued).forEach(x => {
+        const val = counts[x.id];
+        if (val === undefined || val === '') return;
+        const phys = parseFloat(val);
+        if (isNaN(phys) || phys < 0) return;
+        const diff = Math.round((phys - x.on_hand) * 100) / 100;
+        rows.push({ id: x.id, isNew: false, name: x.name, location: x.location, unit: normStockUnit(x.unit), sys: x.on_hand, phys, diff });
+      });
+    }
+    if (!rows.length) { showToast('Enter at least one counted item and quantity first', 'warn'); return; }
     const varCount = rows.filter(r => r.diff !== 0).length;
     openModal(`Review & Reconcile Blind Count (${rows.length} Items)`, `
       <div class="space-y-3 text-xs">
         <div class="p-3 rounded-lg bg-black/5 border border-[var(--line)] flex flex-wrap items-center justify-between gap-2">
           <div>
-            <div class="font-bold text-sm">Variance Check Before Updating Living Stock</div>
-            <div class="opacity-75"><strong>${rows.length}</strong> item(s) counted &bull; <strong>${varCount}</strong> variance(s) detected</div>
+            <strong>${rows.length}</strong> item(s) counted &bull; <strong>${varCount}</strong> variance(s) detected against Living Stock.
           </div>
-          <span class="tag ${varCount === 0 ? 'tag-OK' : 'tag-LOW'}">${varCount === 0 ? 'EXACT MATCH' : varCount + ' VARIANCE(S)'}</span>
+          <span class="tag ${varCount ? 'tag-LOW' : 'tag-OK'}">${varCount ? `${varCount} Variance(s)` : '100% Match'}</span>
         </div>
-        <div class="max-h-72 overflow-y-auto border border-[var(--line)] rounded-lg">
+        <div class="overflow-x-auto max-h-80 border border-[var(--line)] rounded-lg">
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
@@ -1808,7 +1834,7 @@ document.addEventListener('click', (e) => {
             <tbody class="divide-y divide-[var(--line)]">
               ${rows.map(r => `
                 <tr>
-                  <td class="p-2 font-bold">${esc(r.name)} <span class="opacity-60 font-normal">(${esc(r.location)})</span></td>
+                  <td class="p-2 font-bold">${esc(r.name)} <span class="opacity-60 font-normal">(${esc(r.location)})</span> ${r.isNew ? '<span class="tag tag-OK ml-1">NEW ITEM</span>' : ''}</td>
                   <td class="p-2">${esc(r.unit)}</td>
                   <td class="p-2 text-right opacity-75">${fmtNum(r.sys)}</td>
                   <td class="p-2 text-right font-bold">${fmtNum(r.phys)}</td>
@@ -1827,24 +1853,63 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (e.target.id === 'btn-commit-blind') {
-    const counts = (state.blindDraft && state.blindDraft.counts) || {};
-    const zone = (state.blindDraft && state.blindDraft.zone) || 'ALL';
+    const mode = (state.blindDraft && state.blindDraft.mode) || 'blank30';
+    const zone = (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0];
     const rows = [];
     snapUndo();
-    state.items.filter(i => !i.discontinued).forEach(x => {
-      const val = counts[x.id];
-      if (val === undefined || val === '') return;
-      const phys = parseFloat(val);
-      if (isNaN(phys) || phys < 0) return;
-      const cleanU = normStockUnit(x.unit);
-      x.unit = cleanU;
-      x.pack_label = cleanU;
-      rows.push({ name: x.name, unit: cleanU, sys: x.on_hand, phys });
-      x.on_hand = Math.round(phys * 100) / 100;
-    });
+    if (mode === 'blank30') {
+      const byZone = (state.blindDraft && state.blindDraft.blankRowsByZone) || {};
+      Object.entries(byZone).forEach(([zName, zRows]) => {
+        (zRows || []).forEach(r => {
+          if (!r || !r.name.trim() || r.qty === '' || r.qty === undefined) return;
+          const phys = parseFloat(r.qty);
+          if (isNaN(phys) || phys < 0) return;
+          const qName = r.name.trim().toLowerCase();
+          let item = state.items.find(i => !i.discontinued && i.location === zName && i.name.trim().toLowerCase() === qName) ||
+                     state.items.find(i => !i.discontinued && i.name.trim().toLowerCase() === qName);
+          const cleanU = normStockUnit(r.unit.trim() || (item ? item.unit : 'cases'));
+          if (item) {
+            rows.push({ name: item.name, unit: cleanU, sys: item.on_hand, phys });
+            item.unit = cleanU;
+            item.pack_label = cleanU;
+            item.on_hand = Math.round(phys * 100) / 100;
+          } else {
+            const newId = uid('item');
+            const skuPrefix = zName.includes('cooler') ? 'CLR' : zName.includes('freezer') ? 'FRZ' : 'STK';
+            const newItem = {
+              id: newId,
+              sku: `${skuPrefix}-${Math.floor(200 + Math.random() * 799)}`,
+              name: r.name.trim(),
+              location: zName,
+              unit: cleanU,
+              pack_label: cleanU,
+              on_hand: Math.round(phys * 100) / 100,
+              par: Math.max(1, Math.ceil(phys)),
+              cadence: 'M',
+              unit_cost: 0
+            };
+            state.items.push(newItem);
+            rows.push({ name: newItem.name, unit: cleanU, sys: 0, phys });
+          }
+        });
+      });
+    } else {
+      const counts = (state.blindDraft && state.blindDraft.counts) || {};
+      state.items.filter(i => !i.discontinued).forEach(x => {
+        const val = counts[x.id];
+        if (val === undefined || val === '') return;
+        const phys = parseFloat(val);
+        if (isNaN(phys) || phys < 0) return;
+        const cleanU = normStockUnit(x.unit);
+        x.unit = cleanU;
+        x.pack_label = cleanU;
+        rows.push({ name: x.name, unit: cleanU, sys: x.on_hand, phys });
+        x.on_hand = Math.round(phys * 100) / 100;
+      });
+    }
     if (!rows.length) { closeModal(); return; }
     state.blindAudits.unshift({ id: uid('aud'), audit_date: localDateStr(), auditor: getActiveUser().name, zone, rows });
-    state.blindDraft = { zone, mode: (state.blindDraft && state.blindDraft.mode) || 'live', search: '', revealed: false, counts: {} };
+    state.blindDraft = { zone, mode, search: '', revealed: false, counts: {}, blankRowsByZone: {} };
     logActivity('BLIND COUNT', `Reconciled ${rows.length} item(s) in ${zone}`);
     closeModal();
     saveState();
@@ -2349,6 +2414,24 @@ document.addEventListener('input', (e) => {
   if (e.target.matches('[data-blind-id]')) {
     if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
     state.blindDraft.counts[e.target.dataset.blindId] = e.target.value;
+    saveState();
+    return;
+  }
+  if (e.target.matches('[data-blank-row]')) {
+    const [zName, idxStr, field] = e.target.dataset.blankRow.split(':');
+    const idx = Number(idxStr);
+    if (!state.blindDraft) state.blindDraft = { zone: zName, mode: 'blank30', search: '', revealed: false, counts: {}, blankRowsByZone: {} };
+    if (!state.blindDraft.blankRowsByZone) state.blindDraft.blankRowsByZone = {};
+    if (!Array.isArray(state.blindDraft.blankRowsByZone[zName])) {
+      state.blindDraft.blankRowsByZone[zName] = Array.from({ length: 30 }, () => ({ name: '', unit: '', qty: '' }));
+    }
+    state.blindDraft.blankRowsByZone[zName][idx][field] = e.target.value;
+    if (field === 'name') {
+      const m = state.items.find(i => !i.discontinued && i.name.trim().toLowerCase() === e.target.value.trim().toLowerCase());
+      if (m && !state.blindDraft.blankRowsByZone[zName][idx].unit) {
+        state.blindDraft.blankRowsByZone[zName][idx].unit = normStockUnit(m.unit);
+      }
+    }
     saveState();
     return;
   }

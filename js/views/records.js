@@ -1,24 +1,41 @@
-// js/views/records.js — Section Blind Physical Count, Waste & System Backups
+// js/views/records.js — Section Blank 30-Line Blind Count, Waste & System Backups
 
 import { LOCATIONS, normStockUnit, dLabel, esc } from '../utils.js';
 import { state } from '../state.js';
 
+function ensureBlankRows(draft, zone) {
+  if (!draft.blankRowsByZone) draft.blankRowsByZone = {};
+  if (!Array.isArray(draft.blankRowsByZone[zone]) || draft.blankRowsByZone[zone].length < 30) {
+    const existing = Array.isArray(draft.blankRowsByZone[zone]) ? draft.blankRowsByZone[zone] : [];
+    draft.blankRowsByZone[zone] = Array.from({ length: 30 }, (_, idx) => existing[idx] || { name: '', unit: '', qty: '' });
+  }
+  return draft.blankRowsByZone[zone];
+}
+
 export function renderRecords(main) {
   const activeItems = state.items.filter(i => !i.discontinued);
   const opts = activeItems.map(i => `<option value="${i.id}">${esc(i.name)} (${esc(normStockUnit(i.unit))})</option>`).join('');
-  if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'live', search: '', revealed: false, counts: {} };
+  if (!state.blindDraft) state.blindDraft = { zone: LOCATIONS[0], mode: 'blank30', search: '', revealed: false, counts: {}, blankRowsByZone: {} };
   const draft = state.blindDraft;
   const selZone = draft.zone || LOCATIONS[0];
-  const mode = draft.mode || 'live';
+  const mode = draft.mode || 'blank30';
   const bSearch = (draft.search || '').trim().toLowerCase();
   const counts = draft.counts || {};
   const lastAudit = state.blindAudits[0];
+
+  const activeBlankZone = selZone === 'ALL' ? LOCATIONS[0] : selZone;
+  const blankRows = ensureBlankRows(draft, activeBlankZone);
+  const blankEnteredCount = Object.values(draft.blankRowsByZone || {}).reduce(
+    (sum, rows) => sum + (Array.isArray(rows) ? rows.filter(r => r && r.name.trim() && r.qty !== '' && r.qty !== undefined).length : 0),
+    0
+  );
 
   const sectionItems = activeItems.filter(x =>
     (selZone === 'ALL' || x.location === selZone) &&
     (!bSearch || x.name.toLowerCase().includes(bSearch) || x.sku.toLowerCase().includes(bSearch))
   );
-  const totalEntered = Object.keys(counts).filter(k => counts[k] !== '' && counts[k] !== undefined && activeItems.some(i => i.id === k)).length;
+  const catalogEntered = Object.keys(counts).filter(k => counts[k] !== '' && counts[k] !== undefined && activeItems.some(i => i.id === k)).length;
+  const totalEntered = mode === 'blank30' ? blankEnteredCount : catalogEntered;
 
   main.innerHTML = `
     <div class="space-y-4">
@@ -26,11 +43,11 @@ export function renderRecords(main) {
       <div class="kms-card p-4 border-l-4 border-l-[#1b365d] space-y-3">
         <div class="flex flex-wrap justify-between items-start gap-2">
           <div>
-            <h2 class="text-base font-bold">Blind Physical Inventory Count (By Section)</h2>
-            <p class="text-xs opacity-75">System stock stays hidden so shelf counts stay honest. Select a section, count live on your tablet or print a blank sheet and type in hard-copy numbers later.</p>
+            <h2 class="text-base font-bold">Blind Physical Inventory Count (By Section — 30-Line Blank Form)</h2>
+            <p class="text-xs opacity-75">True blind count: select a storage section to print a 30-line blank form or enter counted items directly without seeing expected catalog numbers.</p>
           </div>
           <div class="flex flex-wrap gap-1.5 no-print">
-            <button type="button" id="btn-print-blind-sheet" class="kms-btn-alt px-3 py-1.5 text-xs">Print Blank Count Sheet</button>
+            <button type="button" id="btn-print-blind-sheet" class="kms-btn-alt px-3 py-1.5 text-xs font-semibold">Print Blank 30-Line Sheet (${esc(selZone === 'ALL' ? 'All Sections' : selZone)})</button>
             ${totalEntered ? `<button type="button" id="btn-clear-blind-draft" class="kms-btn-alt px-3 py-1.5 text-xs">Clear Draft (${totalEntered})</button>` : ''}
             <button type="button" id="btn-review-blind" class="kms-btn-ok px-3.5 py-1.5 text-xs font-semibold">Review &amp; Reconcile Count (${totalEntered})</button>
           </div>
@@ -39,26 +56,67 @@ export function renderRecords(main) {
         <!-- Section Selector Tabs -->
         <div class="flex flex-wrap items-center gap-1.5 text-xs no-print">
           ${LOCATIONS.map(loc => {
+            const locRows = (draft.blankRowsByZone && draft.blankRowsByZone[loc]) || [];
+            const blankDone = locRows.filter(r => r && r.name.trim() && r.qty !== '' && r.qty !== undefined).length;
             const locItems = activeItems.filter(x => x.location === loc);
-            const locDone = locItems.filter(x => counts[x.id] !== '' && counts[x.id] !== undefined).length;
+            const catDone = locItems.filter(x => counts[x.id] !== '' && counts[x.id] !== undefined).length;
             const isOn = selZone === loc;
-            return `<button type="button" data-blind-zone="${esc(loc)}" class="px-3 py-1.5 rounded-lg font-semibold border transition ${isOn ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">${esc(loc)} <span class="opacity-80">(${locDone}/${locItems.length})</span></button>`;
+            const badge = mode === 'blank30' ? `${blankDone}/30 lines` : `${catDone}/${locItems.length}`;
+            return `<button type="button" data-blind-zone="${esc(loc)}" class="px-3 py-1.5 rounded-lg font-semibold border transition ${isOn ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">${esc(loc)} <span class="opacity-80">(${badge})</span></button>`;
           }).join('')}
-          <button type="button" data-blind-zone="ALL" class="px-3 py-1.5 rounded-lg font-semibold border transition ${selZone === 'ALL' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">All Sections (${totalEntered}/${activeItems.length})</button>
+          <button type="button" data-blind-zone="ALL" class="px-3 py-1.5 rounded-lg font-semibold border transition ${selZone === 'ALL' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">All Sections (${mode === 'blank30' ? `${blankEnteredCount} lines` : `${catalogEntered}/${activeItems.length}`})</button>
         </div>
 
         <!-- Entry Mode Switcher + Search -->
         <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[var(--line)] text-xs no-print">
-          <div class="flex items-center gap-1.5">
+          <div class="flex flex-wrap items-center gap-1.5">
             <span class="font-bold opacity-75">Entry Mode:</span>
-            <button type="button" data-blind-mode="live" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'live' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Live Shelf Count (Tablet / − +)</button>
-            <button type="button" data-blind-mode="hardcopy" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'hardcopy' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Hard-Copy Sheet Entry (Fast Tab)</button>
+            <button type="button" data-blind-mode="blank30" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'blank30' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Blank 30-Line Form (By Section)</button>
+            <button type="button" data-blind-mode="live" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'live' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Catalog Live Count (− / +)</button>
+            <button type="button" data-blind-mode="hardcopy" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'hardcopy' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Catalog Fast Tab</button>
           </div>
-          <input id="blind-search-inp" type="text" value="${esc(draft.search || '')}" placeholder="Filter items in ${esc(selZone === 'ALL' ? 'All Sections' : selZone)}..." class="kms-input text-xs w-60 max-w-full" />
+          ${mode === 'blank30'
+            ? `<span class="opacity-75 font-semibold">Counting Section: <strong>${esc(activeBlankZone)}</strong> (30 blank lines)</span>`
+            : `<input id="blind-search-inp" type="text" value="${esc(draft.search || '')}" placeholder="Filter items in ${esc(selZone === 'ALL' ? 'All Sections' : selZone)}..." class="kms-input text-xs w-60 max-w-full" />`}
         </div>
 
-        <!-- Count Rows -->
-        ${!sectionItems.length ? '<p class="text-xs opacity-70 py-2">No matching items in this section.</p>' : mode === 'hardcopy' ? `
+        <!-- Count Body -->
+        ${mode === 'blank30' ? `
+          <datalist id="blind-item-suggestions">
+            ${activeItems.map(i => `<option value="${esc(i.name)}">${esc(i.location)} (${esc(normStockUnit(i.unit))})</option>`).join('')}
+          </datalist>
+          <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
+                  <th class="p-2 w-12">#</th>
+                  <th class="p-2">Item Name / Description (${esc(activeBlankZone)})</th>
+                  <th class="p-2 w-36">Unit (cases, cans, lbs...)</th>
+                  <th class="p-2 w-32 text-right">Counted Qty</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[var(--line)]">
+                ${blankRows.map((row, idx) => {
+                  const filled = row.name.trim() && row.qty !== '' && row.qty !== undefined;
+                  return `
+                    <tr class="${filled ? 'bg-emerald-50/40' : ''}">
+                      <td class="p-1.5 font-mono font-bold opacity-60">${idx + 1}</td>
+                      <td class="p-1.5">
+                        <input type="text" list="blind-item-suggestions" data-blank-row="${esc(activeBlankZone)}:${idx}:name" value="${esc(row.name)}" placeholder="Line ${idx + 1} — write or select item..." class="kms-input w-full text-xs" />
+                      </td>
+                      <td class="p-1.5">
+                        <input type="text" data-blank-row="${esc(activeBlankZone)}:${idx}:unit" value="${esc(row.unit)}" placeholder="cases / cans" class="kms-input w-full text-xs" />
+                      </td>
+                      <td class="p-1.5 text-right">
+                        <input type="number" step="0.5" min="0" data-blank-row="${esc(activeBlankZone)}:${idx}:qty" value="${esc(row.qty)}" placeholder="0" class="kms-input w-24 text-xs text-center font-bold" />
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : !sectionItems.length ? '<p class="text-xs opacity-70 py-2">No matching items in this section.</p>' : mode === 'hardcopy' ? `
           <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
             <table class="w-full text-left text-xs border-collapse">
               <thead>
