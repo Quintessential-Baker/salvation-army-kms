@@ -125,7 +125,30 @@
       body.printing-modal #modal-box { position: static !important; max-width: 100% !important; width: 100% !important; max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; background: #fff !important; color: #000 !important; padding: 0 !important; }
       body.printing-modal #modal-close { display: none !important; }
     }
-  </style>
+  
+  /* Light & Dark Mode Contrast Hardening */
+  #tools-menu {
+    background-color: var(--card, #ffffff) !important;
+    color: var(--ink, #1e293b) !important;
+    border: 1px solid var(--line, #cbd5e1) !important;
+  }
+  #tools-menu button {
+    color: inherit;
+  }
+  html:not(.dark) #tools-menu button:not(.text-\[\#b3122b\]):not(.text-\[\#1f7a3d\]) {
+    color: #1e293b !important;
+  }
+  html.dark #tools-menu button:not(.text-\[\#b3122b\]):not(.text-\[\#1f7a3d\]) {
+    color: #f1f5f9 !important;
+  }
+  html:not(.dark) .kms-card {
+    color: #1e293b;
+  }
+  html:not(.dark) input, html:not(.dark) select, html:not(.dark) textarea {
+    color: #0f172a;
+  }
+
+</style>
 </head>
 <body class="min-h-screen flex flex-col">
 
@@ -155,7 +178,7 @@
         <button id="btn-lock-app" type="button" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold">Lock</button>
         <div class="relative">
           <button id="btn-tools" type="button" class="px-2.5 py-1.5 rounded-lg bg-white text-[#1b365d] text-xs font-bold">Tools &#9662;</button>
-          <div id="tools-menu" class="hidden absolute right-0 mt-1.5 w-52 kms-card shadow-xl py-1.5 z-40 text-xs">
+          <div id="tools-menu" class="hidden absolute right-0 mt-1.5 w-56 kms-card text-slate-800 dark:text-slate-100 shadow-xl py-1.5 z-40 text-xs">
             <button id="btn-start-tour" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-bold text-[#b3122b]">Interactive Guided Tour</button>
             <button id="btn-run-selftest" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-bold text-[#1f7a3d]">Run System Self-Test &amp; Report</button>
             <button id="btn-undo" type="button" class="w-full text-left px-3 py-2 hover:bg-black/5 font-semibold">Undo Last Stock Change</button>

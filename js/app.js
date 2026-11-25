@@ -42,7 +42,8 @@ import { renderReport } from './views/report.js';
 import { renderUsers } from './views/users.js';
 import {
   renderHelp, renderPageGuideBanner, tourState, getRoleTourSteps,
-  lastDiagnosticReport, runSystemDiagnostics, showDiagnosticModal
+  lastDiagnosticReport, runSystemDiagnostics, showDiagnosticModal,
+  runTourStepDemo, restoreTourDemoSandbox
 } from './views/help.js';
 
 let trainingStep = 0;
@@ -266,24 +267,25 @@ export function render() {
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="space-y-1.5 flex-1 min-w-[240px]">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="px-2 py-0.5 rounded bg-[#b3122b] text-[11px] font-bold uppercase tracking-wide">Interactive Tutorial &bull; Step ${idx + 1} of ${steps.length}</span>
-                <span class="text-xs text-white/85 font-semibold">${esc(step.title)}</span>
+                <span class="px-2 py-0.5 rounded bg-emerald-500 text-white text-[10px] font-extrabold uppercase tracking-wider">Interactive Demo &bull; Step ${idx + 1} of ${steps.length}</span>
+                <strong class="text-sm sm:text-base text-white">${esc(step.title)}</strong>
               </div>
-              <p class="text-xs sm:text-sm text-white leading-relaxed">${esc(step.desc)}</p>
-              <p class="text-xs text-amber-300 font-medium"><strong>Try it now:</strong> ${esc(step.tryIt)}</p>
+              <p class="text-xs sm:text-sm text-white/95 leading-relaxed">${esc(step.desc)}</p>
+              <p class="text-xs text-emerald-200 font-medium"><strong>How to Use:</strong> ${esc(step.tryIt)}</p>
+              ${tourState.demoActive && tourState.demoNote ? `<div class="mt-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/25 border border-emerald-300/40 text-xs text-emerald-100"><strong>Live Demo Active:</strong> ${esc(tourState.demoNote)} <span class="opacity-80">(Sandboxed — restores automatically on Next or Skip)</span></div>` : ''}
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <button type="button" id="btn-tour-prev" ${idx === 0 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg border border-white/30 text-xs font-semibold ${idx === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-white/10'}">&larr; Back</button>
+            <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+              <button type="button" id="btn-tour-demo" class="px-3 py-1.5 rounded-lg ${tourState.demoActive ? 'bg-amber-400 text-slate-950' : 'bg-sky-400 text-slate-950'} text-xs font-extrabold hover:opacity-90">${tourState.demoActive ? 'Reset Demo Data' : '▶ Demonstrate Feature'}</button>
+              <button type="button" id="btn-tour-prev" ${idx === 0 ? 'disabled' : ''} class="px-2.5 py-1.5 rounded-lg border border-white/30 text-white text-xs font-semibold ${idx === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-white/15'}">&larr; Back</button>
               ${idx < steps.length - 1
-                ? `<button type="button" id="btn-tour-next" class="px-3.5 py-1.5 rounded-lg bg-[#b3122b] hover:bg-[#910d22] text-white text-xs font-semibold">Next Step &rarr;</button>`
-                : `<button type="button" id="btn-tour-finish" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Finish Tour</button>`
-              }
-              <button type="button" id="btn-tour-exit" class="px-2.5 py-1.5 rounded-lg text-white/75 hover:text-white text-xs font-medium">Exit</button>
+                ? `<button type="button" id="btn-tour-next" class="px-3.5 py-1.5 rounded-lg bg-[#b3122b] hover:bg-[#910d22] text-white text-xs font-semibold">Next Feature &rarr;</button>`
+                : `<button type="button" id="btn-tour-finish" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Finish Tour &#10003;</button>`}
+              <button type="button" id="btn-tour-exit" class="px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold">Skip Tour</button>
             </div>
           </div>
         </div>
       `;
-      main.prepend(banner);
+      main.insertAdjacentElement('afterbegin', banner);
     }
   }
   checkMandatoryModals();
@@ -1986,57 +1988,98 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (e.target.id === 'btn-start-tour') {
+    restoreTourDemoSandbox();
+    tourState.demoActive = false;
+    tourState.demoNote = '';
     const steps = getRoleTourSteps();
     if (steps.length) {
       tourState.active = true;
       tourState.stepIndex = 0;
       state.activeTab = steps[0].tab;
-      saveState();
+      render();
+    }
+    return;
+  }
+  if (e.target.id === 'btn-tour-demo') {
+    const steps = getRoleTourSteps();
+    const step = steps[tourState.stepIndex];
+    if (step) {
+      if (tourState.demoActive) {
+        restoreTourDemoSandbox();
+        tourState.demoActive = false;
+        tourState.demoNote = '';
+        showToast('Sandbox reset to your real kitchen data.');
+      } else {
+        tourState.demoNote = runTourStepDemo(step.tab);
+        tourState.demoActive = true;
+      }
       render();
     }
     return;
   }
   const launchStepBtn = e.target.closest('[data-launch-tour-step]');
   if (launchStepBtn) {
+    restoreTourDemoSandbox();
+    tourState.demoActive = false;
+    tourState.demoNote = '';
     const steps = getRoleTourSteps();
     const idx = Number(launchStepBtn.dataset.launchTourStep);
     if (steps[idx]) {
       tourState.active = true;
       tourState.stepIndex = idx;
       state.activeTab = steps[idx].tab;
-      saveState();
       render();
     }
     return;
   }
   if (e.target.id === 'btn-tour-next') {
+    restoreTourDemoSandbox();
+    tourState.demoActive = false;
+    tourState.demoNote = '';
     const steps = getRoleTourSteps();
     if (tourState.stepIndex < steps.length - 1) {
       tourState.stepIndex++;
       state.activeTab = steps[tourState.stepIndex].tab;
-      saveState();
       render();
     }
     return;
   }
   if (e.target.id === 'btn-tour-prev') {
+    restoreTourDemoSandbox();
+    tourState.demoActive = false;
+    tourState.demoNote = '';
     const steps = getRoleTourSteps();
     if (tourState.stepIndex > 0) {
       tourState.stepIndex--;
       state.activeTab = steps[tourState.stepIndex].tab;
-      saveState();
       render();
     }
     return;
   }
   if (e.target.id === 'btn-tour-finish' || e.target.id === 'btn-tour-exit') {
+    const skipped = e.target.id === 'btn-tour-exit';
+    restoreTourDemoSandbox();
+    tourState.demoActive = false;
+    tourState.demoNote = '';
     tourState.active = false;
+    try {
+      localStorage.setItem('kms_tour_completed', '1');
+      localStorage.setItem('kms_tour_autostart', '0');
+    } catch (err) {}
+    const u = getActiveUser();
+    if (u) {
+      u.tour_completed = true;
+      saveState();
+    }
+    if (skipped) state.activeTab = 'dashboard';
     render();
-    if (e.target.id === 'btn-tour-finish') showToast('Interactive tutorial complete!');
+    showToast(skipped ? 'Tour skipped — replay anytime in Help & Training.' : 'Interactive tutorial complete! It will not auto-show again.');
     return;
   }
   if (e.target.id === 'btn-retrain-self') {
+    try { localStorage.removeItem('kms_tour_completed'); localStorage.setItem('kms_tour_autostart', '1'); } catch (err) {}
     const u = getActiveUser();
+    if (u) u.tour_completed = false;
     u.completed_training_ids = [];
     u.onboarding_completed = false;
     trainingStep = 0;
@@ -3712,6 +3755,23 @@ ensureOwnerIntegrity();
 if (!isSessionUnlocked()) state.isLocked = true;
 if (state.theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 document.documentElement.style.fontSize = ['100%', '112.5%', '125%'][state.textZoom || 0];
+function maybeAutoStartInteractiveTour() {
+  const params = new URLSearchParams(window.location.search);
+  const forceParam = params.get('tour') === '1' || params.get('demo') === '1';
+  const u = getActiveUser();
+  const alreadyDone = localStorage.getItem('kms_tour_completed') === '1' ||
+                      localStorage.getItem('kms_tour_autostart') === '0' ||
+                      Boolean(u && u.tour_completed);
+  if (!forceParam && alreadyDone) return;
+  const steps = getRoleTourSteps();
+  if (steps.length) {
+    tourState.active = true;
+    tourState.stepIndex = 0;
+    state.activeTab = steps[0].tab;
+  }
+}
+
+maybeAutoStartInteractiveTour();
 pruneExpiredAlerts();
 render();
 initSupabase();
