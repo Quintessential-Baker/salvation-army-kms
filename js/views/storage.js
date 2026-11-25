@@ -9,31 +9,70 @@ export function renderStorage(main) {
   const activeLeft = state.storageTags.filter(t => t.status === 'STORED' && t.tag_category !== 'SALAD_BAR').sort((a, b) => a.use_by_date.localeCompare(b.use_by_date));
   const activeSalad = state.storageTags.filter(t => t.status === 'STORED' && t.tag_category === 'SALAD_BAR').sort((a, b) => a.use_by_date.localeCompare(b.use_by_date));
 
-  const tagCard = (t) => {
-    const diff = Math.round((new Date(t.use_by_date + 'T12:00:00') - new Date(today + 'T12:00:00')) / 86400000);
-    const cls = diff < 0 ? 'OUT' : diff <= 1 ? 'LOW' : 'OK';
+  const renderFifoTable = (items, emptyMsg) => {
+    if (!items.length) return `<p class="text-xs opacity-70 py-1">${emptyMsg}</p>`;
     return `
-      <div class="p-3 rounded-lg border border-[var(--line)] flex flex-wrap items-center justify-between gap-2 text-xs tag-row-card">
-        <div>
-          <div class="font-bold text-sm">${esc(t.item_name)} ${t.qty_label ? `— ${esc(t.qty_label)}` : ''}</div>
-          <div class="opacity-75">${esc(t.zone)} · Prepped ${dLabel(t.prep_date)} · Use by <strong>${dLabel(t.use_by_date)}</strong> <span class="tag tag-${cls}">${diff < 0 ? 'PAST – THROW OUT' : diff === 0 ? 'USE TODAY' : diff + ' day(s) left'}</span></div>
-        </div>
-        <div class="flex flex-wrap gap-1.5 no-print">
-          <button type="button" data-tag-act="${t.id}:USED" class="kms-btn-ok px-2.5 py-1 text-xs">Used</button>
-          <button type="button" data-tag-act="${t.id}:DISCARDED" class="kms-btn-alt px-2.5 py-1 text-xs">Toss</button>
-          ${isMgr ? `<button type="button" data-del-tag="${t.id}" class="text-red-600 hover:underline font-semibold px-1.5 py-1 text-xs">Delete</button>` : ''}
-        </div>
+      <div class="overflow-x-auto border border-[var(--line)] rounded-lg">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-[#1b365d] text-white uppercase text-[10px]">
+              <th class="py-1.5 px-2.5">Item / Container</th>
+              <th class="py-1.5 px-2.5">Storage Zone</th>
+              <th class="py-1.5 px-2.5">Prep Date</th>
+              <th class="py-1.5 px-2.5">Use-By Date</th>
+              <th class="py-1.5 px-2.5 text-center">Status</th>
+              <th class="py-1.5 px-2.5 text-right no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[var(--line)]">
+            ${items.map(t => {
+              const diff = Math.round((new Date(t.use_by_date + 'T12:00:00') - new Date(today + 'T12:00:00')) / 86400000);
+              const cls = diff < 0 ? 'OUT' : diff <= 1 ? 'LOW' : 'OK';
+              const badgeTxt = diff < 0 ? 'PAST – DISCARD' : diff === 0 ? 'USE TODAY' : `${diff} day(s) left`;
+              return `
+                <tr class="tag-row-card ${diff < 0 ? 'bg-red-50/60' : ''}">
+                  <td class="py-2 px-2.5 font-bold">${esc(t.item_name)} ${t.qty_label ? `<span class="font-normal opacity-75">(${esc(t.qty_label)})</span>` : ''}</td>
+                  <td class="py-2 px-2.5">${esc(t.zone)}</td>
+                  <td class="py-2 px-2.5">${dLabel(t.prep_date)}</td>
+                  <td class="py-2 px-2.5 font-bold">${dLabel(t.use_by_date)}</td>
+                  <td class="py-2 px-2.5 text-center"><span class="tag tag-${cls}">${badgeTxt}</span></td>
+                  <td class="py-2 px-2.5 text-right no-print">
+                    <div class="inline-flex flex-wrap gap-1.5">
+                      <button type="button" data-tag-act="${t.id}:USED" class="kms-btn-ok px-2.5 py-1 text-xs">Used</button>
+                      <button type="button" data-tag-act="${t.id}:DISCARDED" class="kms-btn-alt px-2.5 py-1 text-xs">Toss</button>
+                      ${isMgr ? `<button type="button" data-del-tag="${t.id}" class="text-red-600 hover:underline font-semibold px-1.5 py-1 text-xs">Delete</button>` : ''}
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
       </div>
     `;
   };
 
   main.innerHTML = `
     <div class="space-y-4">
-      <form id="form-add-tag" class="kms-card p-4 space-y-3 no-print">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="text-base font-bold">Date-Label Leftovers &amp; Salad Bar (&gt;24 Hours)</h2>
-          <button type="button" onclick="window.print()" class="kms-btn-alt px-3 py-1.5 text-xs">Print FIFO Sheet</button>
+      <!-- SA FIFO Header Banner -->
+      <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+        <div class="bg-[#1b365d] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; ServSafe 7-Day Rule</div>
+              <h2 class="text-base sm:text-lg font-black tracking-tight">FIFO Date-Label &amp; Shelf-Life Tracking Log — ${dLabel(today)}</h2>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 no-print">
+            <button type="button" onclick="document.body.classList.remove('printing-modal'); window.print();" class="px-4 py-2 rounded-lg bg-white text-[#1b365d] text-xs font-extrabold shadow hover:bg-slate-100">Print FIFO Sheet (Letter)</button>
+          </div>
         </div>
+      </div>
+
+      <!-- Add Date-Label Form (Hidden on Print) -->
+      <form id="form-add-tag" class="kms-card p-4 space-y-3 no-print">
+        <h3 class="text-sm font-bold">Add Date-Label for Leftovers &amp; Salad Bar (&gt;24 Hours)</h3>
         <div class="flex flex-wrap gap-1.5">
           ${SHELF_PRESETS.map((p, idx) => `<button type="button" data-tag-preset="${idx}" class="kms-btn-alt px-2.5 py-1 text-xs">${esc(p.label)}</button>`).join('')}
         </div>
@@ -57,14 +96,20 @@ export function renderStorage(main) {
         </div>
       </form>
 
-      <div class="kms-card p-4 space-y-2">
-        <h3 class="text-sm font-bold">Meal Leftovers FIFO (${activeLeft.length})</h3>
-        ${!activeLeft.length ? '<p class="text-xs opacity-70">No meal leftovers logged.</p>' : activeLeft.map(tagCard).join('')}
+      <div class="kms-card p-4 space-y-2 print-keep">
+        <h3 class="text-sm font-extrabold uppercase tracking-wider text-[#1b365d]">1. Stored Meal Leftovers FIFO (${activeLeft.length})</h3>
+        ${renderFifoTable(activeLeft, 'No meal leftovers currently stored.')}
       </div>
 
-      <div class="kms-card p-4 space-y-2">
-        <h3 class="text-sm font-bold">Daily Salad Bar &amp; Cold Prep FIFO (${activeSalad.length})</h3>
-        ${!activeSalad.length ? '<p class="text-xs opacity-70">No Salad Bar items logged.</p>' : activeSalad.map(tagCard).join('')}
+      <div class="kms-card p-4 space-y-2 print-keep">
+        <h3 class="text-sm font-extrabold uppercase tracking-wider text-[#1b365d]">2. Daily Salad Bar &amp; Cold Prep FIFO (${activeSalad.length})</h3>
+        ${renderFifoTable(activeSalad, 'No Salad Bar items currently stored.')}
+      </div>
+
+      <div class="kms-card p-3.5 text-xs grid grid-cols-3 gap-3 print-keep">
+        <div class="border-b border-slate-400 pb-1 font-semibold">Cooler Inspection Date: ${dLabel(today)}</div>
+        <div class="border-b border-slate-400 pb-1 font-semibold">Expired Items Discarded By:</div>
+        <div class="border-b border-slate-400 pb-1 font-semibold">Verified By (PIC):</div>
       </div>
     </div>
   `;
