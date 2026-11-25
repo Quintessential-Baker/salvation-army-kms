@@ -151,6 +151,9 @@ Open `http://localhost:8000` in your browser.
 
 ---
 
-## License & Acknowledgments
+## Copyright, Proprietary License & Trademarks
 
-Developed by **William Clark** (Culinary Extern, Auguste Escoffier School of Culinary Arts) for **The Salvation Army Butler Worship & Service Center**, Butler, Pennsylvania. Released under the MIT License for non-profit community foodservice operations.
+- **Software Copyright:** © 2026 **William Clark**. All Rights Reserved. See [`LICENSE`](./LICENSE) for full terms.
+- **Non-Profit Operational Grant:** Licensed royalty-free to **The Salvation Army Butler Worship & Service Center** (Butler, PA) for internal kitchen and pantry operations. Commercial distribution, resale, or unauthorized copying is strictly prohibited.
+- **Trademarks:** "The Salvation Army" name and Red Shield emblem are registered trademarks of The Salvation Army and are used here solely for the Butler Corps internal deployment.
+- **Open-Source Libraries:** See [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) for attributions of third-party CDN libraries.

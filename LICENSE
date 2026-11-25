@@ -1,21 +1,24 @@
-MIT License
+PROPRIETARY SOFTWARE LICENSE & NON-PROFIT OPERATIONAL GRANT
+Copyright (c) 2026 William Clark. All Rights Reserved.
 
-Copyright (c) 2026 William Clark — The Salvation Army Butler Worship & Service Center
+1. OWNERSHIP & RESERVATION OF RIGHTS
+This software, including its source code, database schema, user interface design,
+algorithms, workflows, and documentation ("the Software"), is the sole and exclusive
+proprietary intellectual property of William Clark ("Author"). Except as expressly
+granted below, no person or entity may copy, modify, distribute, sublicense,
+reverse-engineer, white-label, or sell the Software or any derivative works thereof
+without prior written permission from the Author.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+2. PERPETUAL ROYALTY-FREE GRANT TO THE SALVATION ARMY (BUTLER, PA)
+The Author hereby grants The Salvation Army Butler Worship & Service Center
+(313 W. Cunningham St., Butler, PA) a perpetual, non-exclusive, non-transferable,
+royalty-free license to install, run, and use the Software solely for its internal
+non-profit community meal and food pantry operations.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+3. COMMERCIAL RIGHTS RESERVED
+The Author retains full ownership and exclusive rights to develop, license,
+white-label, or commercially sell the Software (excluding any Salvation Army
+trademarks or institutional data) to other organizations.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+4. DISCLAIMER OF WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
