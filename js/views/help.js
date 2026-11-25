@@ -168,7 +168,122 @@ export const HOW_DO_I_TASKS = [
   { q: 'Put a 3-day, 4-day, or 7-day date label on leftovers or salad bar items', tab: 'storage', ans: 'Go to Date Labels & Salad Bar, click a 1-Tap Preset button, enter the item name, and click Add & Date-Label.' }
 ];
 
-export const tourState = { active: false, stepIndex: 0, completedTabs: {} };
+export const tourState = { active: false, stepIndex: 0, completedTabs: {}, demoActive: false, demoNote: '' };
+
+export let tourDemoBackup = null;
+
+export function restoreTourDemoSandbox() {
+  if (!tourDemoBackup) return false;
+  const restored = JSON.parse(tourDemoBackup);
+  Object.keys(state).forEach(k => delete state[k]);
+  Object.assign(state, restored);
+  tourDemoBackup = null;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  return true;
+}
+
+export function runTourStepDemo(tabId) {
+  restoreTourDemoSandbox();
+  tourDemoBackup = JSON.stringify(state);
+  const today = localDateStr();
+
+  switch (tabId) {
+    case 'dashboard': {
+      state.announcements.unshift({
+        id: 'demo-ann-1',
+        title: 'LIVE DEMO: Thanksgiving Week Service & Delivery Alert',
+        body: 'Demo notice: Thursday & Friday closed for holiday. Extra portions auto-calculated for Wednesday service.',
+        level: 'CRITICAL',
+        repeat_rule: 'none',
+        created_at: today,
+        posted_by: 'Interactive Tour Demo'
+      });
+      return 'Added a live CRITICAL Dashboard alert banner — notice how it pins to the top of Home!';
+    }
+    case 'stock': {
+      state._stockSearch = 'Spaghetti';
+      if (state.items[0]) state.items[0].on_hand = Number(state.items[0].on_hand || 0) + 1;
+      return 'Filtered Living Stock for "Spaghetti" and simulated a +1 shelf count adjustment (sandboxed).';
+    }
+    case 'orders': {
+      const lowItem = state.items.find(i => i.cadence === 'W') || state.items[0];
+      if (lowItem) lowItem.on_hand = 0;
+      return 'Simulated a zero-stock Weekly item so Marberger whole-case PO suggestions appear below.';
+    }
+    case 'receive': {
+      state.donations.unshift({
+        id: 'demo-don-1',
+        donor_name: 'St. Paul Community Food Drive (Demo)',
+        donor_org: 'Butler Civic Partners',
+        donor_address: '200 N Main St, Butler, PA 16001',
+        donation_date: today,
+        notes: 'Interactive Tour Demo — In-Kind Food Contribution',
+        items: [{ item_id: '', description: 'Fresh Produce & Bakery Assortment', qty: 4, unit: 'cases' }],
+        logged_by: 'Interactive Tour Demo',
+        created_at: nowStamp()
+      });
+      return 'Logged a sample in-kind donation below — click "View / Print Tax Receipt" to preview the IRS receipt!';
+    }
+    case 'menu': {
+      state._menuViewRange = 'all';
+      return 'Switched Menu Planner to show the full November 2026 schedule, planned portions, and Served logging.';
+    }
+    case 'prep': {
+      return 'Showing tomorrow’s scaled ingredient pulls grouped automatically by Walk-in Cooler, Freezer, and Stockroom.';
+    }
+    case 'recipes': {
+      const spag = state.recipes.find(r => r.id === 'rec-spaghetti') || state.recipes[0];
+      if (spag) {
+        state._selectedRecipeId = spag.id;
+        state._recipeScale = 75;
+      }
+      return 'Selected Spaghetti & Meatballs and scaled every ingredient from 65 to 75 portions automatically!';
+    }
+    case 'safety': {
+      state.tempLogs = state.tempLogs.filter(t => t.log_date !== today);
+      state.tempLogs.push(
+        { id: 'demo-t1', log_date: today, checkpoint: 'Walk-in cooler', temp_f: 38, passed: true, logged_by: 'Tour Demo', logged_at: nowStamp() },
+        { id: 'demo-t2', log_date: today, checkpoint: 'Walk-in freezer', temp_f: -2, passed: true, logged_by: 'Tour Demo', logged_at: nowStamp() },
+        { id: 'demo-t3', log_date: today, checkpoint: 'Steam table well', temp_f: 128, passed: false, logged_by: 'Tour Demo', logged_at: nowStamp() }
+      );
+      return 'Logged sample temps: 38°F Cooler (PASS), -2°F Freezer (PASS), and 128°F Steam Table (FIX NOW alert)!';
+    }
+    case 'storage': {
+      state.storageTags.unshift({
+        id: 'demo-tag-1',
+        item_name: 'Demo Cooked Meatballs & Marinara (2 Hotel Pans)',
+        tag_category: 'LEFTOVER',
+        zone: 'Walk-in cooler',
+        prep_date: today,
+        use_by_date: addDays(today, 6),
+        status: 'STORED',
+        logged_by: 'Tour Demo'
+      });
+      return 'Created a 7-day ServSafe FIFO leftover date label with automatic Use-By countdown!';
+    }
+    case 'checklists': {
+      state._checklistTab = 'DAILY';
+      return 'Opened Daily Operational Checklist — tap any box to stamp your name and timestamp automatically.';
+    }
+    case 'forecasting': {
+      return 'Displaying the self-learning forecaster (32.1/day learned baseline, weekday factors & nearest-5 waste buffer).';
+    }
+    case 'records': {
+      state._blindSection = 'Walk-in cooler';
+      return 'Selected Walk-in cooler for a Blind Physical Count — system stock stays hidden until you reconcile.';
+    }
+    case 'report': {
+      state._reportRange = 'month';
+      return 'Loaded Executive Monthly Report with meals served, $3.25/meal grant projections & Copy Funding Brief.';
+    }
+    case 'users': {
+      return 'Showing 4-tier RBAC staff accounts, PIN management, and the Real-Time Accountability Audit Feed.';
+    }
+    default:
+      return 'Interactive demo active for this screen.';
+  }
+}
+
 
 export const TOUR_STEPS = [
   { tab: 'dashboard', title: '1. Home Dashboard & Announcements', desc: 'Your daily command center: see Quick Shift Actions, color-coded Announcements & Reminders, Use-By alerts, Priority Carryover tasks, today\'s meal, and next-service forecast.', tryIt: 'Review any red or amber notices first, or tap a Quick Shift Action button.' },
