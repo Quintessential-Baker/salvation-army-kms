@@ -1372,34 +1372,103 @@ document.addEventListener('click', (e) => {
       }
     } catch (err) {}
     document.body.classList.add('printing-modal');
-    const rNorm = normalizeRecipe(rec);
-    openModal(`The Salvation Army (Butler, PA) — Standardized Recipe`, `
+    const rNorm = typeof normalizeRecipe === 'function' ? normalizeRecipe(rec) : rec;
+    const cols = Array.from(new Set([40, 50, scale, 70, 80])).sort((a, b) => a - b);
+
+    openModal(`Printable Standardized Recipe Card — ${rNorm.name}`, `
       <div class="space-y-3 text-xs">
-        <div class="flex items-start justify-between gap-3 border-b border-[var(--line)] pb-3 print-keep">
-          <div class="flex items-start gap-3">
-            ${rNorm.photo_url ? `<img src="${esc(rNorm.photo_url)}" alt="${esc(rNorm.name)}" class="w-16 h-16 rounded-lg object-cover border border-[var(--line)] shrink-0" />` : ''}
+        <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-black/5 border border-[var(--line)] no-print">
+          <div class="opacity-80">Formatted as a <strong>1-Page Letter Standardized Recipe Card</strong> with scannable QR code &amp; 40–80 scaling matrix.</div>
+          <button type="button" id="btn-print-rec-modal-now" class="kms-btn-navy px-4 py-1.5 text-xs font-semibold">Print Recipe Sheet (Letter)</button>
+        </div>
+
+        <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
+          <!-- SA Navy/Red Header -->
+          <div class="bg-[#1b365d] text-white px-4 py-3 flex items-center justify-between gap-3 border-b-4 border-[#b3122b] print-keep">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+              <div class="min-w-0">
+                <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Standardized Recipe Card</div>
+                <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">${esc(rNorm.name)}</h2>
+                <div class="text-[11px] text-white/90 mt-0.5">
+                  Category: <strong>${esc(rNorm.category || 'Main')}</strong> &bull;
+                  Prep: <strong>${rNorm.prep_min || 20}m</strong> &bull;
+                  Cook: <strong>${rNorm.cook_min || 35}m</strong> &bull;
+                  Active Target: <strong>${scale} Portions</strong>
+                </div>
+              </div>
+            </div>
+            ${qrSvg ? `
+              <div class="bg-white text-slate-900 p-1.5 rounded-lg text-center shrink-0 shadow">
+                <div class="w-14 h-14 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">${qrSvg}</div>
+                <div class="text-[9px] font-mono font-bold mt-0.5">${esc(rNorm.id)}</div>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="p-4 bg-white text-slate-900 space-y-3">
+            <!-- Allergen & Notes Strip -->
+            ${((rNorm.allergens || []).length || rNorm.notes || rNorm.photo_url) ? `
+              <div class="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded-lg bg-slate-50 border border-slate-200 print-keep">
+                <div class="space-y-1 flex-1 min-w-[200px]">
+                  ${(rNorm.allergens || []).length
+                    ? `<div class="text-xs font-extrabold text-[#b3122b]">&#9888; FDA BIG 9 ALLERGENS: ${esc(rNorm.allergens.join(', ').toUpperCase())}</div>`
+                    : `<div class="text-xs font-bold text-emerald-700">&#10003; No Major FDA Big 9 Allergens Listed</div>`}
+                  ${rNorm.notes ? `<div class="text-xs text-slate-700"><strong>Chef / Service Notes:</strong> ${esc(rNorm.notes)}</div>` : ''}
+                </div>
+                ${rNorm.photo_url ? `<img src="${esc(rNorm.photo_url)}" alt="${esc(rNorm.name)}" class="w-16 h-16 rounded-lg object-cover border border-slate-300 shrink-0" />` : ''}
+              </div>
+            ` : ''}
+
+            <!-- Scaled Ingredients Table -->
             <div>
-              <div class="font-bold text-base">${esc(rNorm.name)}</div>
-              <div class="opacity-75">${esc(rNorm.category)} &bull; Prep ${rNorm.prep_min}m &bull; Cook ${rNorm.cook_min}m &bull; Scaled for <strong>${scale} portions</strong></div>
-              ${(rNorm.allergens || []).length ? `<div class="font-bold text-[#b3122b] mt-0.5">Contains: ${esc(rNorm.allergens.join(', '))}</div>` : ''}
-              ${rNorm.notes ? `<div class="opacity-80 mt-0.5">${esc(rNorm.notes)}</div>` : ''}
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-extrabold uppercase tracking-wider text-[11px] text-[#1b365d]">Scaled Ingredients Matrix (Active: ${scale} Portions Highlighted)</span>
+                <span class="text-[10px] font-semibold text-slate-500">Base Yield: ${rNorm.base_servings || 65} servings</span>
+              </div>
+              <table class="w-full text-left border-collapse border border-slate-300 text-xs">
+                <thead>
+                  <tr class="bg-[#1b365d] text-white uppercase text-[10px]">
+                    <th class="border border-slate-400 py-1.5 px-2">Ingredient</th>
+                    ${cols.map(p => `<th class="border border-slate-400 py-1.5 px-2 text-center ${p === scale ? 'bg-[#b3122b] font-black' : ''}">${p} Port.${p === scale ? ' ★' : ''}</th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${(rNorm.ingredients || []).map((g, idx) => `
+                    <tr class="${idx % 2 === 1 ? 'bg-slate-50' : 'bg-white'}">
+                      <td class="border border-slate-300 py-1.5 px-2 font-bold">&#9744; ${esc(g.name)}</td>
+                      ${cols.map(p => {
+                        const f = p / (rNorm.base_servings || 65);
+                        const isTarget = p === scale;
+                        return `<td class="border border-slate-300 py-1.5 px-2 text-center ${isTarget ? 'bg-red-50 font-black text-[#b3122b]' : 'font-semibold'}">${esc(formatKitchenAmt((g.qty || 0) * f, g.unit))}</td>`;
+                      }).join('')}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Preparation & HACCP Directions -->
+            ${(rNorm.steps || []).length ? `
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-300 space-y-1.5 print-keep">
+                <div class="flex items-center justify-between border-b border-slate-200 pb-1">
+                  <span class="font-extrabold uppercase tracking-wider text-[11px] text-[#1b365d]">Preparation &amp; Service Directions</span>
+                  <span class="text-[10px] font-bold text-[#b3122b]">Cook &ge;165&deg;F &bull; Hot Hold &ge;135&deg;F &bull; Cold &le;41&deg;F</span>
+                </div>
+                <ol class="list-decimal list-inside space-y-1 text-xs leading-relaxed text-slate-800">
+                  ${rNorm.steps.map(s => `<li>${esc(s)}</li>`).join('')}
+                </ol>
+              </div>
+            ` : ''}
+
+            <!-- Kitchen Execution Sign-Off -->
+            <div class="grid grid-cols-3 gap-3 pt-1 text-[11px] font-semibold text-slate-700 print-keep">
+              <div class="border-b border-slate-400 pb-0.5">Prepared By:</div>
+              <div class="border-b border-slate-400 pb-0.5">Final Cook Temp (&ge;165&deg;F):</div>
+              <div class="border-b border-slate-400 pb-0.5">Date / Portions Made:</div>
             </div>
           </div>
-          ${qrSvg ? `<div class="shrink-0 text-center">${qrSvg}<div class="text-[10px] font-mono opacity-70">${esc(rNorm.id)}</div></div>` : ''}
         </div>
-        <table class="w-full text-left border-collapse text-xs">
-          <thead><tr class="border-b border-[var(--line)] uppercase opacity-65"><th class="py-1.5">Ingredient</th><th class="py-1.5">40 Port.</th><th class="py-1.5 font-bold text-[#b3122b]">${scale} Port.</th><th class="py-1.5">80 Port.</th></tr></thead>
-          <tbody class="divide-y divide-[var(--line)]">
-            ${(rNorm.ingredients || []).map(g => `<tr><td class="py-1.5 font-semibold">${esc(g.name)}</td><td class="py-1.5">${esc(formatKitchenAmt((g.qty || 0) * (40 / rNorm.base_servings), g.unit))}</td><td class="py-1.5 font-bold text-[#b3122b]">${esc(formatKitchenAmt((g.qty || 0) * factor, g.unit))}</td><td class="py-1.5">${esc(formatKitchenAmt((g.qty || 0) * (80 / rNorm.base_servings), g.unit))}</td></tr>`).join('')}
-          </tbody>
-        </table>
-        ${(rNorm.steps || []).length ? `
-          <div class="p-2.5 rounded bg-black/5 space-y-1 print-keep">
-            <div class="font-bold uppercase opacity-70">Directions</div>
-            <ol class="list-decimal list-inside space-y-1 leading-relaxed">${rNorm.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
-          </div>
-        ` : ''}
-        <button type="button" id="btn-print-rec-modal-now" class="kms-btn-navy w-full py-2 text-xs no-print">Print Recipe Sheet (Letter)</button>
       </div>
     `);
     return;
