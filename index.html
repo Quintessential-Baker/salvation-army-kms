@@ -123,7 +123,7 @@
       body.printing-modal #app-main { display: none !important; }
       body.printing-modal #modal-backdrop { position: static !important; inset: auto !important; display: block !important; background: transparent !important; padding: 0 !important; overflow: visible !important; }
       body.printing-modal #modal-box { position: static !important; max-width: 100% !important; width: 100% !important; max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; background: #fff !important; color: #000 !important; padding: 0 !important; }
-      body.printing-modal #modal-close { display: none !important; }
+      body.printing-modal #modal-close, body.printing-modal #modal-box > div:first-child { display: none !important; }
     }
   
   /* Light & Dark Mode Contrast Hardening ([data-theme="dark"] + Light :root) */

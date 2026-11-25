@@ -1738,38 +1738,46 @@ document.addEventListener('click', (e) => {
     const zonesToPrint = zone === 'ALL' ? LOCATIONS : [zone];
     const blankLines = Array.from({ length: 30 }, (_, idx) => idx + 1);
     document.body.classList.add('printing-modal');
-    openModal(`Printable Blank 30-Line Blind Count Sheet — ${zone === 'ALL' ? 'All Sections (30 Lines Each)' : zone}`, `
-      <div class="space-y-5 text-xs">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 no-print">
-          <div class="opacity-80">Prints <strong>30 numbered blank lines</strong> per section on Letter paper so shelf counts are 100% unbiased.</div>
-          <button type="button" onclick="window.print()" class="kms-btn-navy px-3.5 py-1.5 text-xs font-semibold">Print Blank 30-Line Sheet(s)</button>
+    openModal(`Printable Blank 30-Line Blind Count Sheet — ${zone === 'ALL' ? 'All Sections (1 Page per Zone)' : zone}`, `
+      <div class="text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 mb-3 no-print">
+          <div class="opacity-80">Formatted to fit <strong>exactly 1 Letter page per zone</strong> (${zonesToPrint.length} page${zonesToPrint.length > 1 ? 's' : ''} total, 30 write-in lines each).</div>
+          <button type="button" onclick="window.print()" class="kms-btn-navy px-4 py-1.5 text-xs font-semibold">Print Blank 30-Line Sheet(s)</button>
         </div>
         ${zonesToPrint.map((z, zIdx) => `
-          <div class="${zIdx > 0 ? 'pt-4 border-t-2 border-dashed border-[var(--line)]' : ''}" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 mb-2 print-keep">
+          <div class="w-full" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
+            <div class="flex items-end justify-between gap-3 border-b-2 border-[#1b365d] pb-1.5 mb-1.5 print-keep">
               <div>
-                <div class="font-bold text-sm">The Salvation Army · Butler, PA — Blank Blind Inventory Sheet (30 Lines)</div>
-                <div class="opacity-85 mt-0.5">Section: <strong>${esc(z)}</strong> &bull; Date: ________________ &bull; Counter: ______________________ &bull; Verified By: ________________</div>
+                <div class="text-[10px] font-bold uppercase tracking-wider text-[#b3122b]">The Salvation Army · Butler, PA · Community Meals KMS</div>
+                <div class="text-sm font-extrabold">BLIND PHYSICAL INVENTORY SHEET — <span class="underline">${esc(z.toUpperCase())}</span></div>
+              </div>
+              <div class="text-right text-[11px] font-semibold">
+                Page ${zIdx + 1} of ${zonesToPrint.length} &bull; 30 Lines
               </div>
             </div>
-            <table class="w-full text-left border-collapse text-xs">
+            <div class="grid grid-cols-3 gap-3 text-[11px] font-semibold mb-2 print-keep">
+              <div class="border-b border-slate-500 pb-0.5">Date:</div>
+              <div class="border-b border-slate-500 pb-0.5">Counted By:</div>
+              <div class="border-b border-slate-500 pb-0.5">Verified By:</div>
+            </div>
+            <table class="w-full text-left border-collapse border border-slate-400" style="font-size: 9.5pt; table-layout: fixed;">
               <thead>
-                <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
-                  <th class="py-1 px-2 w-10">#</th>
-                  <th class="py-1 px-2">Item Name / Description</th>
-                  <th class="py-1 px-2 w-28">Unit</th>
-                  <th class="py-1 px-2 w-28 text-right">Counted Qty</th>
-                  <th class="py-1 px-2 w-32">Notes / Exp.</th>
+                <tr class="bg-[#1b365d] text-white uppercase" style="font-size: 8.5pt;">
+                  <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 6%;">#</th>
+                  <th class="border border-slate-400 py-1 px-2" style="width: 48%;">Item Name / Description</th>
+                  <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 14%;">Unit</th>
+                  <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 14%;">Counted Qty</th>
+                  <th class="border border-slate-400 py-1 px-2" style="width: 18%;">Notes / Exp.</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-[var(--line)]">
+              <tbody>
                 ${blankLines.map(num => `
-                  <tr>
-                    <td class="py-1.5 px-2 font-mono font-bold opacity-70">${num}</td>
-                    <td class="py-1.5 px-2">__________________________________________</td>
-                    <td class="py-1.5 px-2">____________</td>
-                    <td class="py-1.5 px-2 text-right font-mono">____________</td>
-                    <td class="py-1.5 px-2">______________</td>
+                  <tr style="height: 24px;">
+                    <td class="border border-slate-400 px-1 text-center font-mono font-bold text-slate-600">${num}</td>
+                    <td class="border border-slate-400 px-2"></td>
+                    <td class="border border-slate-400 px-1.5"></td>
+                    <td class="border border-slate-400 px-1.5"></td>
+                    <td class="border border-slate-400 px-2"></td>
                   </tr>
                 `).join('')}
               </tbody>
