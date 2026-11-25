@@ -293,6 +293,45 @@ export function allMonTueWedFriBetween(startStr, endStr) {
   return res;
 }
 
+export function isAnnouncementActiveToday(ann, nowObj) {
+  if (!ann) return false;
+  const now = nowObj || new Date();
+  const todayStr = localDateStr(now);
+  if (ann.expires_at && ann.expires_at < todayStr) return false;
+  const anchorStr = ann.alert_at ? String(ann.alert_at).slice(0, 10) : (ann.created_at || todayStr);
+  if (anchorStr > todayStr) return false;
+  const rule = ann.repeat_rule || 'none';
+  if (rule === 'none' || rule === 'daily') return true;
+  const dow = now.getDay();
+  const rDays = Array.isArray(ann.repeat_days) ? ann.repeat_days.map(Number) : [];
+  if (rule === 'weekly') return rDays.length ? rDays.includes(dow) : (dow === new Date(anchorStr + 'T12:00:00').getDay());
+  if (rule === 'biweekly') {
+    const dayOk = rDays.length ? rDays.includes(dow) : (dow === new Date(anchorStr + 'T12:00:00').getDay());
+    if (!dayOk) return false;
+    const diffWeeks = Math.floor((new Date(todayStr + 'T12:00:00') - new Date(anchorStr + 'T12:00:00')) / (7 * 86400000));
+    return diffWeeks % 2 === 0;
+  }
+  if (rule === 'monthly') {
+    const anchorDay = parseInt(anchorStr.slice(8, 10), 10) || 1;
+    return now.getDate() === anchorDay;
+  }
+  return true;
+}
+
+export function formatRepeatLabel(ann) {
+  if (!ann) return 'One-time';
+  const rule = ann.repeat_rule || 'none';
+  if (rule === 'none') return 'One-time';
+  if (rule === 'daily') return 'Daily';
+  if (rule === 'monthly') return 'Monthly';
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const rDays = Array.isArray(ann.repeat_days) ? ann.repeat_days.map(Number).filter(n => n >= 0 && n <= 6) : [];
+  const daysStr = rDays.length ? ' (' + rDays.map(d => dayNames[d]).join(', ') + ')' : '';
+  if (rule === 'weekly') return 'Weekly' + daysStr;
+  if (rule === 'biweekly') return 'Every 2 Weeks' + daysStr;
+  return rule;
+}
+
 // Toast & Modal Utilities
 export function showToast(msg, type) {
   const box = document.getElementById('toast-container');
