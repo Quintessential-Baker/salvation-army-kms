@@ -115,8 +115,7 @@ export function renderReport(main) {
     `• Forecasted Need: Projecting ${proj30Meals.toLocaleString()} meals next 30 days (~$${proj30Budget.toLocaleString()}), ${proj90Meals.toLocaleString()} meals next 90 days (~$${proj90Budget.toLocaleString()}), and ${proj365Meals.toLocaleString()} meals annually (~$${proj365Budget.toLocaleString()}).`,
     `• Immediate Restock / Donation Priorities (${lowItems.length} items below Par${restockCost > 0 ? ', est. $' + restockCost.toFixed(2) : ''}): ${lowItems.slice(0, 6).map(r => r.item.name + ' (' + r.needCases + ' cases)').join('; ') || 'All items at Par'}.`,
     `• Compliance & Stewardship: ${safetyPct !== null ? safetyPct + '% HACCP temp pass rate (' + checks + ' checks)' : 'HACCP active'}, ${savedLeftovers} leftover container(s) safely reused via FIFO.`
-  ].join('
-');
+  ].join('\\n');
 
   main.innerHTML = `
     <div class="space-y-4">
