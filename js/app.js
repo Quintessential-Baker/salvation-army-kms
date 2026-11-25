@@ -7,7 +7,7 @@ import {
   parseFlexibleDate, allMonTueWedFriBetween, serviceDaysBetween,
   isAnnouncementActiveToday, nowStamp, uid, esc, fmtNum,
   showToast, openModal, closeModal, askConfirm
-} from './utils.js';
+, formatKitchenAmt } from './utils.js';
 
 import {
   STORAGE_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, WEAK_PINS,
