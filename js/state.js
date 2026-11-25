@@ -23,9 +23,9 @@ import {
   showToast
 } from './utils.js';
 
-export const STORAGE_KEY = 'sa-butler-kms-v4';
-export const SUPABASE_URL = 'https://vydclmlheskrvvtvemky.supabase.co';
-export const SUPABASE_ANON_KEY = 'sb_publishable_MpzBqpjpEl4l7G9mM_XEFg_H5u-xSTv';
+export const STORAGE_KEY = 'community-kitchen-kms-demo-v1';
+export const SUPABASE_URL = 'https://jpznndlwcylekkxhvxvi.supabase.co';
+export const SUPABASE_ANON_KEY = 'sb_publishable_dKEZGO51hGG_fxQ1AqgBXw_13QUXX6i';
 const WK_MS = 604800000;
 
 export const SEED_ITEMS = [
