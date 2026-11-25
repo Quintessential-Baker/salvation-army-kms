@@ -8,6 +8,117 @@ import {
 export function renderReport(main) {
   if (!isMgmtOrHigher()) {
     main.innerHTML = `
+      <div class="kms-card p-6 max-w-lg mx-auto text-center space-y-2">
+        <div class="tag tag-OUT inline-block">MANAGEMENT ONLY</div>
+        <h2 class="text-base font-bold">Restricted Executive &amp; Funding Reports</h2>
+        <p class="text-xs opacity-75">This section contains financial, donation, and management reports and is restricted to Management accounts.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const today = localDateStr();
+  const rm = state.reportMonth || today.slice(0, 7);
+  const rangeMode = state.reportRange || 'month';
+  const months = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+    months.push(localDateStr(d).slice(0, 7));
+  }
+
+  let startStr = rm + '-01';
+  let endStr = rm + '-31';
+  let periodLabel = `Month: ${rm}`;
+  if (rangeMode === '30d') { startStr = addDays(today, -29); endStr = today; periodLabel = `Last 30 Days (${startStr} to ${today})`; }
+  else if (rangeMode === '90d') { startStr = addDays(today, -89); endStr = today; periodLabel = `Last 90 Days (${startStr} to ${today})`; }
+  else if (rangeMode === 'ytd') { startStr = today.slice(0, 4) + '-01-01'; endStr = today; periodLabel = `Year-to-Date (${today.slice(0, 4)})`; }
+  else if (rangeMode === '365d') { startStr = addDays(today, -364); endStr = today; periodLabel = `Last 12 Months (${startStr} to ${today})`; }
+
+  const inPeriod = (ds) => { const s = String(ds || '').slice(0, 10); return s >= startStr && s <= endStr; };
+
+  const servedDays = state.menuPlan.filter(m => m.status === 'SERVED' && inPeriod(m.service_date));
+  const meals = servedDays.reduce((s, m) => s + (m.served_portions || 0), 0);
+  const avgPerDay = servedDays.length ? (meals / servedDays.length) : 0;
+
+  const recvs = state.transactions.filter(t => t.tx_type === 'RECEIVE' && inPeriod(t.tx_date));
+  const donatedRecvs = recvs.filter(t => /donat|food bank/i.test(t.source || ''));
+  const purchasedRecvs = recvs.filter(t => !/donat|food bank/i.test(t.source || ''));
+  const spend = purchasedRecvs.reduce((s, t) => {
+    const item = state.items.find(i => i.id === t.item_id);
+    const unitP = Number(t.cost || (item ? item.unit_price : 0) || 0);
+    return s + (t.cost ? Number(t.cost) : (Number(t.qty || 0) * unitP));
+  }, 0);
+  const costPerMeal = meals > 0 && spend > 0 ? (spend / meals) : 0;
+
+  const waste = state.transactions.filter(t => t.tx_type === 'WASTE' && inPeriod(t.tx_date));
+  const savedLeftovers = (state.storageTags || []).filter(t => t.status === 'USED' && inPeriod(t.prep_date)).length;
+
+  let checks = 0, fails = 0;
+  Object.keys(state.safetyLogs || {}).filter(d => inPeriod(d)).forEach(d => {
+    const t = state.safetyLogs[d].temps || {};
+    TEMP_CHECKS.forEach((c, i) => {
+      if (t[i] === undefined || t[i] === null || t[i] === '') return;
+      checks++;
+      if (c[1] === 'max' ? Number(t[i]) > c[2] : Number(t[i]) < c[2]) fails++;
+    });
+  });
+  const safetyPct = checks ? Math.round(((checks - fails) / checks) * 100) : null;
+
+  const activeItems = state.items.filter(x => !x.discontinued);
+  const stockValue = activeItems.reduce((s, x) => s + (x.on_hand || 0) * (x.unit_price || 0), 0);
+  const lowItems = activeItems.filter(x => itemStatus(x) !== 'OK').map(x => {
+    const needCases = x.on_hand <= 0 ? Math.max(1, Math.floor(x.par || 1)) : Math.floor(itemNeed(x));
+    const estCost = needCases * (x.unit_price || 0);
+    return { item: x, needCases, estCost };
+  }).sort((a, b) => b.needCases - a.needCases);
+  const restockCost = lowItems.reduce((s, r) => s + r.estCost, 0);
+  const parHealthPct = activeItems.length ? Math.round(((activeItems.length - lowItems.length) / activeItems.length) * 100) : 100;
+
+  const fc = getForecastMetrics();
+  const proj30Meals = Math.round(fc.avgRecent * 17);
+  const proj90Meals = Math.round(fc.avgRecent * 51);
+  const proj365Meals = Math.round(fc.avgRecent * 204);
+  const benchPerMeal = costPerMeal > 0 ? costPerMeal : 3.25;
+  const usingBench = costPerMeal <= 0;
+  const proj30Budget = Math.round(proj30Meals * benchPerMeal);
+  const proj90Budget = Math.round(proj90Meals * benchPerMeal);
+  const proj365Budget = Math.round(proj365Meals * benchPerMeal);
+  const next7Days = serviceDaysBetween(today, addDays(today, 14)).slice(0, 7);
+  const next7Meals = next7Days.reduce((s, d) => s + forecastWeekday(d), 0);
+  const peakDow = Object.entries(fc.dowFactor || {}).sort((a, b) => b[1] - a[1])[0];
+
+  const suggestions = [];
+  if (lowItems.length > 0) {
+    suggestions.push(`<strong>Restock Funding / Purchase Request:</strong> ${lowItems.length} staple item(s) are below Par (${lowItems.reduce((s, r) => s + r.needCases, 0)} whole cases needed${restockCost > 0 ? ', est. $' + restockCost.toFixed(2) : ''}). Prioritize: ${lowItems.slice(0, 4).map(r => esc(r.item.name) + ' (' + r.needCases + ' cs)').join(', ')}.`);
+  } else {
+    suggestions.push('<strong>Inventory Readiness:</strong> 100% of active inventory items are at or above Par Level.');
+  }
+  if (donatedRecvs.length > 0 || purchasedRecvs.length > 0) {
+    suggestions.push(`<strong>Donation Leverage:</strong> ${donatedRecvs.length} Food Bank / Donor check-in(s) and ${purchasedRecvs.length} vendor purchase(s) recorded in this period. Targeting in-kind donations for top-turn items (${lowItems.slice(0, 3).map(r => esc(r.item.name)).join(', ') || 'canned proteins & dry pasta'}) directly lowers cash cost per meal.`);
+  }
+  if (fc.avgRecent > 0) {
+    suggestions.push(`<strong>Demand &amp; Staffing Outlook:</strong> Recent trend averages <strong>${fc.avgRecent.toFixed(1)} patrons/day</strong> (${proj90Meals.toLocaleString()} meals next quarter)${peakDow ? `; highest-turnout day is <strong>${peakDow[0]}</strong> (${Math.round((peakDow[1] - 1) * 100) >= 0 ? '+' : ''}${Math.round((peakDow[1] - 1) * 100)}% vs. avg)` : ''}. Plan prep &amp; volunteer coverage accordingly.`);
+  }
+  if (fails > 0) {
+    suggestions.push(`<strong>Food Safety Action:</strong> ${fails} temperature check(s) were flagged out of range in this period — review equipment calibration and corrective actions before leadership audit.`);
+  } else if (checks > 0) {
+    suggestions.push(`<strong>Food Safety Compliance:</strong> 100% pass rate across ${checks} logged HACCP temperature check(s).`);
+  }
+  if (waste.length > 3) {
+    suggestions.push(`<strong>Waste Reduction Opportunity:</strong> ${waste.length} waste entries logged — tighten FIFO rotation in Storage &amp; Date Labels and shift surplus to Leftovers Service.`);
+  }
+
+  const fundingBrief = [
+    `THE SALVATION ARMY COMMUNITY MEALS (BUTLER, PA) — FUNDING & OPERATIONS BRIEF (${periodLabel})`,
+    `• Community Impact: ${meals.toLocaleString()} hot lunches served across ${servedDays.length} open service day(s) (avg ${avgPerDay.toFixed(1)} patrons/day).`,
+    `• Financial & Donation Snapshot: $${spend.toFixed(2)} vendor spend recorded (${costPerMeal > 0 ? '$' + costPerMeal.toFixed(2) + '/meal' : 'est. $3.25/meal benchmark'}), supplemented by ${donatedRecvs.length} in-kind/food bank deliveries. Current inventory value: $${stockValue.toFixed(2)} (${parHealthPct}% items at/above Par).`,
+    `• Forecasted Need: Projecting ${proj30Meals.toLocaleString()} meals next 30 days (~$${proj30Budget.toLocaleString()}), ${proj90Meals.toLocaleString()} meals next 90 days (~$${proj90Budget.toLocaleString()}), and ${proj365Meals.toLocaleString()} meals annually (~$${proj365Budget.toLocaleString()}).`,
+    `• Immediate Restock / Donation Priorities (${lowItems.length} items below Par${restockCost > 0 ? ', est. $' + restockCost.toFixed(2) : ''}): ${lowItems.slice(0, 6).map(r => r.item.name + ' (' + r.needCases + ' cases)').join('; ') || 'All items at Par'}.`,
+    `• Compliance & Stewardship: ${safetyPct !== null ? safetyPct + '% HACCP temp pass rate (' + checks + ' checks)' : 'HACCP active'}, ${savedLeftovers} leftover container(s) safely reused via FIFO.`
+  ].join('
+');
+
+  main.innerHTML = `
     <div class="space-y-4">
       <!-- SA Executive Header Banner -->
       <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
@@ -150,5 +261,4 @@ export function renderReport(main) {
       </div>
     </div>
   `;
-}
 }
