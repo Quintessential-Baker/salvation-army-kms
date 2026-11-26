@@ -88,7 +88,7 @@ document.addEventListener('click', (e) => {
           <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
             <div class="bg-[#1b365d] text-white px-4 py-3 flex items-center justify-between gap-3 border-b-4 border-[#b3122b] print-keep">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+                <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">${esc((state.orgConfig && state.orgConfig.badgeText) || "CK")}</div>
                 <div class="min-w-0">
                   <div class="sa-sub text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Standardized Recipe Card</div>
                   <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">${esc(rNorm.name)}</h2>
@@ -336,7 +336,7 @@ export function render() {
     main.innerHTML = `
       <div class="max-w-md mx-auto mt-10 kms-card p-6 space-y-4 shadow-md">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-bold">SA</div>
+          <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-bold">${esc((state.orgConfig && state.orgConfig.badgeText) || "CK")}</div>
           <div>
             <h2 class="text-base font-bold">Kitchen OS Locked</h2>
             <p class="text-xs opacity-70">Select your profile and enter your PIN.</p>
@@ -1521,7 +1521,7 @@ document.addEventListener('click', (e) => {
           <!-- SA Navy/Red Header -->
           <div class="sa-print-banner bg-[#1b365d] text-white px-4 py-2.5 flex items-center justify-between gap-3 border-b-4 border-[#b3122b] print-keep">
             <div class="flex items-center gap-3 min-w-0">
-              <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+              <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">${esc((state.orgConfig && state.orgConfig.badgeText) || "CK")}</div>
               <div class="min-w-0">
                 <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Standardized Recipe Card</div>
                 <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">${esc(rNorm.name)}</h2>
@@ -1952,7 +1952,7 @@ document.addEventListener('click', (e) => {
           <div class="sa-print-shell w-full overflow-hidden" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
             <div class="sa-print-banner flex items-center justify-between gap-3 print-keep">
               <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-md bg-[#b3122b] text-white flex items-center justify-center font-black text-sm shrink-0">SA</div>
+                <div class="w-8 h-8 rounded-md bg-[#b3122b] text-white flex items-center justify-center font-black text-sm shrink-0">${esc((state.orgConfig && state.orgConfig.badgeText) || "CK")}</div>
                 <div>
                   <div class="sa-sub text-[9.5px] font-extrabold uppercase tracking-wider text-[#b3122b]">Community Kitchen KMS &bull; Community Meals KMS</div>
                   <div class="sa-title text-sm font-black text-[#1b365d]">BLIND PHYSICAL INVENTORY SHEET — <span class="underline">${esc(z.toUpperCase())}</span></div>

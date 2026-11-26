@@ -376,8 +376,51 @@ export function applyOrgTheme(cfg = {}) {
   const root = document.documentElement;
   const primary = cfg.primaryColor || '#1b365d';
   const accent = cfg.accentColor || '#b3122b';
+  const badgeText = esc(cfg.badgeText || 'CK');
+
+  const isLightColor = (hex) => {
+    const c = String(hex || '').replace('#', '');
+    if (c.length !== 6) return false;
+    const r = parseInt(c.slice(0, 2), 16);
+    const g = parseInt(c.slice(2, 4), 16);
+    const b = parseInt(c.slice(4, 6), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 > 155;
+  };
+
+  const primaryInk = isLightColor(primary) ? '#0f172a' : '#ffffff';
+  const accentInk = isLightColor(accent) ? '#0f172a' : '#ffffff';
+
   root.style.setProperty('--sa-navy', primary);
   root.style.setProperty('--sa-red', accent);
+  root.style.setProperty('--sa-navy-ink', primaryInk);
+  root.style.setProperty('--sa-red-ink', accentInk);
+
+  let dyn = document.getElementById('org-dynamic-colors');
+  if (!dyn) {
+    dyn = document.createElement('style');
+    dyn.id = 'org-dynamic-colors';
+    document.head.appendChild(dyn);
+  }
+  dyn.textContent = `
+    header { background-color: ${primary} !important; color: ${primaryInk} !important; }
+    header h1, header p, header #hdr-user { color: ${primaryInk} !important; }
+    header nav { border-top-color: ${accent} !important; }
+    .bg-\\[\\#1b365d\\], .kms-btn-navy, table thead th { background-color: ${primary} !important; color: ${primaryInk} !important; }
+    .bg-\\[\\#b3122b\\], .kms-btn-primary, #nav-groups button.active, #nav-groups button.bg-\\[\\#b3122b\\] {
+      background-color: ${accent} !important;
+      border-color: ${accent} !important;
+      color: ${accentInk} !important;
+    }
+    #nav-subtabs button.active, #nav-subtabs button.bg-white {
+      background-color: ${primary} !important;
+      color: ${primaryInk} !important;
+    }
+    .text-\\[\\#1b365d\\] { color: ${primary} !important; }
+    .text-\\[\\#b3122b\\] { color: ${accent} !important; }
+    .border-\\[\\#1b365d\\] { border-color: ${primary} !important; }
+    .border-\\[\\#b3122b\\], .sa-hero-banner { border-left-color: ${accent} !important; }
+  `;
+
   if (cfg.orgName) {
     document.title = cfg.orgName + ' — Kitchen Management System';
     const h1 = document.querySelector('header h1');
@@ -389,15 +432,11 @@ export function applyOrgTheme(cfg = {}) {
     const userTxt = userSpan ? userSpan.textContent : 'Signed out';
     sub.innerHTML = esc(cfg.orgSubtitle) + ' · <span id="hdr-user">' + esc(userTxt) + '</span>';
   }
-  const badge = document.querySelector('header .bg-\\[\\#b3122b\\], header .sa-shield-badge');
-  if (badge) {
+  document.querySelectorAll('header .bg-\\[\\#b3122b\\], .sa-shield-badge, #pin-change-backdrop .bg-\\[\\#b3122b\\]').forEach((badge) => {
     badge.style.backgroundColor = accent;
+    badge.style.color = accentInk;
     badge.innerHTML = cfg.logoUrl
       ? '<img src="' + esc(cfg.logoUrl) + '" alt="Logo" class="w-full h-full object-contain rounded" />'
-      : esc(cfg.badgeText || 'CK');
-  }
-  const hdr = document.querySelector('header');
-  if (hdr) hdr.style.backgroundColor = primary;
-  const nav = document.querySelector('header nav');
-  if (nav) nav.style.borderTopColor = accent;
+      : badgeText;
+  });
 }

@@ -34,7 +34,7 @@ export function renderDashboard(main) {
       <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
         <div class="sa-hero-banner px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
           <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
+            <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">${esc((state.orgConfig && state.orgConfig.badgeText) || "CK")}</div>
             <div class="min-w-0">
               <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">Community Kitchen KMS &bull; Operations Command Center</div>
               <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Kitchen &amp; Community Meals Overview — ${dLabel(today)}</h2>
