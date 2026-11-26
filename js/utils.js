@@ -389,7 +389,7 @@ export function applyOrgTheme(cfg = {}) {
     const userTxt = userSpan ? userSpan.textContent : 'Signed out';
     sub.innerHTML = esc(cfg.orgSubtitle) + ' · <span id="hdr-user">' + esc(userTxt) + '</span>';
   }
-  const badge = document.querySelector('header .bg-\[\#b3122b\], header .sa-shield-badge');
+  const badge = document.querySelector('header .bg-\\[\\#b3122b\\], header .sa-shield-badge');
   if (badge) {
     badge.style.backgroundColor = accent;
     badge.innerHTML = cfg.logoUrl
@@ -398,4 +398,6 @@ export function applyOrgTheme(cfg = {}) {
   }
   const hdr = document.querySelector('header');
   if (hdr) hdr.style.backgroundColor = primary;
+  const nav = document.querySelector('header nav');
+  if (nav) nav.style.borderTopColor = accent;
 }

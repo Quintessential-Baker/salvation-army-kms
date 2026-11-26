@@ -324,6 +324,7 @@ function checkMandatoryModals() {
 }
 
 export function render() {
+  try { applyOrgTheme(state.orgConfig); } catch (_) {}
   relearnPars();
   renderNav();
   updateSyncUI();
@@ -4102,3 +4103,32 @@ pruneExpiredAlerts();
 render();
 initSupabase();
 setInterval(checkScheduledAlerts, 15000);
+document.addEventListener('input', (e) => {
+  if (e.target && (e.target.name === 'primaryColor' || e.target.name === 'accentColor') && e.target.closest('#form-org-branding')) {
+    const form = e.target.closest('#form-org-branding');
+    applyOrgTheme({
+      ...(state.orgConfig || {}),
+      primaryColor: form.primaryColor.value,
+      accentColor: form.accentColor.value
+    });
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'inp-import-org-profile' && e.target.files && e.target.files[0]) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const imported = JSON.parse(String(reader.result || '{}'));
+        state.orgConfig = { ...(state.orgConfig || {}), ...imported };
+        saveState();
+        applyOrgTheme(state.orgConfig);
+        render();
+        showToast('Imported branding profile!');
+      } catch (err) {
+        showToast('Invalid JSON branding file', 'error');
+      }
+    };
+    reader.readAsText(e.target.files[0]);
+  }
+});

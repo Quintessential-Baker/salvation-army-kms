@@ -11,10 +11,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <style>
     :root {
-      --sa-red: #b3122b;
-      --sa-red-dark: #8f0e22;
-      --sa-navy: #1b365d;
-      --sa-navy-dark: #122644;
+      --sa-red: var(--sa-red, #b3122b);
+      --sa-red-dark: var(--sa-red, #8f0e22);
+      --sa-navy: var(--sa-navy, #1b365d);
+      --sa-navy-dark: var(--sa-navy, #122644);
       --bg: #f1f5f9;
       --card: #ffffff;
       --ink: #0f172a;
@@ -40,15 +40,15 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background-color: #1b365d;
+      background-color: var(--sa-navy, #1b365d);
       color: #ffffff;
       box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
     }
     header nav {
       background-color: #ffffff;
-      border-top: 3px solid #b3122b;
+      border-top: 3px solid var(--sa-red, #b3122b);
       border-bottom: 1px solid #cbd5e1;
-      color: #1b365d;
+      color: var(--sa-navy, #1b365d);
     }
     html[data-theme="dark"] header nav {
       background-color: #1e293b;
@@ -56,7 +56,7 @@
       color: #f8fafc;
     }
     #nav-groups button, #nav-subtabs button {
-      color: #1b365d !important;
+      color: var(--sa-navy, #1b365d) !important;
       background-color: transparent;
       font-weight: 700 !important;
       padding: 6px 12px !important;
@@ -76,8 +76,8 @@
     html[data-theme="dark"] #nav-subtabs button:hover {
       background-color: #334155 !important;
     }
-    #nav-groups button.bg-\[\#b3122b\], #nav-groups button.active {
-      background-color: #b3122b !important;
+    #nav-groups button.bg-\[\var(--sa-red, #b3122b)\], #nav-groups button.active {
+      background-color: var(--sa-red, #b3122b) !important;
       color: #ffffff !important;
     }
     #nav-subtabs {
@@ -89,7 +89,7 @@
       border-top-color: #334155 !important;
     }
     #nav-subtabs button.bg-white, #nav-subtabs button.active {
-      background-color: #1b365d !important;
+      background-color: var(--sa-navy, #1b365d) !important;
       color: #ffffff !important;
     }
     #tools-menu {
@@ -118,25 +118,25 @@
     }
     .kms-input:focus {
       outline: none;
-      border-color: #1b365d;
+      border-color: var(--sa-navy, #1b365d);
       box-shadow: 0 0 0 2px rgba(27, 54, 93, 0.18);
     }
     .kms-btn-primary {
-      background-color: #b3122b;
+      background-color: var(--sa-red, #b3122b);
       color: #ffffff;
       font-weight: 700;
       border-radius: 8px;
-      border: 1px solid #8f0e22;
+      border: 1px solid var(--sa-red, #8f0e22);
     }
-    .kms-btn-primary:hover { background-color: #8f0e22; }
+    .kms-btn-primary:hover { background-color: var(--sa-red, #8f0e22); }
     .kms-btn-navy {
-      background-color: #1b365d;
+      background-color: var(--sa-navy, #1b365d);
       color: #ffffff;
       font-weight: 700;
       border-radius: 8px;
-      border: 1px solid #122644;
+      border: 1px solid var(--sa-navy, #122644);
     }
-    .kms-btn-navy:hover { background-color: #122644; }
+    .kms-btn-navy:hover { background-color: var(--sa-navy, #122644); }
     .kms-btn-ok {
       background-color: #15803d;
       color: #ffffff;
@@ -156,22 +156,22 @@
       background-color: var(--card);
       color: var(--ink);
       border: 1px solid var(--line);
-      border-left: 5px solid #b3122b;
+      border-left: 5px solid var(--sa-red, #b3122b);
       border-radius: 12px;
     }
-    .sa-hero-banner h2 { color: #1b365d; }
+    .sa-hero-banner h2 { color: var(--sa-navy, #1b365d); }
     html[data-theme="dark"] .sa-hero-banner h2 { color: #f8fafc; }
-    .sa-hero-banner .text-amber-300 { color: #b3122b; }
+    .sa-hero-banner .text-amber-300 { color: var(--sa-red, #b3122b); }
     .sa-hero-banner .text-white\/90, .sa-hero-banner .opacity-85 { color: var(--muted); }
     table thead th {
-      background-color: #1b365d;
+      background-color: var(--sa-navy, #1b365d);
       color: #ffffff;
       font-weight: 700;
     }
 
     /* Keep Signature Salvation Army Navy Header Crisp & Legible in Both Light & Dark Modes */
     header {
-      background-color: #1b365d !important;
+      background-color: var(--sa-navy, #1b365d) !important;
       color: #ffffff !important;
     }
     header h1, header p, header #hdr-user {
@@ -192,7 +192,7 @@
     }
     html:not([data-theme="dark"]) header nav {
       background-color: #f8fafc !important;
-      border-top: 3px solid #b3122b !important;
+      border-top: 3px solid var(--sa-red, #b3122b) !important;
       border-bottom: 1px solid #cbd5e1 !important;
     }
     html:not([data-theme="dark"]) #nav-subtabs {
@@ -207,7 +207,7 @@
     }
     html:not([data-theme="dark"]) .kms-btn-alt {
       background-color: #f8fafc !important;
-      color: #1b365d !important;
+      color: var(--sa-navy, #1b365d) !important;
       border: 1px solid #94a3b8 !important;
       font-weight: 700 !important;
     }
@@ -249,10 +249,10 @@
         overflow: visible !important;
       }
       .sa-print-shell, .sa-hero-banner {
-        border: 2px solid #1b365d !important;
+        border: 2px solid var(--sa-navy, #1b365d) !important;
         border-radius: 8px !important;
         background: #ffffff !important;
-        color: #1b365d !important;
+        color: var(--sa-navy, #1b365d) !important;
         box-shadow: none !important;
         margin-bottom: 8px !important;
         page-break-inside: avoid !important;
@@ -260,14 +260,14 @@
       }
       .sa-print-banner, .sa-hero-banner {
         background: #f8fafc !important;
-        color: #1b365d !important;
-        border-bottom: 3px solid #b3122b !important;
+        color: var(--sa-navy, #1b365d) !important;
+        border-bottom: 3px solid var(--sa-red, #b3122b) !important;
         padding: 8px 12px !important;
       }
-      .sa-print-banner *, .sa-hero-banner * { color: #1b365d !important; }
-      .sa-print-banner .sa-sub, .sa-hero-banner .text-amber-300 { color: #b3122b !important; }
-      .sa-shield-badge, .sa-print-banner .bg-\[\#b3122b\], .sa-hero-banner .bg-\[\#b3122b\] {
-        background: #b3122b !important;
+      .sa-print-banner *, .sa-hero-banner * { color: var(--sa-navy, #1b365d) !important; }
+      .sa-print-banner .sa-sub, .sa-hero-banner .text-amber-300 { color: var(--sa-red, #b3122b) !important; }
+      .sa-shield-badge, .sa-print-banner .bg-\[\var(--sa-red, #b3122b)\], .sa-hero-banner .bg-\[\var(--sa-red, #b3122b)\] {
+        background: var(--sa-red, #b3122b) !important;
         color: #ffffff !important;
       }
       .kms-card {
@@ -291,7 +291,7 @@
       h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
       table { width: 100% !important; border-collapse: collapse !important; }
       thead { display: table-header-group; }
-      thead tr, thead th { background: #1b365d !important; color: #ffffff !important; }
+      thead tr, thead th { background: var(--sa-navy, #1b365d) !important; color: #ffffff !important; }
       th, td { border: 1px solid #cbd5e1 !important; padding: 4px 6px !important; }
       tbody tr:nth-child(even) { background: #f8fafc !important; }
       input, select, textarea {
