@@ -1146,69 +1146,47 @@ export async function initSupabase() {
 }
 
 export function unifyCatalogWithSystem(targetState = state) {
-  if (!Array.isArray(JORDAN_BANANA_CATALOG) || !Array.isArray(targetState.items)) return { updated: 0, added: 0 };
+  if (!Array.isArray(JORDAN_BANANA_CATALOG) || !Array.isArray(targetState.items)) return { updated: 0, removedDupes: 0 };
+  // Remove any previously auto-added duplicate items (id starting with jb_)
+  const beforeLen = targetState.items.length;
+  targetState.items = targetState.items.filter(it => !String(it.id || '').startsWith('jb_'));
+  const removedDupes = beforeLen - targetState.items.length;
+
   let updated = 0;
-  let added = 0;
   const norm = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
   JORDAN_BANANA_CATALOG.forEach((cat) => {
     const baseUnitCost = Number((cat.casePrice / (cat.packQty || 1)).toFixed(4));
-    const catKey = norm(cat.name);
-    let match = targetState.items.find(it =>
-      (it.sku && it.sku === cat.itemSku) ||
-      norm(it.name) === catKey ||
-      norm(it.name).includes(catKey.split(' ')[0] + ' ' + (catKey.split(' ')[1] || ''))
-    );
+    const catWords = norm(cat.name).split(' ').filter(w => w.length > 2);
+    const match = targetState.items.find(it => {
+      if (it.sku && it.sku === cat.itemSku) return true;
+      const itemNorm = norm(it.name);
+      return catWords.length >= 2 && itemNorm.includes(catWords[0]) && itemNorm.includes(catWords[1]);
+    });
 
     if (match) {
       match.sku = cat.itemSku;
-      match.name = cat.name;
       match.vendor = 'Jordan Banana';
-      match.category = cat.category || match.category || 'Produce & Provisions';
-      match.zone = cat.zone || match.zone || 'Dry Storage';
-      match.unit = cat.baseUnit || match.unit;
       match.order_unit = cat.orderUnit;
       match.pack_qty = cat.packQty;
       match.case_price = cat.casePrice;
       match.unit_price = baseUnitCost;
       updated++;
-    } else {
-      targetState.items.push({
-        id: 'jb_' + cat.itemSku.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-        sku: cat.itemSku,
-        name: cat.name,
-        vendor: 'Jordan Banana',
-        category: cat.category || 'Produce & Provisions',
-        zone: cat.zone || 'Dry Storage',
-        qty: 0,
-        par: cat.packQty || 10,
-        unit: cat.baseUnit || 'ea',
-        order_unit: cat.orderUnit,
-        pack_qty: cat.packQty,
-        case_price: cat.casePrice,
-        unit_price: baseUnitCost,
-        cadence: 'weekly'
-      });
-      added++;
     }
   });
 
-  // Align recipe ingredient names & units to the unified Master Inventory
   if (Array.isArray(targetState.recipes)) {
     targetState.recipes.forEach((rec) => {
       (rec.ingredients || []).forEach((ing) => {
         const ingKey = norm(ing.name);
-        const invMatch = targetState.items.find(it =>
-          norm(it.name) === ingKey || norm(it.name).startsWith(ingKey)
-        );
+        const invMatch = targetState.items.find(it => norm(it.name) === ingKey || norm(it.name).includes(ingKey));
         if (invMatch) {
           ing.itemId = invMatch.id;
           ing.sku = invMatch.sku;
-          ing.name = invMatch.name;
           ing.unit_price = invMatch.unit_price;
         }
       });
     });
   }
-  return { updated, added };
+  return { updated, removedDupes };
 }
