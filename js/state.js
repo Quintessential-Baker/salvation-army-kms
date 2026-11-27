@@ -15,44 +15,44 @@ export const SUPABASE_ANON_KEY = 'sb_publishable_MpzBqpjpEl4l7G9mM_XEFg_H5u-xSTv
 const WK_MS = 604800000;
 
 export const JORDAN_BANANA_CATALOG = [
-  { name: 'Beef 81/19 Ground Fresh (10lb tube)', orderUnit: 'ea', casePrice: 55.90, singlePrice: 55.90, packQty: 10, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
-  { name: 'Chicken Breast Fresh 7oz (20lb)', orderUnit: 'case', casePrice: 89.95, singlePrice: null, packQty: 20, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
-  { name: 'Deli Ham VA Honey Baked (Catch-Weight)', orderUnit: 'lb', casePrice: 5.30, singlePrice: 5.30, packQty: 1, baseUnit: 'lbs', zone: 'Walk-In Cooler', catchWeight: true },
-  { name: 'Pork Tenderloin Fresh (Catch-Weight)', orderUnit: 'lb', casePrice: 3.60, singlePrice: 3.60, packQty: 1, baseUnit: 'lbs', zone: 'Walk-In Cooler', catchWeight: true },
-  { name: 'Turkey Ground Frozen (4-5lb)', orderUnit: 'case', casePrice: 66.55, singlePrice: null, packQty: 20, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
-  { name: 'Hot Dogs 8-1 All Beef (10lb / 80ct)', orderUnit: 'case', casePrice: 56.30, singlePrice: null, packQty: 80, baseUnit: 'each', zone: 'Walk-In Freezer' },
-  { name: 'Meatball 1oz Fontanini (10lb / 160ct)', orderUnit: 'case', casePrice: 72.90, singlePrice: null, packQty: 160, baseUnit: 'each', zone: 'Walk-In Freezer' },
-  { name: 'Sausage Italian Sweet Link (2-5lb)', orderUnit: 'case', casePrice: 70.30, singlePrice: null, packQty: 10, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
-  { name: 'Fish Sticks Pollock Breaded (4/5lb)', orderUnit: 'case', casePrice: 106.50, singlePrice: null, packQty: 20, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
-  { name: 'Fish Pollock Beer Batter 9oz (10lb)', orderUnit: 'case', casePrice: 56.00, singlePrice: null, packQty: 10, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
-  { name: 'Cheese 50/50 Prov/Moz Shrd (6-5lb)', orderUnit: 'case', casePrice: 76.95, singlePrice: null, packQty: 30, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
-  { name: 'Cheese Parmesan Grated (5lb bag)', orderUnit: 'ea', casePrice: 25.85, singlePrice: 25.85, packQty: 5, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
-  { name: 'Cheese Ricotta 46oz (6-46oz)', orderUnit: 'case', casePrice: 43.35, singlePrice: null, packQty: 6, baseUnit: 'tubs', zone: 'Walk-In Cooler' },
-  { name: 'Eggs Large (15 Dozen Carton)', orderUnit: 'carton', casePrice: 19.00, singlePrice: 19.00, packQty: 15, baseUnit: 'doz', zone: 'Walk-In Cooler' },
-  { name: 'Apple Gala (12-3lb)', orderUnit: 'case', casePrice: 39.00, singlePrice: null, packQty: 36, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
-  { name: 'Broccoli Floret (4-3lb)', orderUnit: 'case', casePrice: 37.50, singlePrice: null, packQty: 12, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
-  { name: 'Carrots (10-5lb / 48-1lb)', orderUnit: 'case', casePrice: 41.00, singlePrice: null, packQty: 50, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
-  { name: 'Celery 30 Sleeve', orderUnit: 'case', casePrice: 64.00, singlePrice: 1.80, packQty: 30, baseUnit: 'stalks', zone: 'Walk-In Cooler' },
-  { name: 'Lettuce Iceberg Cello (24ct)', orderUnit: 'case', casePrice: 45.00, singlePrice: null, packQty: 24, baseUnit: 'heads', zone: 'Walk-In Cooler' },
-  { name: 'Onions Spanish (50lb)', orderUnit: 'case', casePrice: 26.00, singlePrice: null, packQty: 50, baseUnit: 'lbs', zone: 'Stockroom' },
-  { name: 'Potato Idaho (10-5lb)', orderUnit: 'case', casePrice: 24.00, singlePrice: null, packQty: 50, baseUnit: 'lbs', zone: 'Stockroom' },
-  { name: 'Potato Bakers 40/90 Count (50lb)', orderUnit: 'case', casePrice: 21.50, singlePrice: null, packQty: 50, baseUnit: 'lbs', zone: 'Stockroom' },
-  { name: 'Tomatoes Fresh (10lb)', orderUnit: 'case', casePrice: 32.00, singlePrice: null, packQty: 10, baseUnit: 'lbs', zone: 'Kitchen Cooler' },
-  { name: 'Zucchini Fresh (1/2 Bushel 20lb)', orderUnit: 'case', casePrice: 32.00, singlePrice: null, packQty: 20, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
-  { name: 'Corn #10 Can (6-#10)', orderUnit: 'case', casePrice: 46.95, singlePrice: 8.50, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
-  { name: 'Peas Sweet #10 Can (6-#10)', orderUnit: 'case', casePrice: 51.25, singlePrice: 9.25, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
-  { name: 'Green Beans #10 Can (6-#10)', orderUnit: 'case', casePrice: 49.50, singlePrice: 9.85, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
-  { name: 'Fruit Cocktail #10 Can (6-#10)', orderUnit: 'case', casePrice: 60.30, singlePrice: 10.75, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
-  { name: 'Peaches Diced in Syrup #10 (6-#10)', orderUnit: 'case', casePrice: 56.70, singlePrice: 10.25, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
-  { name: 'Pineapple Chunks/Tidbits #10 (6-#10)', orderUnit: 'case', casePrice: 50.50, singlePrice: 9.25, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
-  { name: 'Tomatoes Diced / Marinara #10 (6-#10)', orderUnit: 'case', casePrice: 48.10, singlePrice: 8.75, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
-  { name: 'Pudding Chocolate / Vanilla #10 (6-#10)', orderUnit: 'case', casePrice: 54.50, singlePrice: 9.75, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
-  { name: 'Potato Real Mashed Idahoan (6-3.24lb)', orderUnit: 'case', casePrice: 92.60, singlePrice: null, packQty: 6, baseUnit: 'bags', zone: 'Stockroom' },
-  { name: 'Ketchup / Mayo / Dressings (4-1gal / 6-#10)', orderUnit: 'case', casePrice: 62.85, singlePrice: 14.25, packQty: 4, baseUnit: 'jugs', zone: 'Stockroom' },
-  { name: 'Flour All-Trump (50lb Bag)', orderUnit: 'bag', casePrice: 31.95, singlePrice: 31.95, packQty: 50, baseUnit: 'lbs', zone: 'Stockroom' },
-  { name: 'Sugar Granulated (25lb Bag)', orderUnit: 'bag', casePrice: 35.50, singlePrice: 35.50, packQty: 25, baseUnit: 'lbs', zone: 'Stockroom' },
+  { name: 'Beef 81/19 Ground Fresh (10lb tube)', itemSku: 'JB-0101', orderUnit: 'ea', casePrice: 55.90, singlePrice: 55.90, packQty: 10, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
+  { name: 'Chicken Breast Fresh 7oz (20lb)', itemSku: 'JB-0102', orderUnit: 'case', casePrice: 89.95, singlePrice: null, packQty: 20, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
+  { name: 'Deli Ham VA Honey Baked (Catch-Weight)', itemSku: 'JB-0103', orderUnit: 'lb', casePrice: 5.30, singlePrice: 5.30, packQty: 1, baseUnit: 'lbs', zone: 'Walk-In Cooler', catchWeight: true },
+  { name: 'Pork Tenderloin Fresh (Catch-Weight)', itemSku: 'JB-0104', orderUnit: 'lb', casePrice: 3.60, singlePrice: 3.60, packQty: 1, baseUnit: 'lbs', zone: 'Walk-In Cooler', catchWeight: true },
+  { name: 'Turkey Ground Frozen (4-5lb)', itemSku: 'JB-0105', orderUnit: 'case', casePrice: 66.55, singlePrice: null, packQty: 20, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
+  { name: 'Hot Dogs 8-1 All Beef (10lb / 80ct)', itemSku: 'JB-0106', orderUnit: 'case', casePrice: 56.30, singlePrice: null, packQty: 80, baseUnit: 'each', zone: 'Walk-In Freezer' },
+  { name: 'Meatball 1oz Fontanini (10lb / 160ct)', itemSku: 'JB-0107', orderUnit: 'case', casePrice: 72.90, singlePrice: null, packQty: 160, baseUnit: 'each', zone: 'Walk-In Freezer' },
+  { name: 'Sausage Italian Sweet Link (2-5lb)', itemSku: 'JB-0108', orderUnit: 'case', casePrice: 70.30, singlePrice: null, packQty: 10, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
+  { name: 'Fish Sticks Pollock Breaded (4/5lb)', itemSku: 'JB-0109', orderUnit: 'case', casePrice: 106.50, singlePrice: null, packQty: 20, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
+  { name: 'Fish Pollock Beer Batter 9oz (10lb)', itemSku: 'JB-0110', orderUnit: 'case', casePrice: 56.00, singlePrice: null, packQty: 10, baseUnit: 'lbs', zone: 'Walk-In Freezer' },
+  { name: 'Cheese 50/50 Prov/Moz Shrd (6-5lb)', itemSku: 'JB-0111', orderUnit: 'case', casePrice: 76.95, singlePrice: null, packQty: 30, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
+  { name: 'Cheese Parmesan Grated (5lb bag)', itemSku: 'JB-0112', orderUnit: 'ea', casePrice: 25.85, singlePrice: 25.85, packQty: 5, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
+  { name: 'Cheese Ricotta 46oz (6-46oz)', itemSku: 'JB-0113', orderUnit: 'case', casePrice: 43.35, singlePrice: null, packQty: 6, baseUnit: 'tubs', zone: 'Walk-In Cooler' },
+  { name: 'Eggs Large (15 Dozen Carton)', itemSku: 'JB-0114', orderUnit: 'carton', casePrice: 19.00, singlePrice: 19.00, packQty: 15, baseUnit: 'doz', zone: 'Walk-In Cooler' },
+  { name: 'Apple Gala (12-3lb)', itemSku: 'JB-0115', orderUnit: 'case', casePrice: 39.00, singlePrice: null, packQty: 36, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
+  { name: 'Broccoli Floret (4-3lb)', itemSku: 'JB-0116', orderUnit: 'case', casePrice: 37.50, singlePrice: null, packQty: 12, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
+  { name: 'Carrots (10-5lb / 48-1lb)', itemSku: 'JB-0117', orderUnit: 'case', casePrice: 41.00, singlePrice: null, packQty: 50, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
+  { name: 'Celery 30 Sleeve', itemSku: 'JB-0118', orderUnit: 'case', casePrice: 64.00, singlePrice: 1.80, packQty: 30, baseUnit: 'stalks', zone: 'Walk-In Cooler' },
+  { name: 'Lettuce Iceberg Cello (24ct)', itemSku: 'JB-0119', orderUnit: 'case', casePrice: 45.00, singlePrice: null, packQty: 24, baseUnit: 'heads', zone: 'Walk-In Cooler' },
+  { name: 'Onions Spanish (50lb)', itemSku: 'JB-0120', orderUnit: 'case', casePrice: 26.00, singlePrice: null, packQty: 50, baseUnit: 'lbs', zone: 'Stockroom' },
+  { name: 'Potato Idaho (10-5lb)', itemSku: 'JB-0121', orderUnit: 'case', casePrice: 24.00, singlePrice: null, packQty: 50, baseUnit: 'lbs', zone: 'Stockroom' },
+  { name: 'Potato Bakers 40/90 Count (50lb)', itemSku: 'JB-0122', orderUnit: 'case', casePrice: 21.50, singlePrice: null, packQty: 50, baseUnit: 'lbs', zone: 'Stockroom' },
+  { name: 'Tomatoes Fresh (10lb)', itemSku: 'JB-0123', orderUnit: 'case', casePrice: 32.00, singlePrice: null, packQty: 10, baseUnit: 'lbs', zone: 'Kitchen Cooler' },
+  { name: 'Zucchini Fresh (1/2 Bushel 20lb)', itemSku: 'JB-0124', orderUnit: 'case', casePrice: 32.00, singlePrice: null, packQty: 20, baseUnit: 'lbs', zone: 'Walk-In Cooler' },
+  { name: 'Corn #10 Can (6-#10)', itemSku: 'JB-0125', orderUnit: 'case', casePrice: 46.95, singlePrice: 8.50, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
+  { name: 'Peas Sweet #10 Can (6-#10)', itemSku: 'JB-0126', orderUnit: 'case', casePrice: 51.25, singlePrice: 9.25, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
+  { name: 'Green Beans #10 Can (6-#10)', itemSku: 'JB-0127', orderUnit: 'case', casePrice: 49.50, singlePrice: 9.85, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
+  { name: 'Fruit Cocktail #10 Can (6-#10)', itemSku: 'JB-0128', orderUnit: 'case', casePrice: 60.30, singlePrice: 10.75, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
+  { name: 'Peaches Diced in Syrup #10 (6-#10)', itemSku: 'JB-0129', orderUnit: 'case', casePrice: 56.70, singlePrice: 10.25, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
+  { name: 'Pineapple Chunks/Tidbits #10 (6-#10)', itemSku: 'JB-0130', orderUnit: 'case', casePrice: 50.50, singlePrice: 9.25, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
+  { name: 'Tomatoes Diced / Marinara #10 (6-#10)', itemSku: 'JB-0131', orderUnit: 'case', casePrice: 48.10, singlePrice: 8.75, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
+  { name: 'Pudding Chocolate / Vanilla #10 (6-#10)', itemSku: 'JB-0132', orderUnit: 'case', casePrice: 54.50, singlePrice: 9.75, packQty: 6, baseUnit: 'cans', zone: 'Stockroom' },
+  { name: 'Potato Real Mashed Idahoan (6-3.24lb)', itemSku: 'JB-0133', orderUnit: 'case', casePrice: 92.60, singlePrice: null, packQty: 6, baseUnit: 'bags', zone: 'Stockroom' },
+  { name: 'Ketchup / Mayo / Dressings (4-1gal / 6-#10)', itemSku: 'JB-0134', orderUnit: 'case', casePrice: 62.85, singlePrice: 14.25, packQty: 4, baseUnit: 'jugs', zone: 'Stockroom' },
+  { name: 'Flour All-Trump (50lb Bag)', itemSku: 'JB-0135', orderUnit: 'bag', casePrice: 31.95, singlePrice: 31.95, packQty: 50, baseUnit: 'lbs', zone: 'Stockroom' },
+  { name: 'Sugar Granulated (25lb Bag)', itemSku: 'JB-0136', orderUnit: 'bag', casePrice: 35.50, singlePrice: 35.50, packQty: 25, baseUnit: 'lbs', zone: 'Stockroom' },
   { name: 'Amoroso 11.5" Sub Rolls (60ct)', orderUnit: 'case', casePrice: 53.30, singlePrice: null, packQty: 60, baseUnit: 'rolls', zone: 'Walk-In Freezer' },
-  { name: 'French Fries / Tater Tots (6-5lb)', orderUnit: 'case', casePrice: 69.85, singlePrice: null, packQty: 30, baseUnit: 'lbs', zone: 'Walk-In Freezer' }
+  { name: 'French Fries / Tater Tots (6-5lb)', itemSku: 'JB-0137', orderUnit: 'case', casePrice: 69.85, singlePrice: null, packQty: 30, baseUnit: 'lbs', zone: 'Walk-In Freezer' }
 ];
 
 export const SEED_ITEMS = [
@@ -173,11 +173,11 @@ export function buildSeedRecipes() {
         'Hold on steam table >=135°F and serve with Daily Salad Bar & breadsticks.'
       ],
       ingredients: [
-        { name: 'Spaghetti (dry)', qty: 8, unit: 'lbs', inv_id: 'item-26', stock_per_unit: 2, per100: 6.15 },
-        { name: 'Spaghetti sauce', qty: 24, unit: 'cups', inv_id: 'item-24', stock_per_unit: 24, per100: 1.54 },
-        { name: 'Chopped garlic', qty: 6, unit: 'tbsp', inv_id: 'item-69', stock_per_unit: 32, per100: 0.29 },
-        { name: 'Meatballs', qty: 130, unit: 'pieces', inv_id: 'item-63', stock_per_unit: 130, per100: 1.54 },
-        { name: 'Breadsticks', qty: 65, unit: 'pieces', inv_id: 'item-59', stock_per_unit: 65, per100: 1.54 }
+        { name: 'Spaghetti (dry)', itemSku: 'JB-0138', qty: 8, unit: 'lbs', inv_id: 'item-26', stock_per_unit: 2, per100: 6.15 },
+        { name: 'Spaghetti sauce', itemSku: 'JB-0139', qty: 24, unit: 'cups', inv_id: 'item-24', stock_per_unit: 24, per100: 1.54 },
+        { name: 'Chopped garlic', itemSku: 'JB-0140', qty: 6, unit: 'tbsp', inv_id: 'item-69', stock_per_unit: 32, per100: 0.29 },
+        { name: 'Meatballs', itemSku: 'JB-0141', qty: 130, unit: 'pieces', inv_id: 'item-63', stock_per_unit: 130, per100: 1.54 },
+        { name: 'Breadsticks', itemSku: 'JB-0142', qty: 65, unit: 'pieces', inv_id: 'item-59', stock_per_unit: 65, per100: 1.54 }
       ]
     },
     {
@@ -195,12 +195,12 @@ export function buildSeedRecipes() {
         'Serve with crackers or biscuits.'
       ],
       ingredients: [
-        { name: 'Ground beef (hamburger)', qty: 15, unit: 'lbs', inv_id: 'item-56', stock_per_unit: 5, per100: 4.62 },
-        { name: 'Kidney beans', qty: 12, unit: 'cups', inv_id: 'item-15', stock_per_unit: 12, per100: 1.54 },
-        { name: 'Black beans', qty: 16, unit: 'cups', inv_id: 'item-19', stock_per_unit: 8, per100: 3.08 },
-        { name: 'Tomato sauce', qty: 24, unit: 'cups', inv_id: 'item-22', stock_per_unit: 8, per100: 4.62 },
-        { name: 'Chopped garlic', qty: 4, unit: 'tbsp', inv_id: 'item-69', stock_per_unit: 32, per100: 0.19 },
-        { name: 'Biscuits', qty: 65, unit: 'pieces', inv_id: 'item-58', stock_per_unit: 65, per100: 1.54 }
+        { name: 'Ground beef (hamburger)', itemSku: 'JB-0143', qty: 15, unit: 'lbs', inv_id: 'item-56', stock_per_unit: 5, per100: 4.62 },
+        { name: 'Kidney beans', itemSku: 'JB-0144', qty: 12, unit: 'cups', inv_id: 'item-15', stock_per_unit: 12, per100: 1.54 },
+        { name: 'Black beans', itemSku: 'JB-0145', qty: 16, unit: 'cups', inv_id: 'item-19', stock_per_unit: 8, per100: 3.08 },
+        { name: 'Tomato sauce', itemSku: 'JB-0146', qty: 24, unit: 'cups', inv_id: 'item-22', stock_per_unit: 8, per100: 4.62 },
+        { name: 'Chopped garlic', itemSku: 'JB-0147', qty: 4, unit: 'tbsp', inv_id: 'item-69', stock_per_unit: 32, per100: 0.19 },
+        { name: 'Biscuits', itemSku: 'JB-0148', qty: 65, unit: 'pieces', inv_id: 'item-58', stock_per_unit: 65, per100: 1.54 }
       ]
     },
     {
@@ -218,12 +218,12 @@ export function buildSeedRecipes() {
         'Serve with cranberry sauce & Daily Salad Bar.'
       ],
       ingredients: [
-        { name: 'Turkeys', qty: 38, unit: 'lbs', inv_id: 'item-49', stock_per_unit: 20, per100: 2.53 },
-        { name: 'Mashed potatoes (flakes)', qty: 24, unit: 'cups', inv_id: 'item-30', stock_per_unit: 16, per100: 2 },
-        { name: 'Block butter', qty: 16, unit: 'tbsp', inv_id: 'item-65', stock_per_unit: 32, per100: 0.67 },
-        { name: 'Chicken gravy', qty: 16, unit: 'cups', inv_id: 'item-36', stock_per_unit: 4, per100: 5.33 },
-        { name: 'Green beans', qty: 18, unit: 'cups', inv_id: 'item-18', stock_per_unit: 12, per100: 2 },
-        { name: 'Cranberry sauce', qty: 8, unit: 'cups', inv_id: 'item-39', stock_per_unit: 4, per100: 2.67 }
+        { name: 'Turkeys', itemSku: 'JB-0149', qty: 38, unit: 'lbs', inv_id: 'item-49', stock_per_unit: 20, per100: 2.53 },
+        { name: 'Mashed potatoes (flakes)', itemSku: 'JB-0150', qty: 24, unit: 'cups', inv_id: 'item-30', stock_per_unit: 16, per100: 2 },
+        { name: 'Block butter', itemSku: 'JB-0151', qty: 16, unit: 'tbsp', inv_id: 'item-65', stock_per_unit: 32, per100: 0.67 },
+        { name: 'Chicken gravy', itemSku: 'JB-0152', qty: 16, unit: 'cups', inv_id: 'item-36', stock_per_unit: 4, per100: 5.33 },
+        { name: 'Green beans', itemSku: 'JB-0153', qty: 18, unit: 'cups', inv_id: 'item-18', stock_per_unit: 12, per100: 2 },
+        { name: 'Cranberry sauce', itemSku: 'JB-0154', qty: 8, unit: 'cups', inv_id: 'item-39', stock_per_unit: 4, per100: 2.67 }
       ]
     }
   ];
@@ -1143,4 +1143,72 @@ export async function initSupabase() {
         sbRefreshTimer = setTimeout(() => { refreshFromCloud(); }, 900);
       }).subscribe();
   }
+}
+
+export function unifyCatalogWithSystem(targetState = state) {
+  if (!Array.isArray(JORDAN_BANANA_CATALOG) || !Array.isArray(targetState.items)) return { updated: 0, added: 0 };
+  let updated = 0;
+  let added = 0;
+  const norm = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+  JORDAN_BANANA_CATALOG.forEach((cat) => {
+    const baseUnitCost = Number((cat.casePrice / (cat.packQty || 1)).toFixed(4));
+    const catKey = norm(cat.name);
+    let match = targetState.items.find(it =>
+      (it.sku && it.sku === cat.itemSku) ||
+      norm(it.name) === catKey ||
+      norm(it.name).includes(catKey.split(' ')[0] + ' ' + (catKey.split(' ')[1] || ''))
+    );
+
+    if (match) {
+      match.sku = cat.itemSku;
+      match.name = cat.name;
+      match.vendor = 'Jordan Banana';
+      match.category = cat.category || match.category || 'Produce & Provisions';
+      match.zone = cat.zone || match.zone || 'Dry Storage';
+      match.unit = cat.baseUnit || match.unit;
+      match.order_unit = cat.orderUnit;
+      match.pack_qty = cat.packQty;
+      match.case_price = cat.casePrice;
+      match.unit_price = baseUnitCost;
+      updated++;
+    } else {
+      targetState.items.push({
+        id: 'jb_' + cat.itemSku.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+        sku: cat.itemSku,
+        name: cat.name,
+        vendor: 'Jordan Banana',
+        category: cat.category || 'Produce & Provisions',
+        zone: cat.zone || 'Dry Storage',
+        qty: 0,
+        par: cat.packQty || 10,
+        unit: cat.baseUnit || 'ea',
+        order_unit: cat.orderUnit,
+        pack_qty: cat.packQty,
+        case_price: cat.casePrice,
+        unit_price: baseUnitCost,
+        cadence: 'weekly'
+      });
+      added++;
+    }
+  });
+
+  // Align recipe ingredient names & units to the unified Master Inventory
+  if (Array.isArray(targetState.recipes)) {
+    targetState.recipes.forEach((rec) => {
+      (rec.ingredients || []).forEach((ing) => {
+        const ingKey = norm(ing.name);
+        const invMatch = targetState.items.find(it =>
+          norm(it.name) === ingKey || norm(it.name).startsWith(ingKey)
+        );
+        if (invMatch) {
+          ing.itemId = invMatch.id;
+          ing.sku = invMatch.sku;
+          ing.name = invMatch.name;
+          ing.unit_price = invMatch.unit_price;
+        }
+      });
+    });
+  }
+  return { updated, added };
 }

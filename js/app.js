@@ -24,7 +24,7 @@ import {
   updateSyncUI, edgeFetch, rpcLogin, rpcSetPin, pinErrorText,
   randomTempPin, stripLocalPins, requireRelogin,
   syncToSupabase, forceLiveStatus, initSupabase
-, JORDAN_BANANA_CATALOG } from './state.js';
+, JORDAN_BANANA_CATALOG , unifyCatalogWithSystem } from './state.js';
 
 import { renderDashboard } from './views/dashboard.js';
 import { renderStock } from './views/stock.js';
