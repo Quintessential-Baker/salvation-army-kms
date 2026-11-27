@@ -9,8 +9,7 @@ import {
   showToast, openModal, closeModal, askConfirm
 , formatKitchenAmt } from './utils.js';
 
-import {
-  STORAGE_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, WEAK_PINS,
+import { STORAGE_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, WEAK_PINS,
   state, undoSnapshot, sbClient, syncStatus, sessionPin,
   setRenderCallback, replaceState, setSessionPin, cloudManaged,
   saveState, getDefaultState, buildSeedInventory,
@@ -23,8 +22,7 @@ import {
   verifyPin, makeUser, newSalt, hashPin,
   updateSyncUI, edgeFetch, rpcLogin, rpcSetPin, pinErrorText,
   randomTempPin, stripLocalPins, requireRelogin,
-  syncToSupabase, forceLiveStatus, initSupabase
-, JORDAN_BANANA_CATALOG , unifyCatalogWithSystem } from './state.js';
+  syncToSupabase, forceLiveStatus, initSupabase, JORDAN_BANANA_CATALOG, unifyCatalogWithSystem } from './state.js';
 
 import { renderDashboard } from './views/dashboard.js';
 import { renderStock } from './views/stock.js';

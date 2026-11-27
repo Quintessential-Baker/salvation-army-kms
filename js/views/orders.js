@@ -1,7 +1,8 @@
 // js/views/orders.js — Orders & Purchase Orders (Weekly Marberger / Monthly Jordan Banana)
 
 import { VENDORS, localDateStr, addDays, serviceDaysBetween, esc, fmtNum } from '../utils.js';
-import { state, getActiveUser, isMgmtOrHigher, demandForDays, suggestedOrderAmount , JORDAN_BANANA_CATALOG } from '../state.js';
+import { state, getActiveUser, isMgmtOrHigher, demandForDays, suggestedOrderAmount } from '../state.js';
+import { JORDAN_BANANA_CATALOG } from '../state.js';
 
 export function renderOrders(main) {
   const hz = Number(state._orderHorizon || 7);
@@ -112,7 +113,7 @@ export function renderOrders(main) {
               </div>
               <div class="flex flex-wrap items-center gap-1.5 no-print">
                 ${(isMgr || po.status === 'requested') && ['requested', 'approved', 'ordered'].includes(po.status) ? `<button type="button" data-po-edit="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit PO / Invoice #</button>` : ''}
-                ${po.status === 'requested' && isMgr ? `<button type="button" data-po-decide="${po.id}:approved" class="kms-btn-ok px-2.5 py-1 text-xs" title="Approve PO, Copy Order Sheet & Open Vendor Email">Approve &amp; Place Order</button> <button type="button" data-copy-vendor-po="${esc(po.id)}" class="kms-btn-alt px-2.5 py-1 text-xs">Copy Order</button><button type="button" data-po-decide="${po.id}:rejected" class="kms-btn-alt px-2.5 py-1 text-xs">Reject</button>` : ''}
+                ${po.status === 'requested' && isMgr ? `<button type="button" data-po-decide="${po.id}:approved" class="kms-btn-ok px-2.5 py-1 text-xs">1-Click Approve &amp; Place Order</button> <button type="button" data-copy-vendor-po="${esc(po.id)}" class="kms-btn-alt px-2.5 py-1 text-xs">Copy Order</button><button type="button" data-po-decide="${po.id}:rejected" class="kms-btn-alt px-2.5 py-1 text-xs">Reject</button>` : ''}
                 ${po.status === 'approved' && isMgr ? `<input id="conf-${po.id}" value="${esc(po.vendor_conf || '')}" placeholder="Vendor conf #" class="kms-input text-xs w-28" /><input id="eta-${po.id}" type="date" value="${esc(po.expected_arrival || '')}" title="Expected Delivery Date" class="kms-input text-xs" /><label class="flex items-center gap-1 text-[11px] opacity-80 cursor-pointer" title="Create system reminder for delivery date"><input type="checkbox" id="rem-${po.id}" checked class="accent-[#b3122b]" /><span>Remind</span></label><button type="button" data-po-order="${po.id}" class="kms-btn-navy px-2.5 py-1 text-xs">Mark Ordered</button>` : ''}
                 ${po.status === 'ordered' ? `<button type="button" data-po-reconcile="${po.id}" class="kms-btn-ok px-2.5 py-1 text-xs">Reconcile &amp; Receive</button>` : ''}
                 ${(isMgr || po.status === 'requested') ? `<button type="button" data-po-del="${po.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Delete</button>` : ''}
@@ -131,35 +132,6 @@ export function renderOrders(main) {
           </div>
         `).join('')}
         ${closedPOs.length ? `<div class="text-xs opacity-70 pt-2">Recently closed: ${closedPOs.map(p => esc(p.po_number)).join(', ')}</div>` : ''}
-      </div>
-    
-      <div class="kms-card p-4 mt-4 border-l-4 border-l-amber-500 space-y-2.5">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h4 class="text-xs font-extrabold uppercase tracking-wide text-[#1b365d]">Jordan Banana Catalog · Quick-Add &amp; Costing Sync</h4>
-            <p class="text-[11px] opacity-75">Net 7 Days · Tax Exempt (0%) · Need by 1:00 PM (92 Race St.) · Auto-adds $10.00 Delivery Fee &amp; converts Cases → Base Units on Check-In</p>
-          </div>
-          <button type="button" id="btn-sync-master-catalog" class="kms-btn-alt px-2.5 py-1 text-[11px] font-bold">Clean Dupes &amp; Sync Catalog Prices</button>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end text-xs">
-          <label class="sm:col-span-5 font-bold">Jordan Banana Catalog Item
-            <select id="jb-cat-item" class="kms-input w-full mt-1">
-              ${(JORDAN_BANANA_CATALOG || []).map((it, idx) => `<option value="${idx}">[${esc(it.itemSku || 'JB')}] ${esc(it.name)} — ${Number(it.casePrice || 0).toFixed(2)}/${esc(it.orderUnit)} (${it.packQty} ${esc(it.baseUnit)})</option>`).join('')}
-            </select>
-          </label>
-          <label class="sm:col-span-2 font-bold">Order Mode
-            <select id="jb-cat-mode" class="kms-input w-full mt-1">
-              <option value="case">Full Case / Bulk</option>
-              <option value="single">Single Unit (ea)</option>
-            </select>
-          </label>
-          <label class="sm:col-span-2 font-bold">Qty
-            <input type="number" id="jb-cat-qty" step="0.5" min="0.5" value="1" class="kms-input w-full mt-1 text-center font-bold" />
-          </label>
-          <div class="sm:col-span-3">
-            <button type="button" id="btn-jb-add-line" class="kms-btn-primary w-full py-2 text-xs font-bold">+ Add to Jordan Banana PO</button>
-          </div>
-        </div>
       </div>
     </div>
   `;

@@ -1104,49 +1104,71 @@ export async function initSupabase() {
   }
 }
 export const JORDAN_BANANA_CATALOG = [
-  { itemSku: 'JB-0101', category: 'Produce', zone: 'Walk-In Cooler', name: 'Apples Red Delicious 125ct', orderUnit: 'cs', packQty: 125, baseUnit: 'ea', casePrice: 34.50, singlePrice: 0.35 },
-  { itemSku: 'JB-0102', category: 'Produce', zone: 'Walk-In Cooler', name: 'Bananas Green/Yellow 40lb', orderUnit: 'cs', packQty: 40, baseUnit: 'lb', casePrice: 23.50, singlePrice: 0.65 },
-  { itemSku: 'JB-0103', category: 'Produce', zone: 'Walk-In Cooler', name: 'Carrots Jumbo 50lb', orderUnit: 'bag', packQty: 50, baseUnit: 'lb', casePrice: 26.00, singlePrice: 0.60 },
-  { itemSku: 'JB-0104', category: 'Produce', zone: 'Walk-In Cooler', name: 'Celery 30 Sleeve', orderUnit: 'cs', packQty: 30, baseUnit: 'ea', casePrice: 44.00, singlePrice: 1.80 },
-  { itemSku: 'JB-0105', category: 'Produce', zone: 'Walk-In Cooler', name: 'Cucumbers Select 1-1/9 Bu', orderUnit: 'cs', packQty: 72, baseUnit: 'ea', casePrice: 32.00, singlePrice: 0.55 },
-  { itemSku: 'JB-0106', category: 'Produce', zone: 'Walk-In Cooler', name: 'Lettuce Iceberg 24ct', orderUnit: 'cs', packQty: 24, baseUnit: 'ea', casePrice: 31.00, singlePrice: 1.50 },
-  { itemSku: 'JB-0107', category: 'Produce', zone: 'Walk-In Cooler', name: 'Lettuce Romaine 24ct', orderUnit: 'cs', packQty: 24, baseUnit: 'ea', casePrice: 33.50, singlePrice: 1.60 },
-  { itemSku: 'JB-0108', category: 'Produce', zone: 'Dry Storage', name: 'Onions Yellow Jumbo 50lb', orderUnit: 'bag', packQty: 50, baseUnit: 'lb', casePrice: 24.50, singlePrice: 0.55 },
-  { itemSku: 'JB-0109', category: 'Produce', zone: 'Dry Storage', name: 'Potatoes Russet 50lb', orderUnit: 'cs', packQty: 50, baseUnit: 'lb', casePrice: 27.00, singlePrice: 0.60 },
-  { itemSku: 'JB-0110', category: 'Produce', zone: 'Walk-In Cooler', name: 'Tomatoes 6x6 25lb', orderUnit: 'cs', packQty: 25, baseUnit: 'lb', casePrice: 28.50, singlePrice: 1.25 },
-  { itemSku: 'JB-0111', category: 'Deli & Meats', zone: 'Walk-In Cooler', name: 'Deli Ham VA Honey Baked (Catch-Weight)', orderUnit: 'lb', packQty: 1, baseUnit: 'lb', casePrice: 5.30, singlePrice: 5.30, catchWeight: true },
-  { itemSku: 'JB-0112', category: 'Deli & Meats', zone: 'Freezer', name: 'Ground Beef 80/20 Bulk 10lb Chub', orderUnit: 'cs', packQty: 40, baseUnit: 'lb', casePrice: 138.00, singlePrice: 3.65 },
-  { itemSku: 'JB-0113', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Corn #10 Can (6-#10)', orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 46.95, singlePrice: 8.25 },
-  { itemSku: 'JB-0114', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Green Beans #10 Can (6-#10)', orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 44.50, singlePrice: 7.90 },
-  { itemSku: 'JB-0115', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Diced Tomatoes #10 Can (6-#10)', orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 42.00, singlePrice: 7.50 },
-  { itemSku: 'JB-0116', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Tomato Sauce #10 Can (6-#10)', orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 39.50, singlePrice: 7.10 },
-  { itemSku: 'JB-0117', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Spaghetti Pasta 20lb Bulk', orderUnit: 'cs', packQty: 20, baseUnit: 'lb', casePrice: 28.00, singlePrice: 1.50 }
+  { itemSku: 'JB-1042', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Chicken soup', aliases: ['chicken noodle soup'], orderUnit: 'cs', packQty: 12, baseUnit: 'cans', casePrice: 38.40, singlePrice: 3.40 },
+  { itemSku: 'JB-1088', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Kidney beans (small)', aliases: ['kidney beans'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 34.50, singlePrice: 6.10 },
+  { itemSku: 'JB-1091', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Black beans (large)', aliases: ['black beans'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 35.90, singlePrice: 6.35 },
+  { itemSku: 'JB-1104', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Tomato sauce', aliases: ['tomato sauce #10'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 39.50, singlePrice: 7.10 },
+  { itemSku: 'JB-1105', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Diced tomatoes', aliases: ['diced tomatoes #10'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 42.00, singlePrice: 7.50 },
+  { itemSku: 'JB-1112', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Corn (small)', aliases: ['corn #10', 'sweet corn'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 46.95, singlePrice: 8.25 },
+  { itemSku: 'JB-1115', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Green beans', aliases: ['green beans #10'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 44.50, singlePrice: 7.90 },
+  { itemSku: 'JB-1210', category: 'Bakery & Dry Mix', zone: 'Dry Storage', name: 'Vanilla pudding', aliases: ['pudding vanilla'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 41.00, singlePrice: 7.25 },
+  { itemSku: 'JB-1211', category: 'Bakery & Dry Mix', zone: 'Dry Storage', name: 'Butterscotch pudding', aliases: ['pudding butterscotch'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 41.00, singlePrice: 7.25 },
+  { itemSku: 'JB-1305', category: 'Bakery & Frozen', zone: 'Freezer', name: 'Biscuits', aliases: ['buttermilk biscuits'], orderUnit: 'cs', packQty: 120, baseUnit: 'ea', casePrice: 36.00, singlePrice: 0.35 },
+  { itemSku: 'JB-1410', category: 'Frozen Proteins', zone: 'Freezer', name: 'Ground beef (hamburger)', aliases: ['ground beef', 'hamburger'], orderUnit: 'cs', packQty: 40, baseUnit: 'lb', casePrice: 138.00, singlePrice: 3.65 },
+  { itemSku: 'JB-1422', category: 'Frozen Proteins', zone: 'Freezer', name: 'Chicken nuggets', aliases: ['breaded chicken nuggets'], orderUnit: 'cs', packQty: 10, baseUnit: 'lb', casePrice: 34.90, singlePrice: 3.75 },
+  { itemSku: 'JB-1430', category: 'Frozen Seafood', zone: 'Freezer', name: 'Fish sticks', aliases: ['breaded fish sticks'], orderUnit: 'cs', packQty: 10, baseUnit: 'lb', casePrice: 36.50, singlePrice: 3.90 },
+  { itemSku: 'JB-1445', category: 'Frozen Pasta', zone: 'Freezer', name: 'Ravioli (cheese)', aliases: ['ravioli'], orderUnit: 'cs', packQty: 10, baseUnit: 'lb', casePrice: 32.50, singlePrice: 3.50 },
+  { itemSku: 'JB-1502', category: 'Deli & Meats', zone: 'Walk-In Cooler', name: 'Sliced ham', aliases: ['deli ham', 'ham'], orderUnit: 'cs', packQty: 12, baseUnit: 'lb', casePrice: 63.60, singlePrice: 5.30 },
+  { itemSku: 'JB-2010', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Apples Red Delicious 125ct', aliases: ['apples'], orderUnit: 'cs', packQty: 125, baseUnit: 'ea', casePrice: 34.50, singlePrice: 0.35 },
+  { itemSku: 'JB-2014', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Bananas Green/Yellow 40lb', aliases: ['bananas'], orderUnit: 'cs', packQty: 40, baseUnit: 'lb', casePrice: 23.50, singlePrice: 0.65 },
+  { itemSku: 'JB-2025', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Celery 30 Sleeve', aliases: ['celery'], orderUnit: 'cs', packQty: 30, baseUnit: 'ea', casePrice: 44.00, singlePrice: 1.80 },
+  { itemSku: 'JB-2030', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Lettuce Iceberg 24ct', aliases: ['lettuce'], orderUnit: 'cs', packQty: 24, baseUnit: 'ea', casePrice: 31.00, singlePrice: 1.50 },
+  { itemSku: 'JB-2040', category: 'Fresh Produce', zone: 'Dry Storage', name: 'Onions Yellow Jumbo 50lb', aliases: ['onions'], orderUnit: 'bag', packQty: 50, baseUnit: 'lb', casePrice: 24.50, singlePrice: 0.55 },
+  { itemSku: 'JB-2045', category: 'Fresh Produce', zone: 'Dry Storage', name: 'Potatoes Russet 50lb', aliases: ['potatoes'], orderUnit: 'cs', packQty: 50, baseUnit: 'lb', casePrice: 27.00, singlePrice: 0.60 },
+  { itemSku: 'JB-2050', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Tomatoes 6x6 25lb', aliases: ['tomatoes'], orderUnit: 'cs', packQty: 25, baseUnit: 'lb', casePrice: 28.50, singlePrice: 1.25 }
 ];
 
-export function unifyCatalogWithSystem(targetState = state) {
-  if (!Array.isArray(targetState.items)) return { updated: 0, removedDupes: 0 };
-  const before = targetState.items.length;
-  // Remove only auto-generated jb_ duplicates; NEVER touch your 11-13 inventory items
-  targetState.items = targetState.items.filter(it => !String(it.id || '').startsWith('jb_') && !(it.name === 'Spaghetti' && String(it.sku || '').startsWith('STK-227')));
-  const removedDupes = before - targetState.items.length;
+export function matchJordanBananaItem(q) {
+  const s = String(q || '').toLowerCase().trim();
+  if (!s) return null;
+  return JORDAN_BANANA_CATALOG.find(c =>
+    c.itemSku.toLowerCase() === s ||
+    c.name.toLowerCase() === s ||
+    (c.aliases || []).some(a => s.includes(a) || a.includes(s))
+  ) || null;
+}
 
-  let updated = 0;
-  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  JORDAN_BANANA_CATALOG.forEach(cat => {
-    const unitCost = Number((cat.casePrice / (cat.packQty || 1)).toFixed(4));
-    const words = norm(cat.name).split(' ').filter(w => w.length > 3);
-    const match = targetState.items.find(it => {
-      const n = norm(it.name);
-      return words.length >= 2 && n.includes(words[0]) && n.includes(words[1]);
-    });
-    if (match) {
-      match.sku = cat.itemSku;
-      match.order_unit = cat.orderUnit;
-      match.pack_qty = cat.packQty;
-      match.case_price = cat.casePrice;
-      match.unit_price = unitCost;
-      updated++;
+export function unifyCatalogWithSystem(t = state) {
+  if (!Array.isArray(t.items)) return { updated: 0, removedDupes: 0 };
+  const b = t.items.length;
+  t.items = t.items.filter(it => !String(it.id || '').startsWith('jb_') && !(it.name === 'Spaghetti' && String(it.sku || '').startsWith('STK-227')));
+  let u = 0;
+  t.items.forEach(it => {
+    const c = matchJordanBananaItem(it.sku) || matchJordanBananaItem(it.name);
+    if (c) {
+      it.sku = c.itemSku;
+      it.vendor = 'Jordan Banana';
+      it.category = c.category;
+      it.order_unit = c.orderUnit;
+      it.pack_qty = c.packQty;
+      it.case_price = c.casePrice;
+      it.unit_price = Number((c.casePrice / (c.packQty || 1)).toFixed(4));
+      u++;
     }
   });
-  return { updated, removedDupes };
+  (t.purchaseOrders || []).forEach(po => {
+    if (!/jordan banana/i.test(po.vendor || '')) return;
+    (po.lines || []).forEach(ln => {
+      if (ln.isFee) return;
+      const c = matchJordanBananaItem(ln.sku) || matchJordanBananaItem(ln.name);
+      if (c) {
+        ln.sku = c.itemSku;
+        ln.category = c.category;
+        ln.unit_price = ln.unit === 'ea' ? c.singlePrice : c.casePrice;
+        ln.packQty = ln.unit === 'ea' ? 1 : c.packQty;
+        ln.baseUnit = c.baseUnit;
+      }
+    });
+  });
+  return { updated: u, removedDupes: b - t.items.length };
 }
