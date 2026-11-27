@@ -2,29 +2,39 @@ import { localDateStr, addDays, serviceDaysBetween, esc } from '../utils.js';
 import { state, getActiveUser, isMgmtOrHigher, demandForDays, VENDOR_CATALOG, matchCatalogItem } from '../state.js';
 
 export function renderOrders(main) {
-  const hz = Number(state._orderHorizon || 30);
+  const hz = Number(state._orderHorizon || 7);
+  const vFilter = state._orderVendor || 'ALL';
   const days = serviceDaysBetween(localDateStr(), addDays(localDateStr(), hz === 1 ? 4 : hz));
-  const dd = demandForDays(hz === 1 ? days.slice(0, 1) : days);
+  const useDays = hz === 1 ? days.slice(0, 1) : days;
+  const dd = demandForDays(useDays);
   const isMgr = isMgmtOrHigher(getActiveUser());
 
-  // Stage 1: Combine Menu Forecast Shortages + Below-Par Items
-  const suggestions = (state.items || []).filter(x => {
-    const need = Math.max(Number(x.par || 0), Number(dd[x.id] || 0));
-    return Number(x.on_hand || 0) < need;
-  }).map(x => {
+  // Scale par by cadence: Weekly = 1x base par, Monthly = 4x dry/frozen par (or 1x perishable), Next Day = 0.25x par
+  const parMult = hz === 30 ? 4 : (hz === 1 ? 0.25 : 1);
+
+  const suggestions = (state.items || []).map(x => {
     const cat = matchCatalogItem(x.sku) || matchCatalogItem(x.name);
-    const vendor = cat?.vendor || (/milk|lemonade|tea|yogurt|butter/i.test(x.name) ? 'Marberger Dairy' : 'Jordan Banana');
-    const need = Math.max(Number(x.par || 0), Number(dd[x.id] || 0));
-    const deficit = Math.max(1, need - Number(x.on_hand || 0));
+    const vendor = cat?.vendor || (/milk|lemonade|tea|yogurt|butter|cream/i.test(x.name) ? 'Marberger Dairy' : 'Jordan Banana');
+    const isPerishable = /produce|dairy|milk|deli|fresh/i.test(cat?.cat || x.zone || '');
+    const effMult = (hz === 30 && isPerishable) ? 1 : parMult;
+    const parNeed = Math.ceil(Number(x.par || 0) * effMult);
+    const menuNeed = Math.ceil(Number(dd[x.id] || 0));
+    const totalNeed = Math.max(parNeed, menuNeed);
+    const onHand = Number(x.on_hand || 0);
+    const deficit = totalNeed - onHand;
+    if (deficit <= 0) return null;
     const packQty = cat?.packQty || 1;
     const orderQty = Math.max(1, Math.ceil(deficit / packQty));
     return {
       itemId: x.id, sku: cat?.sku || x.sku || 'STK', cat: cat?.cat || x.zone || 'General',
-      vendor, name: cat?.name || x.name, onHand: Number(x.on_hand || 0), target: need,
+      vendor, name: cat?.name || x.name, onHand, parNeed, menuNeed, totalNeed,
       baseUnit: x.unit || cat?.baseUnit || 'ea', orderQty, unit: cat?.orderUnit || x.unit || 'cs',
       packQty, unitPrice: cat?.casePrice || Number(x.unit_price || 0) || 0
     };
-  });
+  }).filter(Boolean).filter(s => vFilter === 'ALL' || s.vendor === vFilter);
+
+  const jbCount = suggestions.filter(s => s.vendor === 'Jordan Banana').length;
+  const mdCount = suggestions.filter(s => s.vendor === 'Marberger Dairy').length;
 
   const pos = state.purchaseOrders || [];
   const requestedPOs = pos.filter(p => p.status === 'requested');
@@ -86,14 +96,21 @@ export function renderOrders(main) {
       <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
         <div class="sa-hero-banner px-4 py-3 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army · Butler, PA · Unified Procurement Pipeline</div>
-            <h2 class="text-base sm:text-lg font-black">1. Stock Suggestions → 2. Purchase Request → 3. Approve &amp; Place → 4. Invoice Check-In</h2>
+            <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army · Butler, PA · Menu + Par Ordering Engine</div>
+            <h2 class="text-base sm:text-lg font-black">1. Weekly/Monthly Suggestions → 2. Purchase Request → 3. Approve &amp; Place → 4. Invoice Check-In</h2>
           </div>
-          <select id="order-hz" class="px-2.5 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold">
-            <option value="1" ${hz === 1 ? 'selected' : ''}>Next Service Day</option>
-            <option value="7" ${hz === 7 ? 'selected' : ''}>7-Day Window</option>
-            <option value="30" ${hz === 30 ? 'selected' : ''}>30-Day Monthly Window</option>
-          </select>
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="ord-vendor-filter" class="px-2.5 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold">
+              <option value="ALL" ${vFilter === 'ALL' ? 'selected' : ''}>All Vendors</option>
+              <option value="Jordan Banana" ${vFilter === 'Jordan Banana' ? 'selected' : ''}>Jordan Banana Only</option>
+              <option value="Marberger Dairy" ${vFilter === 'Marberger Dairy' ? 'selected' : ''}>Marberger Dairy Only</option>
+            </select>
+            <select id="order-hz" class="px-2.5 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold">
+              <option value="1" ${hz === 1 ? 'selected' : ''}>Next Service Day (1-Day)</option>
+              <option value="7" ${hz === 7 ? 'selected' : ''}>Weekly Order (7-Day Menu + Par)</option>
+              <option value="30" ${hz === 30 ? 'selected' : ''}>Monthly Order (30-Day Menu + 4x Dry Par)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -101,26 +118,28 @@ export function renderOrders(main) {
         <div class="lg:col-span-7 kms-card p-4 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
             <div>
-              <h3 class="text-xs font-extrabold uppercase tracking-wide">Stage 1A · Stock &amp; Menu Forecast Suggestions (${suggestions.length})</h3>
-              <p class="text-[11px] opacity-75">Auto-calculated from Living Stock vs. Par &amp; Planned Menus</p>
+              <h3 class="text-xs font-extrabold uppercase tracking-wide">Stage 1A · ${hz === 30 ? 'Monthly (30-Day)' : (hz === 1 ? 'Next-Day' : 'Weekly (7-Day)')} Stock &amp; Menu Suggestions (${suggestions.length})</h3>
+              <p class="text-[11px] opacity-75">Combines Living Stock, ${hz === 30 ? '4x Dry/Frozen' : '1x'} Par Levels &amp; Planned Calendar Menus (${useDays.length} service days)</p>
             </div>
-            <div class="flex gap-1.5">
-              <button type="button" id="btn-req-all-jb" class="kms-btn-primary px-2.5 py-1.5 text-xs font-bold">+ Request All Jordan Banana</button>
-              <button type="button" id="btn-req-all-md" class="kms-btn-alt px-2.5 py-1.5 text-xs font-bold">+ Request All Marberger</button>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" id="btn-req-all-jb" class="kms-btn-primary px-2.5 py-1.5 text-xs font-bold">+ Request All Jordan Banana (${jbCount})</button>
+              <button type="button" id="btn-req-all-md" class="kms-btn-alt px-2.5 py-1.5 text-xs font-bold">+ Request All Marberger (${mdCount})</button>
             </div>
           </div>
-          ${suggestions.length === 0 ? `<p class="text-xs opacity-70 py-4 text-center">All inventory items meet par &amp; menu needs.</p>` : `
-            <div class="max-h-72 overflow-y-auto divide-y divide-[var(--line)]/50 text-xs">
-              ${suggestions.map((sg, i) => `
+          ${suggestions.length === 0 ? `<p class="text-xs opacity-70 py-4 text-center">All inventory items meet par &amp; planned menu servings for this window.</p>` : `
+            <div class="max-h-80 overflow-y-auto divide-y divide-[var(--line)]/50 text-xs">
+              ${suggestions.map(sg => `
                 <div class="py-2 flex items-center justify-between gap-2">
                   <div>
                     <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/10 mr-1">${esc(sg.sku)}</span>
                     <strong>${esc(sg.name)}</strong>
-                    <span class="text-[11px] opacity-70 ml-1">(${esc(sg.vendor)} · Have ${sg.onHand}/${sg.target} ${esc(sg.baseUnit)})</span>
+                    <div class="text-[11px] opacity-75 mt-0.5">
+                      ${esc(sg.vendor)} · On Hand: <strong>${sg.onHand}</strong> · Menu Need: <strong>${sg.menuNeed}</strong> · Par Target: <strong>${sg.parNeed} ${esc(sg.baseUnit)}</strong>
+                    </div>
                   </div>
                   <div class="flex items-center gap-2 shrink-0">
                     <span class="font-bold">${sg.orderQty} ${esc(sg.unit)} ($${(sg.orderQty * sg.unitPrice).toFixed(2)})</span>
-                    <button type="button" data-add-sug="${i}" class="kms-btn-alt px-2 py-1 text-[11px] font-bold">+ Request</button>
+                    <button type="button" data-add-sug-id="${esc(sg.itemId)}" class="kms-btn-alt px-2 py-1 text-[11px] font-bold">+ Request</button>
                   </div>
                 </div>
               `).join('')}
