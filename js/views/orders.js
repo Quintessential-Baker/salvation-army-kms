@@ -132,6 +132,8 @@ export function renderOrders(main) {
         `).join('')}
         ${closedPOs.length ? `<div class="text-xs opacity-70 pt-2">Recently closed: ${closedPOs.map(p => esc(p.po_number)).join(', ')}</div>` : ''}
       </div>
+    
+      <div class="kms-card p-3.5 mt-4 border-l-4 border-l-amber-500 space-y-2.5"><div class="flex flex-wrap items-center justify-between gap-2"><div><h4 class="text-xs font-extrabold uppercase tracking-wide text-[#1b365d]">Jordan Banana Catalog · Pack &amp; Costing Engine</h4><p class="text-[11px] opacity-75">Net 7 Days · Tax Exempt (0%) · Need by 1:00 PM (92 Race St.) · Auto-converts Cases to Base Units on Check-In</p></div><span class="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900">Std Delivery Fee: $10.00</span></div><div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end text-xs"><label class="sm:col-span-5 font-bold">Catalog Item<select id="jb-cat-item" class="kms-input w-full mt-1">${(JORDAN_BANANA_CATALOG||[]).map((it,idx)=>`<option value="${idx}">${esc(it.name)} — ${it.casePrice.toFixed(2)}/${it.orderUnit} (${it.packQty} ${it.baseUnit})</option>`).join("")}</select></label><label class="sm:col-span-2 font-bold">Order Mode<select id="jb-cat-mode" class="kms-input w-full mt-1"><option value="case">Full Case / Bulk</option><option value="single">Single Unit (ea)</option></select></label><label class="sm:col-span-2 font-bold">Order Qty<input type="number" id="jb-cat-qty" step="0.5" min="0.5" value="1" class="kms-input w-full mt-1" /></label><div class="sm:col-span-3"><button type="button" id="btn-jb-add-line" class="kms-btn-primary w-full py-2 text-xs">+ Add to Jordan Banana PO</button></div></div></div>
     </div>
   `;
 }
