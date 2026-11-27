@@ -22,7 +22,7 @@ import { STORAGE_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, WEAK_PINS,
   verifyPin, makeUser, newSalt, hashPin,
   updateSyncUI, edgeFetch, rpcLogin, rpcSetPin, pinErrorText,
   randomTempPin, stripLocalPins, requireRelogin,
-  syncToSupabase, forceLiveStatus, initSupabase, JORDAN_BANANA_CATALOG, unifyCatalogWithSystem } from './state.js';
+  syncToSupabase, forceLiveStatus, initSupabase, VENDOR_CATALOG, matchCatalogItem } from "./state.js";
 
 import { renderDashboard } from './views/dashboard.js';
 import { renderStock } from './views/stock.js';

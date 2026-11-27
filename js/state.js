@@ -1103,72 +1103,40 @@ export async function initSupabase() {
       }).subscribe();
   }
 }
-export const JORDAN_BANANA_CATALOG = [
-  { itemSku: 'JB-1042', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Chicken soup', aliases: ['chicken noodle soup'], orderUnit: 'cs', packQty: 12, baseUnit: 'cans', casePrice: 38.40, singlePrice: 3.40 },
-  { itemSku: 'JB-1088', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Kidney beans (small)', aliases: ['kidney beans'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 34.50, singlePrice: 6.10 },
-  { itemSku: 'JB-1091', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Black beans (large)', aliases: ['black beans'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 35.90, singlePrice: 6.35 },
-  { itemSku: 'JB-1104', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Tomato sauce', aliases: ['tomato sauce #10'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 39.50, singlePrice: 7.10 },
-  { itemSku: 'JB-1105', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Diced tomatoes', aliases: ['diced tomatoes #10'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 42.00, singlePrice: 7.50 },
-  { itemSku: 'JB-1112', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Corn (small)', aliases: ['corn #10', 'sweet corn'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 46.95, singlePrice: 8.25 },
-  { itemSku: 'JB-1115', category: 'Canned & Dry', zone: 'Dry Storage', name: 'Green beans', aliases: ['green beans #10'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 44.50, singlePrice: 7.90 },
-  { itemSku: 'JB-1210', category: 'Bakery & Dry Mix', zone: 'Dry Storage', name: 'Vanilla pudding', aliases: ['pudding vanilla'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 41.00, singlePrice: 7.25 },
-  { itemSku: 'JB-1211', category: 'Bakery & Dry Mix', zone: 'Dry Storage', name: 'Butterscotch pudding', aliases: ['pudding butterscotch'], orderUnit: 'cs', packQty: 6, baseUnit: 'cans', casePrice: 41.00, singlePrice: 7.25 },
-  { itemSku: 'JB-1305', category: 'Bakery & Frozen', zone: 'Freezer', name: 'Biscuits', aliases: ['buttermilk biscuits'], orderUnit: 'cs', packQty: 120, baseUnit: 'ea', casePrice: 36.00, singlePrice: 0.35 },
-  { itemSku: 'JB-1410', category: 'Frozen Proteins', zone: 'Freezer', name: 'Ground beef (hamburger)', aliases: ['ground beef', 'hamburger'], orderUnit: 'cs', packQty: 40, baseUnit: 'lb', casePrice: 138.00, singlePrice: 3.65 },
-  { itemSku: 'JB-1422', category: 'Frozen Proteins', zone: 'Freezer', name: 'Chicken nuggets', aliases: ['breaded chicken nuggets'], orderUnit: 'cs', packQty: 10, baseUnit: 'lb', casePrice: 34.90, singlePrice: 3.75 },
-  { itemSku: 'JB-1430', category: 'Frozen Seafood', zone: 'Freezer', name: 'Fish sticks', aliases: ['breaded fish sticks'], orderUnit: 'cs', packQty: 10, baseUnit: 'lb', casePrice: 36.50, singlePrice: 3.90 },
-  { itemSku: 'JB-1445', category: 'Frozen Pasta', zone: 'Freezer', name: 'Ravioli (cheese)', aliases: ['ravioli'], orderUnit: 'cs', packQty: 10, baseUnit: 'lb', casePrice: 32.50, singlePrice: 3.50 },
-  { itemSku: 'JB-1502', category: 'Deli & Meats', zone: 'Walk-In Cooler', name: 'Sliced ham', aliases: ['deli ham', 'ham'], orderUnit: 'cs', packQty: 12, baseUnit: 'lb', casePrice: 63.60, singlePrice: 5.30 },
-  { itemSku: 'JB-2010', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Apples Red Delicious 125ct', aliases: ['apples'], orderUnit: 'cs', packQty: 125, baseUnit: 'ea', casePrice: 34.50, singlePrice: 0.35 },
-  { itemSku: 'JB-2014', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Bananas Green/Yellow 40lb', aliases: ['bananas'], orderUnit: 'cs', packQty: 40, baseUnit: 'lb', casePrice: 23.50, singlePrice: 0.65 },
-  { itemSku: 'JB-2025', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Celery 30 Sleeve', aliases: ['celery'], orderUnit: 'cs', packQty: 30, baseUnit: 'ea', casePrice: 44.00, singlePrice: 1.80 },
-  { itemSku: 'JB-2030', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Lettuce Iceberg 24ct', aliases: ['lettuce'], orderUnit: 'cs', packQty: 24, baseUnit: 'ea', casePrice: 31.00, singlePrice: 1.50 },
-  { itemSku: 'JB-2040', category: 'Fresh Produce', zone: 'Dry Storage', name: 'Onions Yellow Jumbo 50lb', aliases: ['onions'], orderUnit: 'bag', packQty: 50, baseUnit: 'lb', casePrice: 24.50, singlePrice: 0.55 },
-  { itemSku: 'JB-2045', category: 'Fresh Produce', zone: 'Dry Storage', name: 'Potatoes Russet 50lb', aliases: ['potatoes'], orderUnit: 'cs', packQty: 50, baseUnit: 'lb', casePrice: 27.00, singlePrice: 0.60 },
-  { itemSku: 'JB-2050', category: 'Fresh Produce', zone: 'Walk-In Cooler', name: 'Tomatoes 6x6 25lb', aliases: ['tomatoes'], orderUnit: 'cs', packQty: 25, baseUnit: 'lb', casePrice: 28.50, singlePrice: 1.25 }
+export const VENDOR_CATALOG = [
+  { vendor: "Jordan Banana", sku: "JB-MEAT-01", cat: "Meat & Poultry", zone: "Walk-In Freezer", name: "Beef 81/19 Ground Fresh (10lb Tube)", aliases: ["ground beef","hamburger"], orderUnit: "ea", packQty: 10, baseUnit: "lb", casePrice: 55.90, singlePrice: 55.90 },
+  { vendor: "Jordan Banana", sku: "JB-MEAT-02", cat: "Meat & Poultry", zone: "Walk-In Cooler", name: "Chicken Breast Fresh 7oz (20lb)", aliases: ["chicken breast","cut-up chicken","whole chickens"], orderUnit: "cs", packQty: 20, baseUnit: "lb", casePrice: 89.95, singlePrice: 4.50 },
+  { vendor: "Jordan Banana", sku: "JB-DELI-01", cat: "Deli & Catch-Weight", zone: "Walk-In Cooler", name: "Deli Ham VA Honey Baked (Catch-Weight lb)", aliases: ["sliced ham","deli ham","ham"], orderUnit: "lb", packQty: 1, baseUnit: "lb", casePrice: 5.30, singlePrice: 5.30, catchWeight: true },
+  { vendor: "Jordan Banana", sku: "JB-MEAT-03", cat: "Deli & Catch-Weight", zone: "Walk-In Cooler", name: "Pork Tenderloin Fresh (Catch-Weight lb)", aliases: ["pork tenderloin","pork"], orderUnit: "lb", packQty: 1, baseUnit: "lb", casePrice: 3.60, singlePrice: 3.60, catchWeight: true },
+  { vendor: "Jordan Banana", sku: "JB-FRZ-01", cat: "Frozen Entrees", zone: "Walk-In Freezer", name: "Turkey Ground Frozen (4-5lb / 20lb)", aliases: ["ground turkey"], orderUnit: "cs", packQty: 20, baseUnit: "lb", casePrice: 66.55, singlePrice: 16.65 },
+  { vendor: "Jordan Banana", sku: "JB-FRZ-02", cat: "Frozen Entrees", zone: "Walk-In Freezer", name: "Hot Dogs 8-1 All Beef (10lb / 80ct)", aliases: ["hot dogs"], orderUnit: "cs", packQty: 80, baseUnit: "ea", casePrice: 56.30, singlePrice: 0.75 },
+  { vendor: "Jordan Banana", sku: "JB-FRZ-03", cat: "Frozen Entrees", zone: "Walk-In Freezer", name: "Meatball 1oz Fontanini (10lb / 160ct)", aliases: ["meatball"], orderUnit: "cs", packQty: 160, baseUnit: "ea", casePrice: 72.90, singlePrice: 0.50 },
+  { vendor: "Jordan Banana", sku: "JB-FRZ-04", cat: "Frozen Entrees", zone: "Walk-In Freezer", name: "Fish Sticks Pollock Breaded (4/5lb / 20lb)", aliases: ["fish sticks"], orderUnit: "cs", packQty: 20, baseUnit: "lb", casePrice: 106.50, singlePrice: 26.65 },
+  { vendor: "Jordan Banana", sku: "JB-DAIRY-01", cat: "Cheese & Eggs", zone: "Walk-In Cooler", name: "Cheese 50/50 Prov/Moz Shrd (6-5lb)", aliases: ["shredded cheese"], orderUnit: "cs", packQty: 30, baseUnit: "lb", casePrice: 76.95, singlePrice: 13.25 },
+  { vendor: "Jordan Banana", sku: "JB-DAIRY-02", cat: "Cheese & Eggs", zone: "Walk-In Cooler", name: "Cheese Parmesan Grated (5lb Bag)", aliases: ["parmesan cheese"], orderUnit: "ea", packQty: 5, baseUnit: "lb", casePrice: 25.85, singlePrice: 25.85 },
+  { vendor: "Jordan Banana", sku: "JB-DAIRY-03", cat: "Cheese & Eggs", zone: "Walk-In Cooler", name: "Eggs Large (15 Dozen Carton)", aliases: ["eggs"], orderUnit: "CARTON", packQty: 15, baseUnit: "doz", casePrice: 19.00, singlePrice: 19.00 },
+  { vendor: "Jordan Banana", sku: "JB-PROD-01", cat: "Fresh Produce", zone: "Walk-In Cooler", name: "Celery 30 Sleeve (Case or Single Stalk)", aliases: ["celery"], orderUnit: "cs", packQty: 30, baseUnit: "ea", casePrice: 64.00, singlePrice: 1.80 },
+  { vendor: "Jordan Banana", sku: "JB-PROD-02", cat: "Fresh Produce", zone: "Walk-In Cooler", name: "Lettuce Iceberg Cello (24ct)", aliases: ["lettuce"], orderUnit: "cs", packQty: 24, baseUnit: "ea", casePrice: 45.00, singlePrice: 1.95 },
+  { vendor: "Jordan Banana", sku: "JB-PROD-03", cat: "Fresh Produce", zone: "Stockroom", name: "Onions Spanish (50lb Box)", aliases: ["onions"], orderUnit: "cs", packQty: 50, baseUnit: "lb", casePrice: 26.00, singlePrice: 0.60 },
+  { vendor: "Jordan Banana", sku: "JB-PROD-04", cat: "Fresh Produce", zone: "Stockroom", name: "Potato Idaho 10-5lb (50lb)", aliases: ["potato","potatoes"], orderUnit: "cs", packQty: 50, baseUnit: "lb", casePrice: 24.00, singlePrice: 2.50 },
+  { vendor: "Jordan Banana", sku: "JB-PROD-05", cat: "Fresh Produce", zone: "Walk-In Cooler", name: "Carrots 48-1lb / 10-5lb (50lb)", aliases: ["carrots"], orderUnit: "cs", packQty: 50, baseUnit: "lb", casePrice: 38.00, singlePrice: 0.85 },
+  { vendor: "Jordan Banana", sku: "JB-CAN-01", cat: "Canned #10 & Dry", zone: "Stockroom", name: "Corn #10 Can (6-#10)", aliases: ["corn (small)","corn"], orderUnit: "cs", packQty: 6, baseUnit: "cans", casePrice: 46.95, singlePrice: 8.25 },
+  { vendor: "Jordan Banana", sku: "JB-CAN-02", cat: "Canned #10 & Dry", zone: "Stockroom", name: "Green Beans #10 Can (6-#10)", aliases: ["green beans"], orderUnit: "cs", packQty: 6, baseUnit: "cans", casePrice: 49.50, singlePrice: 9.85 },
+  { vendor: "Jordan Banana", sku: "JB-CAN-03", cat: "Canned #10 & Dry", zone: "Stockroom", name: "Tomato Sauce / Marinara #10 (6-#10)", aliases: ["tomato sauce","spaghetti sauce"], orderUnit: "cs", packQty: 6, baseUnit: "cans", casePrice: 48.00, singlePrice: 8.50 },
+  { vendor: "Jordan Banana", sku: "JB-CAN-04", cat: "Canned #10 & Dry", zone: "Stockroom", name: "Black Beans / Kidney Beans #10 (6-#10)", aliases: ["black beans","kidney beans"], orderUnit: "cs", packQty: 6, baseUnit: "cans", casePrice: 46.50, singlePrice: 8.25 },
+  { vendor: "Jordan Banana", sku: "JB-CAN-05", cat: "Canned #10 & Dry", zone: "Stockroom", name: "Peaches / Fruit Cocktail #10 (6-#10)", aliases: ["peaches","fruit cocktail"], orderUnit: "cs", packQty: 6, baseUnit: "cans", casePrice: 56.70, singlePrice: 10.70 },
+  { vendor: "Jordan Banana", sku: "JB-CAN-06", cat: "Canned #10 & Dry", zone: "Stockroom", name: "Pudding Chocolate / Vanilla #10 (6-#10)", aliases: ["vanilla pudding","butterscotch pudding","pudding"], orderUnit: "cs", packQty: 6, baseUnit: "cans", casePrice: 54.75, singlePrice: 9.50 },
+  { vendor: "Jordan Banana", sku: "JB-DRY-01", cat: "Canned #10 & Dry", zone: "Stockroom", name: "Potato Real Mashed Idahoan (6-3.24lb)", aliases: ["mashed potato","potato pearls"], orderUnit: "cs", packQty: 6, baseUnit: "pouches", casePrice: 92.60, singlePrice: 15.80 },
+  { vendor: "Jordan Banana", sku: "JB-DRY-02", cat: "Canned #10 & Dry", zone: "Stockroom", name: "Flour All-Trump (50lb Bag)", aliases: ["flour"], orderUnit: "Bag", packQty: 50, baseUnit: "lb", casePrice: 31.95, singlePrice: 31.95 },
+  { vendor: "Jordan Banana", sku: "JB-DRY-03", cat: "Canned #10 & Dry", zone: "Stockroom", name: "Sugar Granulated (25lb Bag)", aliases: ["sugar"], orderUnit: "Bag", packQty: 25, baseUnit: "lb", casePrice: 35.50, singlePrice: 35.50 },
+  { vendor: "Jordan Banana", sku: "JB-BAK-01", cat: "Bakery & Rolls", zone: "Walk-In Freezer", name: "Amoroso 11.5in Sub Rolls (60ct Case)", aliases: ["sub rolls","sliced bun","biscuits"], orderUnit: "cs", packQty: 60, baseUnit: "ea", casePrice: 53.30, singlePrice: 0.95 },
+  { vendor: "Marberger Dairy", sku: "MD-MILK-01", cat: "Fluid Milk & Juice", zone: "Walk-In Cooler", name: "Whole / 2% White Milk (Crate / 4-Gal)", aliases: ["milk"], orderUnit: "crates", packQty: 4, baseUnit: "gal", casePrice: 16.80, singlePrice: 4.35 },
+  { vendor: "Marberger Dairy", sku: "MD-MILK-02", cat: "Fluid Milk & Juice", zone: "Walk-In Cooler", name: "Chocolate Milk Half-Pints (50ct Crate)", aliases: ["chocolate milk"], orderUnit: "crates", packQty: 50, baseUnit: "ea", casePrice: 18.50, singlePrice: 0.40 },
+  { vendor: "Marberger Dairy", sku: "MD-JUICE-01", cat: "Fluid Milk & Juice", zone: "Walk-In Cooler", name: "Lemonade / Iced Tea Gallon (4-1Gal Crate)", aliases: ["lemonade","iced tea"], orderUnit: "crates", packQty: 4, baseUnit: "gal", casePrice: 12.40, singlePrice: 3.25 },
+  { vendor: "Marberger Dairy", sku: "MD-DAIRY-01", cat: "Cultured Dairy", zone: "Walk-In Cooler", name: "Butter Solids / Yogurt Case", aliases: ["black butter","yogurt","butter"], orderUnit: "cs", packQty: 12, baseUnit: "ea", casePrice: 28.00, singlePrice: 2.50 }
 ];
-
-export function matchJordanBananaItem(q) {
-  const s = String(q || '').toLowerCase().trim();
+export function matchCatalogItem(q, vendor) {
+  const s = String(q || "").toLowerCase().trim();
   if (!s) return null;
-  return JORDAN_BANANA_CATALOG.find(c =>
-    c.itemSku.toLowerCase() === s ||
-    c.name.toLowerCase() === s ||
-    (c.aliases || []).some(a => s.includes(a) || a.includes(s))
-  ) || null;
-}
-
-export function unifyCatalogWithSystem(t = state) {
-  if (!Array.isArray(t.items)) return { updated: 0, removedDupes: 0 };
-  const b = t.items.length;
-  t.items = t.items.filter(it => !String(it.id || '').startsWith('jb_') && !(it.name === 'Spaghetti' && String(it.sku || '').startsWith('STK-227')));
-  let u = 0;
-  t.items.forEach(it => {
-    const c = matchJordanBananaItem(it.sku) || matchJordanBananaItem(it.name);
-    if (c) {
-      it.sku = c.itemSku;
-      it.vendor = 'Jordan Banana';
-      it.category = c.category;
-      it.order_unit = c.orderUnit;
-      it.pack_qty = c.packQty;
-      it.case_price = c.casePrice;
-      it.unit_price = Number((c.casePrice / (c.packQty || 1)).toFixed(4));
-      u++;
-    }
-  });
-  (t.purchaseOrders || []).forEach(po => {
-    if (!/jordan banana/i.test(po.vendor || '')) return;
-    (po.lines || []).forEach(ln => {
-      if (ln.isFee) return;
-      const c = matchJordanBananaItem(ln.sku) || matchJordanBananaItem(ln.name);
-      if (c) {
-        ln.sku = c.itemSku;
-        ln.category = c.category;
-        ln.unit_price = ln.unit === 'ea' ? c.singlePrice : c.casePrice;
-        ln.packQty = ln.unit === 'ea' ? 1 : c.packQty;
-        ln.baseUnit = c.baseUnit;
-      }
-    });
-  });
-  return { updated: u, removedDupes: b - t.items.length };
+  return VENDOR_CATALOG.find(c => (!vendor || c.vendor === vendor) && (c.sku.toLowerCase() === s || c.name.toLowerCase() === s || (c.aliases || []).some(a => s.includes(a) || a.includes(s)))) || null;
 }
