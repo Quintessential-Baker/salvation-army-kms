@@ -4482,3 +4482,96 @@ if (!window.__recipeWorkflowUpgraded) {
     }, 50);
   });
 }
+
+
+// === SMART WEEKLY DIGEST & ESCALATION DISPATCHER ===
+if (!window.__smartAlertDispatcherReady) {
+  window.__smartAlertDispatcherReady = true;
+
+  const getLeadershipRecipients = () => {
+    return (state.users || []).filter(u =>
+      u && u.active !== false &&
+      ['ADMIN', 'MANAGER'].includes(normalizeRole(u.role)) &&
+      u.email
+    );
+  };
+
+  window.dispatchSmartAlerts = async (forceDigest = false) => {
+    const today = localDateStr();
+    const recipients = getLeadershipRecipients();
+    state.sentAlertKeys = state.sentAlertKeys || {};
+
+    if (forceDigest) {
+      const dig = buildWeeklyExecutiveDigest(today);
+      if (!recipients.length) {
+        showToast('Add at least one Manager/Admin email in Team Roster first', 'warn');
+        return;
+      }
+      const ok = await sendBackgroundAlert(recipients, dig.subject, dig.text);
+      if (ok) {
+        state.sentAlertKeys[dig.key] = today;
+        logActivity('WEEKLY DIGEST', `Sent weekly executive digest to ${recipients.map(r => r.email).join(', ')}`);
+        saveState();
+        showToast(`Weekly Digest emailed to ${recipients.length} leader(s)!`);
+      } else {
+        const mail = buildAlertMailto(recipients, dig.subject, dig.text);
+        window.open(mail.mailHref, '_blank');
+        showToast('Opened email client with Weekly Digest (configure RESEND_API_KEY in Supabase for silent background send)', 'warn');
+      }
+      return;
+    }
+
+    const triggers = evaluateSmartAlertTriggers(today);
+    let sentCount = 0;
+    for (const al of triggers) {
+      if (state.sentAlertKeys[al.key]) continue;
+      if (recipients.length) {
+        const ok = await sendBackgroundAlert(recipients, al.subject, al.text);
+        if (ok) {
+          state.sentAlertKeys[al.key] = today;
+          sentCount++;
+          logActivity('SMART ALERT', `[${al.label}] Emailed leadership`);
+        }
+      }
+    }
+    if (sentCount > 0) {
+      saveState();
+      showToast(`Dispatched ${sentCount} smart alert / digest email(s) to leadership`);
+    }
+  };
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-send-weekly-digest-now')) {
+      window.dispatchSmartAlerts(true);
+      return;
+    }
+    if (e.target.closest('#btn-run-smart-alerts-now')) {
+      const triggers = evaluateSmartAlertTriggers(localDateStr());
+      if (!triggers.length) {
+        showToast('All clear — no urgent HACCP, 86, chronic miss, or Friday digest triggers active today!');
+      } else {
+        window.dispatchSmartAlerts(false);
+      }
+      return;
+    }
+  });
+
+  document.addEventListener('submit', (e) => {
+    if (e.target.id === 'form-smart-alert-config') {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const cfg = getAlertConfig();
+      cfg.weeklyDigestEnabled = fd.get('weeklyDigestEnabled') === 'on';
+      cfg.urgentHaccpEnabled = fd.get('urgentHaccpEnabled') === 'on';
+      cfg.urgent86Enabled = fd.get('urgent86Enabled') === 'on';
+      cfg.chronicMissThreshold = Math.max(2, Number(fd.get('chronicMissThreshold')) || 2);
+      logActivity('ALERT SETTINGS', `Updated Smart Digest & Escalation rules (Chronic threshold: ${cfg.chronicMissThreshold} days)`);
+      saveState();
+      render();
+      showToast('Saved Weekly Digest & Smart Escalation rules!');
+    }
+  });
+
+  // Automatically check triggers 4 seconds after startup (deduplicated per day/event)
+  setTimeout(() => { try { window.dispatchSmartAlerts(false); } catch (_) {} }, 4000);
+}

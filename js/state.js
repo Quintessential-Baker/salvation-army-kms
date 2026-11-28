@@ -1322,3 +1322,172 @@ export function computeAccurateOrderSuggestions(hz = 7) {
     };
   }).filter(Boolean);
 }
+
+
+// === SMART WEEKLY DIGEST + URGENT / CHRONIC ESCALATION ENGINE ===
+export function getAlertConfig() {
+  state.alertConfig = Object.assign({
+    weeklyDigestEnabled: true,
+    digestDay: 5, // Friday
+    urgentHaccpEnabled: true,
+    urgent86Enabled: true,
+    chronicMissThreshold: 2, // Escalate after 2 consecutive missed service days
+    thirdFridayReminderEnabled: true
+  }, state.alertConfig || {});
+  return state.alertConfig;
+}
+
+export function isThirdFriday(dateStr = localDateStr()) {
+  const d = new Date(dateStr + 'T12:00:00');
+  if (d.getDay() !== 5) return false;
+  const dayOfMonth = d.getDate();
+  return dayOfMonth >= 15 && dayOfMonth <= 21;
+}
+
+export function buildWeeklyExecutiveDigest(today = localDateStr()) {
+  const weekStart = addDays(today, -6);
+  const inWeek = (ds) => { const s = String(ds || '').slice(0, 10); return s >= weekStart && s <= today; };
+
+  const servedDays = (state.menuPlan || []).filter(m => m && m.status === 'SERVED' && inWeek(m.service_date));
+  const meals = servedDays.reduce((s, m) => s + Number(m.served_portions || 0), 0);
+
+  let checks = 0, fails = 0;
+  Object.keys(state.safetyLogs || {}).filter(inWeek).forEach(d => {
+    const t = (state.safetyLogs[d] && state.safetyLogs[d].temps) || {};
+    TEMP_CHECKS.forEach((c, i) => {
+      if (t[i] === undefined || t[i] === null || t[i] === '') return;
+      checks++;
+      if (c[1] === 'max' ? Number(t[i]) > c[2] : Number(t[i]) < c[2]) fails++;
+    });
+  });
+
+  const lowItems = (state.items || []).filter(x => x && !x.discontinued && itemStatus(x) !== 'OK');
+  const openPOs = (state.purchaseOrders || []).filter(p => p && p.status !== 'closed');
+  const pendingRecipes = (state.recipeSuggestions || []).filter(s => s && s.status === 'PENDING');
+  const missedChecklists = (state.checklists || []).filter(c => c && !c.done);
+
+  const subject = `[SA Butler KMS] Weekly Kitchen Digest (${weekStart} to ${today})`;
+  const text = [
+    `THE SALVATION ARMY — BUTLER, PA COMMUNITY MEALS`,
+    `WEEKLY OPERATIONS & COMPLIANCE DIGEST (${weekStart} to ${today})`,
+    `------------------------------------------------------------`,
+    `• Service Impact: ${meals} hot meals served across ${servedDays.length} service day(s).`,
+    `• Food Safety (HACCP): ${checks ? Math.round(((checks - fails) / checks) * 100) + '% pass rate (' + checks + ' checks, ' + fails + ' flagged)' : 'No temp checks logged this week'}.`,
+    `• Inventory Status: ${lowItems.length} item(s) below Par${lowItems.length ? ' (' + lowItems.slice(0, 5).map(x => x.name).join(', ') + ')' : ''}.`,
+    `• Purchasing & Approvals: ${openPOs.length} active PO(s) • ${pendingRecipes.length} recipe suggestion(s) awaiting review.`,
+    `• Open Checklist Items: ${missedChecklists.length} unchecked task(s).`,
+    `------------------------------------------------------------`,
+    `Note: Routine reports are consolidated into this Friday digest. Urgent HACCP violations, imminent menu 86s, or items missed 2+ service days in a row trigger immediate alerts.`
+  ].join('\n');
+
+  return { key: `weekly-digest-${today}`, priority: 'digest', subject, text };
+}
+
+export function evaluateSmartAlertTriggers(today = localDateStr()) {
+  const cfg = getAlertConfig();
+  const alerts = [];
+  const dObj = new Date(today + 'T12:00:00');
+  const dow = dObj.getDay();
+
+  // 1. URGENT: Out-of-range HACCP temperatures logged today
+  if (cfg.urgentHaccpEnabled) {
+    const todayTemps = (state.safetyLogs && state.safetyLogs[today] && state.safetyLogs[today].temps) || {};
+    const badTemps = [];
+    TEMP_CHECKS.forEach((c, i) => {
+      const val = todayTemps[i];
+      if (val === undefined || val === null || val === '') return;
+      const num = Number(val);
+      const out = c[1] === 'max' ? num > c[2] : num < c[2];
+      if (out) badTemps.push(`${c[0]}: ${num}°F (Limit: ${c[1] === 'max' ? '≤' : '≥'}${c[2]}°F)`);
+    });
+    if (badTemps.length) {
+      alerts.push({
+        key: `urgent-haccp-${today}-${badTemps.join('|')}`,
+        priority: 'urgent',
+        label: 'URGENT HACCP Temp Violation',
+        subject: `[URGENT HACCP ALERT] Out-of-Range Temperature — ${today}`,
+        text: `IMMEDIATE ACTION REQUIRED — The Salvation Army Butler Kitchen (${today}):\n\nOut-of-range temperature(s) recorded:\n• ${badTemps.join('\n• ')}\n\nVerify equipment calibration, move TCS food to safe cold/hot holding, and log corrective action in Temps & Cleaning.`
+      });
+    }
+  }
+
+  // 2. URGENT: Imminent "86" shortage (0 on hand for next 2 service days)
+  if (cfg.urgent86Enabled) {
+    const next2 = serviceDaysBetween(today, addDays(today, 6)).slice(0, 2);
+    const dd2 = demandForDays(next2);
+    const zeroItems = (state.items || []).filter(x => x && !x.discontinued && (dd2[x.id] || 0) > 0 && Number(x.on_hand || 0) <= 0 && Number(onOrderQty(x.id) || 0) <= 0);
+    if (zeroItems.length) {
+      alerts.push({
+        key: `urgent-86-${today}-${zeroItems.map(x => x.id).join(',')}`,
+        priority: 'urgent',
+        label: 'URGENT Menu 86 Shortage',
+        subject: `[URGENT 86 ALERT] Zero Stock for Upcoming Scheduled Menu (${today})`,
+        text: `IMMEDIATE RESTOCK / MENU SUBSTITUTION NEEDED:\n\nThe following scheduled recipe ingredient(s) have 0 on hand and no open PO for the next 2 service days:\n• ${zeroItems.map(x => `${x.name} (Need ${dd2[x.id]} ${x.unit})`).join('\n• ')}`
+      });
+    }
+  }
+
+  // 3. CHRONIC MISS ESCALATION: Track consecutive service days with unlogged temps or missed daily checklists
+  state.alertTracker = state.alertTracker || { lastEvalDate: '', consecutiveTempMissDays: 0, checklistMissStreaks: {} };
+  const isServiceDay = [1, 2, 3, 5].includes(dow);
+  if (isServiceDay && state.alertTracker.lastEvalDate !== today) {
+    const prevServiceDay = serviceDaysBetween(addDays(today, -7), addDays(today, -1)).slice(-1)[0];
+    if (prevServiceDay) {
+      const prevTemps = (state.safetyLogs && state.safetyLogs[prevServiceDay] && state.safetyLogs[prevServiceDay].temps) || {};
+      const hadAnyTemp = Object.values(prevTemps).some(v => v !== null && v !== '');
+      state.alertTracker.consecutiveTempMissDays = hadAnyTemp ? 0 : (state.alertTracker.consecutiveTempMissDays || 0) + 1;
+
+      (state.checklists || []).filter(c => c && c.freq === 'daily').forEach(c => {
+        const streaks = state.alertTracker.checklistMissStreaks || {};
+        streaks[c.id] = c.done ? 0 : (streaks[c.id] || 0) + 1;
+        state.alertTracker.checklistMissStreaks = streaks;
+      });
+    }
+    state.alertTracker.lastEvalDate = today;
+  }
+
+  const thresh = Number(cfg.chronicMissThreshold || 2);
+  const chronicItems = [];
+  if ((state.alertTracker.consecutiveTempMissDays || 0) >= thresh) {
+    chronicItems.push(`HACCP Temperature Log unrecorded for ${state.alertTracker.consecutiveTempMissDays} consecutive service days`);
+  }
+  (state.checklists || []).filter(c => c && c.freq === 'daily').forEach(c => {
+    const streak = (state.alertTracker.checklistMissStreaks || {})[c.id] || 0;
+    if (streak >= thresh) {
+      chronicItems.push(`Checklist task "${c.title}" missed ${streak} consecutive service days`);
+    }
+  });
+  if (chronicItems.length) {
+    alerts.push({
+      key: `chronic-miss-${today}-${chronicItems.length}`,
+      priority: 'escalation',
+      label: `Chronic Miss Escalation (${thresh}+ Days)`,
+      subject: `[ESCALATION] Repeated Missed Kitchen Tasks (${today})`,
+      text: `REPEATED COMPLIANCE MISSES DETECTED (Threshold: ${thresh}+ consecutive service days):\n\n• ${chronicItems.join('\n• ')}\n\nPlease review shift wrap-up procedures with staff and volunteers.`
+    });
+  }
+
+  // 4. HARD DEADLINE: 3rd Friday Monthly Order Reminder
+  if (cfg.thirdFridayReminderEnabled && isThirdFriday(today)) {
+    const hasRecentMonthlyPO = (state.purchaseOrders || []).some(p => p && String(p.created_at || p.requested_date || '') >= addDays(today, -5));
+    if (!hasRecentMonthlyPO) {
+      alerts.push({
+        key: `3rd-friday-order-${today}`,
+        priority: 'deadline',
+        label: '3rd Friday Monthly Order Deadline',
+        subject: `[ACTION DUE TODAY] 3rd Friday Monthly Pantry & Freezer Order (${today})`,
+        text: `Today is the 3rd Friday of the month — the deadline to finalize and submit next month's Jordan Banana & Marberger Dairy order.\n\nOpen Orders & POs in the KMS to review the 30-day Menu BOM + Burn Rate suggestions and dispatch your Purchase Order.`
+      });
+    }
+  }
+
+  // 5. ROUTINE: Friday Weekly Executive Digest
+  if (cfg.weeklyDigestEnabled && dow === Number(cfg.digestDay ?? 5)) {
+    alerts.push({
+      ...buildWeeklyExecutiveDigest(today),
+      label: 'Friday Weekly Executive Digest'
+    });
+  }
+
+  return alerts;
+}

@@ -79,6 +79,48 @@ export function renderUsers(main) {
         `}
       </div>
 
+      <div class="kms-card p-4 space-y-3 border-l-4 border-l-[#1b365d]">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-extrabold uppercase tracking-wide text-[#1b365d]">Weekly Digest &amp; Smart Escalation Settings</h2>
+            <p class="text-xs opacity-75">Leadership receives one consolidated <strong>Friday Weekly Digest</strong> by default—urgent emails only fire for HACCP temp violations, imminent menu "86" shortages, 3rd-Friday order deadlines, or tasks missed <strong>2+ service days in a row</strong>.</p>
+          </div>
+          <div class="flex flex-wrap gap-1.5 no-print">
+            <button type="button" id="btn-send-weekly-digest-now" class="kms-btn-navy px-3 py-1.5 text-xs font-bold">Send Weekly Digest Now</button>
+            <button type="button" id="btn-run-smart-alerts-now" class="kms-btn-alt px-3 py-1.5 text-xs font-semibold">Check &amp; Dispatch Urgent Alerts</button>
+          </div>
+        </div>
+        ${(() => {
+          const cfg = getAlertConfig();
+          const activeTriggers = evaluateSmartAlertTriggers(todayAdm);
+          const mgrEmails = (state.users || []).filter(u => u.active !== false && ['ADMIN', 'MANAGER'].includes(normalizeRole(u.role)) && u.email).map(u => u.email);
+          return `
+            <form id="form-smart-alert-config" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs pt-1">
+              <label class="p-2.5 rounded-lg border border-[var(--line)] flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="weeklyDigestEnabled" ${cfg.weeklyDigestEnabled ? 'checked' : ''} class="accent-[#1b365d]" />
+                <span><strong>Friday Weekly Digest</strong><br/><span class="text-[11px] opacity-70">Consolidated weekly summary</span></span>
+              </label>
+              <label class="p-2.5 rounded-lg border border-[var(--line)] flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="urgentHaccpEnabled" ${cfg.urgentHaccpEnabled ? 'checked' : ''} class="accent-[#b3122b]" />
+                <span><strong>Urgent HACCP Alerts</strong><br/><span class="text-[11px] opacity-70">Immediate out-of-range temps</span></span>
+              </label>
+              <label class="p-2.5 rounded-lg border border-[var(--line)] flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="urgent86Enabled" ${cfg.urgent86Enabled ? 'checked' : ''} class="accent-[#b3122b]" />
+                <span><strong>Imminent Menu 86s</strong><br/><span class="text-[11px] opacity-70">0 stock for next 2 service days</span></span>
+              </label>
+              <div class="p-2.5 rounded-lg border border-[var(--line)] flex items-center justify-between gap-2">
+                <span><strong>Chronic Miss Limit</strong><br/><span class="text-[11px] opacity-70">Consecutive missed days</span></span>
+                <input type="number" name="chronicMissThreshold" min="2" max="10" value="${cfg.chronicMissThreshold || 2}" class="kms-input w-14 text-center font-bold text-xs" />
+              </div>
+              <div class="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center justify-between gap-2 pt-1">
+                <span class="text-[11px] opacity-75">Leadership Recipients: <strong>${mgrEmails.length ? esc(mgrEmails.join(', ')) : 'Add Manager/Admin emails in Team Roster below'}</strong> &bull; Active Triggers Today: <strong>${activeTriggers.length}</strong></span>
+                <button type="submit" class="kms-btn-ok px-3.5 py-1.5 text-xs font-bold">Save Notification Rules</button>
+              </div>
+            </form>
+          `;
+        })()}
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <form id="form-add-user" class="kms-card p-4 space-y-2.5 no-print">
           <h2 class="text-sm font-bold">Add Staff / Volunteer</h2>
