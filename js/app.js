@@ -4219,7 +4219,7 @@ if (!window.__sec3OrdersWired) {
       const po = (state.purchaseOrders || []).find(p => String(p.id) === String(id));
       if (!po) return;
       if (actBtn.hasAttribute('data-ord-del')) {
-        state.purchaseOrders = state.purchaseOrders.filter(p => p !== po);
+        state._deletedPoIds = [...new Set([...(state._deletedPoIds || []), po.id])]; state.purchaseOrders = state.purchaseOrders.filter(p => p !== po); if (typeof sbClient !== "undefined" && sbClient) { try { sbClient.from("kms_purchase_orders").delete().eq("id", po.id); } catch (_) {} }
         saveState(); render(); return;
       }
       if (actBtn.hasAttribute('data-ord-recv')) {
