@@ -552,6 +552,44 @@ export function renderHelp(main) {
     : '';
   main.innerHTML = `
     <div class="space-y-4">
+      <div id="shift-simulator-card" class="kms-card p-4 space-y-3 border-l-4 border-l-[#b3122b]">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div class="text-[10px] font-extrabold uppercase tracking-widest text-[#b3122b]">Safe Sandbox &bull; Full Closed-Loop Verification</div>
+            <h2 class="text-sm sm:text-base font-extrabold text-[#1b365d]">Interactive Full-Shift Simulator (8:30 AM &ndash; 2:30 PM Dry Run)</h2>
+            <p class="text-xs opacity-75">Snapshots your real Butler inventory first, then simulates a complete shift across Recipes, Menu, Prep, HACCP Temps, Service, Waste, 30-Day Orders &amp; Weekly Digest—with 1-click restore.</p>
+          </div>
+          <div class="flex flex-wrap gap-1.5 no-print">
+            <button type="button" id="btn-sim-run-all" class="kms-btn-navy px-3.5 py-1.5 text-xs font-bold">Run Full Shift Simulation</button>
+            ${state._simSnapshot ? `<button type="button" id="btn-sim-restore" class="kms-btn-ok px-3.5 py-1.5 text-xs font-bold">Restore Live Data</button>` : ''}
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+          <button type="button" data-sim-phase="1" class="p-2.5 rounded-lg border border-[var(--line)] hover:border-[#1b365d] text-left space-y-1 transition">
+            <div class="font-extrabold text-[#1b365d]">1. 8:30 AM Prep &amp; Menu</div>
+            <div class="text-[11px] opacity-75">Auto-link Beef Goulash, schedule today's forecast &amp; deduct prep pull.</div>
+          </button>
+          <button type="button" data-sim-phase="2" class="p-2.5 rounded-lg border border-[var(--line)] hover:border-[#1b365d] text-left space-y-1 transition">
+            <div class="font-extrabold text-[#1b365d]">2. 11:30 AM Temps &amp; Service</div>
+            <div class="text-[11px] opacity-75">Log 6-point HACCP temps, mark lunch served &amp; create 6-day leftover tag.</div>
+          </button>
+          <button type="button" data-sim-phase="3" class="p-2.5 rounded-lg border border-[var(--line)] hover:border-[#1b365d] text-left space-y-1 transition">
+            <div class="font-extrabold text-[#1b365d]">3. 1:00 PM Waste &amp; Orders</div>
+            <div class="text-[11px] opacity-75">Log store-use/crack &amp; compute 30-day Menu BOM + Burn Rate POs.</div>
+          </button>
+          <button type="button" data-sim-phase="4" class="p-2.5 rounded-lg border border-[var(--line)] hover:border-[#1b365d] text-left space-y-1 transition">
+            <div class="font-extrabold text-[#1b365d]">4. 2:00 PM Audit &amp; Digest</div>
+            <div class="text-[11px] opacity-75">Preview Weekly Executive Digest &amp; verify all 7 management reports.</div>
+          </button>
+        </div>
+        ${(state._simLog && state._simLog.length) ? `
+          <div class="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[11px] space-y-1 max-h-48 overflow-y-auto">
+            <div class="text-amber-300 font-bold uppercase text-[10px]">Simulation Execution Log (${state._simSnapshot ? 'SANDBOX ACTIVE — Click Restore Live Data when finished' : 'Ready'})</div>
+            ${state._simLog.map(line => `<div>&#10003; ${esc(line)}</div>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+  
       <div class="rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
         <div class="sa-hero-banner px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
           <div class="flex items-center gap-3 min-w-0">

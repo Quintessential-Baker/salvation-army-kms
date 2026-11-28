@@ -4575,3 +4575,134 @@ if (!window.__smartAlertDispatcherReady) {
   // Automatically check triggers 4 seconds after startup (deduplicated per day/event)
   setTimeout(() => { try { window.dispatchSmartAlerts(false); } catch (_) {} }, 4000);
 }
+
+
+// === INTERACTIVE END-TO-END SHIFT SIMULATOR ===
+if (!window.__shiftSimulatorReady) {
+  window.__shiftSimulatorReady = true;
+
+  const ensureSimSnapshot = () => {
+    if (!state._simSnapshot) {
+      const clone = JSON.parse(JSON.stringify(state));
+      delete clone._simSnapshot;
+      delete clone._simLog;
+      state._simSnapshot = JSON.stringify(clone);
+      state._simLog = ['Backed up live Butler kitchen state before simulation.'];
+    }
+  };
+
+  const runSimPhase = (phase) => {
+    ensureSimSnapshot();
+    const today = localDateStr();
+    const actor = getActiveUser().name + ' (Sim)';
+
+    if (phase === 1) {
+      let rec = (state.recipes || []).find(r => /goulash/i.test(r.name)) || (state.recipes || [])[0];
+      if (rec) {
+        state.selectedRecipeId = rec.id;
+        const portions = Math.max(45, predictedPortions(today));
+        let mp = (state.menuPlan || []).find(m => m.service_date === today);
+        if (!mp) {
+          mp = { id: uid('mp'), service_date: today, status: 'PLANNED' };
+          state.menuPlan.push(mp);
+        }
+        mp.recipe_id = rec.id;
+        mp.custom_title = rec.name;
+        mp.planned_portions = portions;
+        mp.status = 'PLANNED';
+
+        let deducted = 0;
+        (rec.ingredients || []).forEach(g => {
+          const item = g.inv_id ? (state.items || []).find(x => x.id === g.inv_id) : null;
+          if (item && g.per100) {
+            const amt = Math.round(((g.per100 * portions) / 100) * 100) / 100;
+            item.on_hand = Math.round(Math.max(0, Number(item.on_hand || 0) - amt) * 100) / 100;
+            state.transactions.unshift({
+              id: uid('tx'), tx_date: today, tx_type: 'PREP_DEDUCT',
+              item_id: item.id, item_name: item.name, unit: item.unit,
+              qty: -amt, reason: `Simulated 8:30 AM Prep (${rec.name})`, staff_name: actor
+            });
+            deducted++;
+          }
+        });
+        state._simLog.push(`Phase 1 (8:30 AM): Scheduled "${rec.name}" for ${portions} forecasted portions & deducted ${deducted} linked pantry item(s).`);
+      }
+    }
+
+    if (phase === 2) {
+      state.safetyLogs = state.safetyLogs || {};
+      state.safetyLogs[today] = state.safetyLogs[today] || { temps: {}, cleaning: {} };
+      state.safetyLogs[today].temps = { 0: 37, 1: -4, 2: 38, 3: 152, 4: 168, 5: 39 };
+
+      const mp = (state.menuPlan || []).find(m => m.service_date === today);
+      const planned = (mp && mp.planned_portions) || 65;
+      const served = Math.max(35, planned - 4);
+      if (mp) {
+        mp.served_portions = served;
+        mp.status = 'SERVED';
+        mp.logged_by = actor;
+      }
+      state.storageTags = state.storageTags || [];
+      state.storageTags.unshift({
+        id: uid('tag'),
+        item_name: (mp && mp.custom_title) || 'Community Lunch Entree',
+        tag_category: 'LEFTOVER',
+        zone: 'Walk-In Cooler',
+        qty_label: `${Math.max(4, planned - served)} portions`,
+        prep_date: today,
+        prep_time: '12:30',
+        use_by_date: addDays(today, 6),
+        tagged_by: actor,
+        status: 'STORED'
+      });
+      state._simLog.push(`Phase 2 (11:30 AM): Logged 6 passing HACCP temps, recorded ${served} meals served & created 6-day FIFO leftover tag.`);
+    }
+
+    if (phase === 3) {
+      const sampleItem = (state.items || []).find(x => !x.discontinued && Number(x.on_hand || 0) >= 2) || (state.items || [])[0];
+      if (sampleItem) {
+        sampleItem.on_hand = Math.round(Math.max(0, Number(sampleItem.on_hand) - 1) * 100) / 100;
+        state.transactions.unshift({
+          id: uid('tx'), tx_date: today, tx_type: 'WASTE',
+          item_id: sampleItem.id, item_name: sampleItem.name, unit: sampleItem.unit,
+          qty: -1, reason: 'Simulated Shift Crack / Spoilage', staff_name: actor
+        });
+      }
+      const sug30 = computeAccurateOrderSuggestions(30);
+      state._simLog.push(`Phase 3 (1:00 PM): Logged 1 ${sampleItem ? sampleItem.unit + ' ' + sampleItem.name : 'item'} waste; 30-Day Multi-Variable Engine calculated ${sug30.length} vendor restock line(s).`);
+    }
+
+    if (phase === 4) {
+      const dig = buildWeeklyExecutiveDigest(today);
+      state._simLog.push(`Phase 4 (2:00 PM): Generated Weekly Executive Digest ("${dig.subject}") — ready for Friday dispatch or Restore Live Data.`);
+    }
+  };
+
+  document.addEventListener('click', (e) => {
+    const phaseBtn = e.target.closest('[data-sim-phase]');
+    if (phaseBtn) {
+      const p = Number(phaseBtn.dataset.simPhase);
+      runSimPhase(p);
+      saveState();
+      render();
+      showToast(`Completed Shift Simulation Phase ${p}!`);
+      return;
+    }
+    if (e.target.closest('#btn-sim-run-all')) {
+      [1, 2, 3, 4].forEach(p => runSimPhase(p));
+      saveState();
+      render();
+      showToast('Full 8:30 AM – 2:30 PM Shift Simulation complete! Inspect any tab or click Restore Live Data.');
+      return;
+    }
+    if (e.target.closest('#btn-sim-restore')) {
+      if (!state._simSnapshot) return;
+      const restored = JSON.parse(state._simSnapshot);
+      Object.keys(state).forEach(k => delete state[k]);
+      Object.assign(state, restored);
+      saveState();
+      render();
+      showToast('Restored your exact live Butler kitchen data!');
+    }
+  });
+}
