@@ -1192,6 +1192,10 @@ document.addEventListener('click', (e) => {
   if (poEditBtn) {
     const po = (state.purchaseOrders || []).find(p => p.id === poEditBtn.dataset.poEdit);
     if (po) {
+      if (!isStaffOrHigher()) {
+        showToast('Staff or Management access required to edit PO requests', 'warn');
+        return;
+      }
       if (!isMgmtOrHigher() && po.status !== 'requested') {
         showToast('Only Management can edit approved or ordered POs', 'warn');
         return;
@@ -1207,11 +1211,11 @@ document.addEventListener('click', (e) => {
           </div>
           <p class="opacity-75">Update requested whole-case quantities below (set to 0 to remove an item).</p>
           <div class="max-h-60 overflow-y-auto divide-y divide-[var(--line)] border border-[var(--line)] rounded-lg">
-            ${(po.lines || []).map(l => `
+            ${(po.lines || []).map((l, lIdx) => l.isFee ? '' : `
               <div class="p-2 flex items-center justify-between gap-2">
                 <span class="font-semibold">${esc(l.name)}</span>
                 <div class="flex items-center gap-1">
-                  <input type="number" step="1" min="0" name="line_${esc(l.item_id)}" value="${Math.ceil(l.qty)}" class="kms-input w-20 text-xs text-center font-bold" />
+                  <input type="number" step="0.5" min="0" name="line_idx_${lIdx}" value="${Number(l.qty || 0)}" class="kms-input w-20 text-xs text-center font-bold" />
                   <span class="opacity-70">${esc(l.unit)}</span>
                 </div>
               </div>
@@ -1277,6 +1281,10 @@ document.addEventListener('click', (e) => {
   if (recPoBtn) {
     const po = state.purchaseOrders.find(p => p.id === recPoBtn.dataset.poReconcile);
     if (po) {
+      if (po.status === 'requested') {
+        showToast('This PO must be approved and placed by Management before it can be reconciled.', 'warn');
+        return;
+      }
       for (let idx = 0; idx < (po.lines || []).length; idx++) {
         const inp = document.getElementById(`rc-${po.id}-${idx}`);
         if (inp && (inp.value === '' || isNaN(parseFloat(inp.value)) || parseFloat(inp.value) < 0)) {
@@ -2782,7 +2790,11 @@ document.addEventListener('submit', (e) => {
 
   if (e.target.classList && e.target.classList.contains('form-reconcile-po')) {
     const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.poId);
-    if (po && ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(po.status)) {
+    if (po && po.status === 'requested') {
+      showToast('This PO must be approved and placed by Management before it can be reconciled.', 'warn');
+      return;
+    }
+    if (po && ['ordered', 'approved', 'APPROVED_ORDERED'].includes(po.status)) {
       const lines = po.lines || [];
       for (let idx = 0; idx < lines.length; idx++) {
         const ln = lines[idx];
@@ -3120,13 +3132,18 @@ document.addEventListener('submit', (e) => {
   if (e.target.id === 'form-edit-po') {
     const po = (state.purchaseOrders || []).find(p => p.id === fd.get('poId'));
     if (po) {
+      if (!isStaffOrHigher()) {
+        showToast('Staff or Management access required to edit PO requests', 'warn');
+        return;
+      }
       if (!isMgmtOrHigher() && po.status !== 'requested') {
         showToast('Only Management can modify approved or ordered POs', 'warn');
         return;
       }
       const nextLines = [];
-      (po.lines || []).forEach(l => {
-        const q = Math.ceil(parseFloat(fd.get('line_' + l.item_id)));
+      (po.lines || []).forEach((l, lIdx) => {
+        if (l.isFee) { nextLines.push({ ...l }); return; }
+        const q = Math.round((parseFloat(fd.get('line_idx_' + lIdx)) || 0) * 100) / 100;
         if (!isNaN(q) && q > 0) nextLines.push({ ...l, qty: q });
       });
       const exId = fd.get('extraItemId');
@@ -3159,7 +3176,16 @@ document.addEventListener('submit', (e) => {
         if (item) {
           const exist = nextLines.find(l => l.item_id === exId);
           if (exist) exist.qty += exQ;
-          else nextLines.push({ item_id: item.id, name: item.name, unit: item.unit, qty: exQ, received: 0, price: item.unit_price || 0 });
+          else {
+            const meta = getCatalogMetaForItem(item);
+            nextLines.push({
+              item_id: item.id, sku: meta.sku, category: meta.cat, name: item.name,
+              unit: meta.orderUnit, qty: exQ, received: 0,
+              unit_price: meta.casePrice || meta.unitPrice,
+              isWholesaleEst: !!meta.isWholesaleEst,
+              packQty: meta.packQty, baseUnit: meta.baseUnit
+            });
+          }
         }
       }
       if (!nextLines.length) { showToast('PO must have at least 1 item', 'warn'); return; }
@@ -4081,13 +4107,17 @@ if (!window.__sec3OrdersWired) {
       if (actBtn.hasAttribute('data-ord-recv')) {
         state.activeTab = 'receive'; render(); return;
       }
+      const canSeePrices = isMgmtOrHigher(getActiveUser());
       const lines = po.lines || [];
       const total = lines.reduce((s, l) => s + Number(l.qty || 0) * Number(l.unit_price || 0), 0);
       const txt = [
         `PURCHASE ORDER: ${po.po_number} (${po.vendor})`,
         'SHIP TO: The Salvation Army Butler · 92 Race St., Butler, PA 16003 · NEED BY 1:00 PM · Net 7 Days · Tax Exempt',
-        ...lines.map(l => `- [${l.sku || ''}] ${l.qty} ${l.unit} ${l.name} @ $${Number(l.unit_price || 0).toFixed(2)} = $${(Number(l.qty || 0) * Number(l.unit_price || 0)).toFixed(2)}`),
-        `ESTIMATED INVOICE TOTAL: $${total.toFixed(2)}`
+        ...lines.map(l => canSeePrices
+          ? `- [${l.sku || ''}] ${l.qty} ${l.unit} ${l.name} @ ${Number(l.unit_price || 0).toFixed(2)} = ${(Number(l.qty || 0) * Number(l.unit_price || 0)).toFixed(2)}`
+          : `- [${l.sku || ''}] ${l.qty} ${l.unit} ${l.name}`
+        ),
+        ...(canSeePrices ? [`ESTIMATED INVOICE TOTAL: ${total.toFixed(2)}`] : [])
       ].join('\n');
       navigator.clipboard?.writeText(txt);
       if (actBtn.hasAttribute('data-ord-approve')) {
@@ -4182,4 +4212,83 @@ document.addEventListener('change', (e) => {
   saveState();
   render();
   showToast(`Updated price for ${ln.name} to $${val.toFixed(2)} (saved for future orders)`);
+});
+
+
+document.addEventListener('change', (e) => {
+  const attr = e.target && e.target.getAttribute && e.target.getAttribute('data-po-qty');
+  if (!attr || !isStaffOrHigher(getActiveUser())) return;
+  const [poId, idxStr] = attr.split(':');
+  const idx = Number(idxStr);
+  const po = (state.purchaseOrders || []).find(p => String(p.id) === String(poId));
+  if (!po || !po.lines || !po.lines[idx]) return;
+  if (!isMgmtOrHigher(getActiveUser()) && po.status !== 'requested') {
+    showToast('Only Management can edit approved or ordered POs', 'warn');
+    render();
+    return;
+  }
+  const newQty = Math.round((parseFloat(e.target.value) || 0) * 100) / 100;
+  if (newQty <= 0) {
+    const removedName = po.lines[idx].name;
+    po.lines.splice(idx, 1);
+    showToast(`Removed ${removedName} from ${po.po_number}`);
+  } else {
+    po.lines[idx].qty = newQty;
+    showToast(`Updated ${po.lines[idx].name} qty to ${newQty} ${po.lines[idx].unit}`);
+  }
+  saveState();
+  render();
+});
+
+document.addEventListener('click', (e) => {
+  const emailBtn = e.target.closest('[data-po-email]');
+  if (!emailBtn) return;
+  const poId = emailBtn.getAttribute('data-po-email');
+  const po = (state.purchaseOrders || []).find(p => String(p.id) === String(poId));
+  if (!po) return;
+  const sel = document.getElementById(`po-approver-sel-${po.id}`);
+  const approverId = sel ? sel.value : '';
+  if (!approverId) {
+    showToast('Select an approver account from the dropdown first.', 'warn');
+    if (sel) sel.focus();
+    return;
+  }
+  const approver = (state.users || []).find(u => String(u.id) === String(approverId));
+  if (!approver) return;
+  if (!approver.email) {
+    showToast(`${approver.name} does not have an email address saved yet (add it in Users & Roster).`, 'warn');
+    return;
+  }
+  const me = getActiveUser();
+  const canSeePrices = isMgmtOrHigher(me);
+  const lines = po.lines || [];
+  const total = lines.reduce((s, l) => s + Number(l.qty || 0) * Number(l.unit_price || 0), 0);
+  const bodyLines = [
+    `Hi ${approver.name},`,
+    '',
+    `${me.name} (${me.role}) submitted Purchase Request ${po.po_number} for ${po.vendor} and requested your approval:`,
+    '',
+    ...lines.map(l => canSeePrices
+      ? `- [${l.sku || ''}] ${l.qty} ${l.unit} ${l.name} @ $${Number(l.unit_price || 0).toFixed(2)} = $${(Number(l.qty || 0) * Number(l.unit_price || 0)).toFixed(2)}`
+      : `- [${l.sku || ''}] ${l.qty} ${l.unit} ${l.name}`
+    ),
+    ...(canSeePrices ? ['', `Estimated Total: $${total.toFixed(2)}`] : []),
+    '',
+    'Please review and approve this request in the Salvation Army Community Meals KMS (Orders & POs tab).'
+  ];
+  const subj = `PO Approval Needed: ${po.po_number} (${po.vendor})`;
+  window.open(`mailto:${encodeURIComponent(approver.email)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(bodyLines.join('\n'))}`, '_blank');
+  state.messages = state.messages || [];
+  state.messages.unshift({
+    id: uid('msg'),
+    sender_id: me.id,
+    sender_name: me.name,
+    sender_role: me.role,
+    recipient_id: approver.id,
+    body: `Sent PO Request ${po.po_number} (${po.vendor}) to ${approver.name} (${approver.email}) for approval.`,
+    created_at: new Date().toISOString()
+  });
+  logActivity('PO APPROVAL EMAILED', `Emailed ${po.po_number} to ${approver.name} (${approver.email})`);
+  saveState();
+  showToast(`Opened email to ${approver.name} (${approver.email})`);
 });

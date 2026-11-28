@@ -87,7 +87,8 @@ export function showDonationTaxReceiptModal(donId) {
 export function renderReceive(main) {
   const today = localDateStr();
   const isMgr = isMgmtOrHigher();
-  const expectedPos = (state.purchaseOrders || []).filter(p => ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(p.status));
+  const pendingReqCount = (state.purchaseOrders || []).filter(p => p.status === 'requested').length;
+  const expectedPos = (state.purchaseOrders || []).filter(p => ['ordered', 'approved', 'APPROVED_ORDERED'].includes(p.status));
   const donations = state.donations || [];
   const invOpts = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
 
@@ -116,7 +117,8 @@ export function renderReceive(main) {
           </div>
           <button type="button" data-tab="orders" class="kms-btn-alt px-3 py-1.5 text-xs font-semibold no-print">+ Create New PO</button>
         </div>
-        ${!expectedPos.length ? '<p class="text-xs opacity-70 py-1">No open Purchase Orders waiting for delivery. Create or approve a PO in <strong>Orders &amp; POs</strong> first.</p>' : expectedPos.map(po => `
+        ${pendingReqCount > 0 ? `<p class="text-xs text-amber-700 font-semibold bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">Note: ${pendingReqCount} Purchase Request(s) are still awaiting Manager approval &amp; placement in <strong>Orders &amp; POs</strong> and cannot be reconciled until ordered.</p>` : ''}
+        ${!expectedPos.length ? '<p class="text-xs opacity-70 py-1">No placed Purchase Orders waiting for delivery. Approve &amp; place a request in <strong>Orders &amp; POs</strong> first.</p>' : expectedPos.map(po => `
           <form class="form-reconcile-po p-3 rounded-lg border border-[var(--line)] bg-black/5 space-y-2.5 print-keep" data-po-id="${esc(po.id)}">
             <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
               <div class="flex flex-wrap items-center gap-2">

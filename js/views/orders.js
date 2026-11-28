@@ -1,13 +1,16 @@
 // js/views/orders.js — Section 3: Weekly & Monthly Menu-Driven Ordering Pipeline
 import { localDateStr, addDays, serviceDaysBetween, esc } from '../utils.js';
-import { state, getActiveUser, isMgmtOrHigher, VENDOR_CATALOG, getCatalogMetaForItem, committedAndNetAvailable } from '../state.js';
+import { state, getActiveUser, isMgmtOrHigher, isStaffOrHigher, normalizeRole, VENDOR_CATALOG, getCatalogMetaForItem, committedAndNetAvailable } from '../state.js';
 
 export function renderOrders(main) {
   const hz = Number(state._orderHorizon || 7);
   const vFilter = state._orderVendor || 'ALL';
   const days = serviceDaysBetween(localDateStr(), addDays(localDateStr(), hz === 1 ? 4 : hz));
   const useDays = hz === 1 ? days.slice(0, 1) : days;
-  const isMgr = isMgmtOrHigher(getActiveUser());
+  const me = getActiveUser();
+  const isMgr = isMgmtOrHigher(me);
+  const canEditReq = isStaffOrHigher(me);
+  const approvers = (state.users || []).filter(u => u.active !== false && ['ADMIN', 'MANAGER'].includes(normalizeRole(u.role)));
   const parMult = hz === 30 ? 4 : (hz === 1 ? 0.25 : 1);
 
   const suggestions = (state.items || []).filter(x => !x.discontinued).map(x => {
@@ -46,16 +49,26 @@ export function renderOrders(main) {
           </div>
           <p class="text-xs opacity-75 mt-1">Created ${esc(po.created_at || '')} by ${esc(po.created_by || 'Staff')}${isMgr ? ` · Est. PO Total: <strong>${total.toFixed(2)}</strong> <span class="opacity-75">(editable unit prices)</span>` : ''}</p>
         </div>
-        <div class="flex flex-wrap gap-1.5">
+        <div class="flex flex-wrap items-center gap-1.5">
+          ${((!placed && canEditReq) || (placed && isMgr)) ? `<button type="button" data-po-edit="${esc(po.id)}" class="kms-btn-alt px-2.5 py-1.5 text-xs font-bold">${placed ? 'Edit PO' : 'Edit Request'}</button>` : ''}
+          ${!placed ? `
+            <div class="flex items-center gap-1 bg-black/5 px-1.5 py-1 rounded-lg border border-[var(--line)]">
+              <select id="po-approver-sel-${esc(po.id)}" class="kms-input text-xs py-1">
+                <option value="">Select Approver...</option>
+                ${approvers.map(ap => `<option value="${esc(ap.id)}">${esc(ap.name)} (${esc(ap.role)})${ap.email ? ' — ' + esc(ap.email) : ' (no email)'}</option>`).join('')}
+              </select>
+              <button type="button" data-po-email="${esc(po.id)}" class="kms-btn-alt px-2.5 py-1 text-xs font-bold">Email Approver</button>
+            </div>
+          ` : ''}
           ${(!placed && isMgr) ? `<button type="button" data-ord-approve="${esc(po.id)}" class="kms-btn-primary px-3 py-1.5 text-xs font-bold">1-Click Approve &amp; Place Order</button>` : ''}
           ${placed ? `<button type="button" data-ord-recv="${esc(po.id)}" class="kms-btn-primary px-3 py-1.5 text-xs font-bold">Go to Invoice Check-In →</button>` : ''}
           <button type="button" data-ord-copy="${esc(po.id)}" class="kms-btn-alt px-2.5 py-1.5 text-xs">Copy Order Sheet</button>
-          <button type="button" data-ord-del="${esc(po.id)}" class="kms-btn-alt px-2.5 py-1.5 text-xs text-red-600">Delete</button>
+          ${((!placed && canEditReq) || isMgr) ? `<button type="button" data-ord-del="${esc(po.id)}" class="kms-btn-alt px-2.5 py-1.5 text-xs text-red-600">Delete</button>` : ''}
         </div>
       </div>
       <div class="overflow-x-auto"><table class="w-full text-xs border-collapse">
         <thead><tr class="border-b border-[var(--line)] text-left opacity-70"><th class="py-1 pr-2">SKU</th><th class="py-1 pr-2">Category</th><th class="py-1 pr-2">Item</th><th class="py-1 pr-2 text-right">Order Qty</th><th class="py-1 pr-2 text-right">Stock Gain</th>${isMgr ? `<th class="py-1 pr-2 text-right">Unit Price ($)</th><th class="py-1 text-right">Ext. Total</th>` : ''}</tr></thead>
-        <tbody>${lines.map((ln, lnIdx) => `<tr class="border-b border-[var(--line)]/40"><td class="py-1.5 pr-2 font-mono text-[11px] opacity-75">${esc(ln.sku || '—')}</td><td class="py-1.5 pr-2 opacity-75">${esc(ln.category || '—')}</td><td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td><td class="py-1.5 pr-2 text-right font-bold">${ln.qty} ${esc(ln.unit)}</td><td class="py-1.5 pr-2 text-right opacity-75">${ln.isFee ? '—' : '+' + (Number(ln.qty || 0) * Number(ln.packQty || 1)) + ' ' + esc(ln.baseUnit || ln.unit)}</td>${isMgr ? `<td class="py-1.5 pr-2 text-right"><input type="number" step="0.01" min="0" value="${Number(ln.unit_price || 0).toFixed(2)}" data-po-price="${esc(po.id)}:${lnIdx}" title="${ln.isWholesaleEst ? 'Standard Wholesale Benchmark (edit to save real price)' : 'Saved Unit Price (editable)'}" class="kms-input w-20 text-xs text-right font-semibold" />${ln.isWholesaleEst ? `<div class="text-[9px] text-amber-600 font-bold">Est. Wholesale</div>` : ''}</td><td class="py-1.5 text-right font-bold">${(Number(ln.qty || 0) * Number(ln.unit_price || 0)).toFixed(2)}</td>` : ''}</tr>`).join('')}</tbody>
+        <tbody>${lines.map((ln, lnIdx) => `<tr class="border-b border-[var(--line)]/40"><td class="py-1.5 pr-2 font-mono text-[11px] opacity-75">${esc(ln.sku || '—')}</td><td class="py-1.5 pr-2 opacity-75">${esc(ln.category || '—')}</td><td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td><td class="py-1.5 pr-2 text-right font-bold">${(!placed && canEditReq && !ln.isFee) ? `<input type="number" step="0.5" min="0" value="${ln.qty}" data-po-qty="${esc(po.id)}:${lnIdx}" class="kms-input w-16 text-xs text-right font-bold" /> ${esc(ln.unit)}` : `${ln.qty} ${esc(ln.unit)}`}</td><td class="py-1.5 pr-2 text-right opacity-75">${ln.isFee ? '—' : '+' + (Number(ln.qty || 0) * Number(ln.packQty || 1)) + ' ' + esc(ln.baseUnit || ln.unit)}</td>${isMgr ? `<td class="py-1.5 pr-2 text-right"><input type="number" step="0.01" min="0" value="${Number(ln.unit_price || 0).toFixed(2)}" data-po-price="${esc(po.id)}:${lnIdx}" title="${ln.isWholesaleEst ? 'Standard Wholesale Benchmark (edit to save real price)' : 'Saved Unit Price (editable)'}" class="kms-input w-20 text-xs text-right font-semibold" />${ln.isWholesaleEst ? `<div class="text-[9px] text-amber-600 font-bold">Est. Wholesale</div>` : ''}</td><td class="py-1.5 text-right font-bold">${(Number(ln.qty || 0) * Number(ln.unit_price || 0)).toFixed(2)}</td>` : ''}</tr>`).join('')}</tbody>
       </table></div>
     </div>`;
   };

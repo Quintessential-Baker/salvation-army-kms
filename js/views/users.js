@@ -99,7 +99,7 @@ export function renderUsers(main) {
             const isSelfOwner = (u.id === 'usr-1' && me.id === 'usr-1');
             return `
             <div class="p-2.5 rounded-lg border border-[var(--line)] flex flex-wrap justify-between items-center gap-2 text-xs print-keep">
-              <div><strong>${esc(u.name)}</strong> (${esc(u.initials)}) · ${esc(u.role)}${u.active === false ? ' <span class="tag tag-OUT ml-1">INACTIVE</span>' : ''}</div>
+              <div><strong>${esc(u.name)}</strong> (${esc(u.initials)}) · ${esc(u.role)}${u.email ? ` · <span class="font-mono text-[11px] opacity-80">${esc(u.email)}</span>` : ''}${u.active === false ? ' <span class="tag tag-OUT ml-1">INACTIVE</span>' : ''}</div>
               <div class="flex flex-wrap gap-1.5 no-print">
                 ${(canManage || isSelfOwner) ? `<button type="button" data-edit-usr="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Edit</button>` : ''}
                 ${(canManage || isSelfOwner) ? `<button type="button" data-reset-pin="${u.id}" class="kms-btn-alt px-2.5 py-1 text-xs">Reset PIN</button>` : ''}
