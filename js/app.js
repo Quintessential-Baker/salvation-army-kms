@@ -29,7 +29,7 @@ import {
 import { renderDashboard } from './views/dashboard.js';
 import { renderStock } from './views/stock.js';
 import { renderOrders } from './views/orders.js';
-import { VENDOR_CATALOG, getCatalogMetaForItem, committedAndNetAvailable } from './state.js';
+import { VENDOR_CATALOG, getCatalogMetaForItem, getEffectiveUnitPrice, committedAndNetAvailable } from './state.js';
 import { renderReceive, showDonationTaxReceiptModal } from './views/receive.js';
 import { renderMenu, showMenuPrintSuiteModal, showBulkMenuModal } from './views/menu.js';
 import { renderPrep } from './views/prep.js';
@@ -1064,7 +1064,7 @@ document.addEventListener('click', (e) => {
           <div class="grid grid-cols-3 gap-2">
             <div><label class="block font-semibold mb-1">On Hand</label><input name="onHand" type="number" step="0.5" min="0" value="${x.on_hand}" class="kms-input w-full text-xs font-bold" /></div>
             <div><label class="block font-semibold mb-1">Par Level</label><input name="par" type="number" step="0.5" min="0" value="${x.par}" class="kms-input w-full text-xs font-bold" /></div>
-            <div><label class="block font-semibold mb-1">Unit Price ($)</label><input name="unitPrice" type="number" step="0.01" min="0" value="${x.unit_price || ''}" placeholder="0.00" class="kms-input w-full text-xs" /></div>
+            ${isMgmtOrHigher(getActiveUser()) ? `<div><label class="block font-semibold mb-1">Unit Price ($) <span class="text-[10px] font-normal opacity-70">(PO &amp; Waste reports only · blank = ${getEffectiveUnitPrice(x).price.toFixed(2)} wholesale est.)</span></label><input name="unitPrice" type="number" step="0.01" min="0" value="${x.unit_price || ''}" placeholder="${getEffectiveUnitPrice(x).price.toFixed(2)}" class="kms-input w-full text-xs" /></div>` : ''}
           </div>
           <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-semibold">Save Item Changes</button>
         </form>
@@ -2018,8 +2018,9 @@ document.addEventListener('click', (e) => {
   }
   if (e.target.id === 'btn-export-exec-csv') {
     const activeItems = state.items.filter(x => !x.discontinued && itemNeed(x) > 0);
-    const rows = [['Item', 'Vendor', 'On Hand', 'Par', 'Unit', 'Whole Cases Needed', 'Unit Price']];
-    activeItems.forEach(x => rows.push([x.name, x.vendor || '', x.on_hand, x.par, x.unit, Math.max(1, Math.ceil(itemNeed(x))), x.unit_price || 0]));
+    const canPrice = isMgmtOrHigher(getActiveUser());
+    const rows = [canPrice ? ['Item', 'Vendor', 'On Hand', 'Par', 'Unit', 'Whole Cases Needed', 'Est. PO Unit Price'] : ['Item', 'Vendor', 'On Hand', 'Par', 'Unit', 'Whole Cases Needed']];
+    activeItems.forEach(x => rows.push(canPrice ? [x.name, x.vendor || '', x.on_hand, x.par, x.unit, Math.max(1, Math.ceil(itemNeed(x))), getEffectiveUnitPrice(x).price] : [x.name, x.vendor || '', x.on_hand, x.par, x.unit, Math.max(1, Math.ceil(itemNeed(x)))]));
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
@@ -2807,6 +2808,11 @@ document.addEventListener('submit', (e) => {
         if (Number(ln.qty || 0) <= 0) return;
         const actualOrderUnits = Math.max(0, Math.round((parseFloat(fd.get('rec_idx_' + idx)) || 0) * 100) / 100);
         ln.received = actualOrderUnits;
+        const editedRateEl = form.querySelector(`[name="rec_price_${idx}"]`);
+        if (editedRateEl && isMgmtOrHigher(getActiveUser())) {
+          const newRate = Number(editedRateEl.value || 0);
+          if (!isNaN(newRate) && newRate >= 0) ln.unit_price = newRate;
+        }
         invTotal += actualOrderUnits * Number(ln.unit_price || 0);
         if (ln.isFee || actualOrderUnits <= 0) return;
         const packMult = Number(ln.packQty || 1);
@@ -2833,7 +2839,7 @@ document.addEventListener('submit', (e) => {
       logActivity('PO RECEIVED', `${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} ($${po.verified_total.toFixed(2)} · ${added} items checked in)`);
       saveState();
       render();
-      showToast(`Reconciled ${po.po_number} ($${po.verified_total.toFixed(2)}): added ${added} item(s) to Living Stock!`);
+      showToast(isMgmtOrHigher(getActiveUser()) ? `Reconciled ${po.po_number} (${po.verified_total.toFixed(2)}): added ${added} item(s) to Living Stock!` : `Reconciled ${po.po_number}: added ${added} item(s) to Living Stock!`);
     }
     return;
   }
@@ -3725,7 +3731,8 @@ document.addEventListener('submit', (e) => {
     const reason = String(fd.get('reason') || '');
     if (!x || q <= 0) return;
     x.on_hand = Math.round(Math.max(0, Number(x.on_hand || 0) - q) * 100) / 100;
-    const costImpact = Math.round(q * Number(x.unit_price || 0) * 100) / 100;
+    const effUnit = getEffectiveUnitPrice(x).price;
+    const costImpact = Math.round(q * effUnit * 100) / 100;
     state.transactions.unshift({
       id: uid('tx'), tx_date: localDateStr(), tx_type: txType, item_id: x.id, item_name: x.name,
       unit: x.unit, qty: -q, cost_impact: costImpact, reason, staff_name: getActiveUser().name
@@ -3972,6 +3979,7 @@ if (!window.__sec3OrdersWired) {
           qty: orderQty,
           unit: meta.orderUnit,
           unit_price: meta.casePrice || meta.unitPrice,
+          isWholesaleEst: !!meta.isWholesaleEst,
           packQty: meta.packQty,
           baseUnit: meta.baseUnit
         }
@@ -4089,7 +4097,7 @@ if (!window.__sec3OrdersWired) {
         saveState();
         const to = /jordan/i.test(po.vendor) ? 'orders@jordanbanana.com' : '';
         window.open(`mailto:${to}?subject=${encodeURIComponent('Approved Order ' + po.po_number + ' - Salvation Army Butler')}&body=${encodeURIComponent(txt)}`, '_blank');
-        showToast(`Approved & Placed ${po.po_number} ($${total.toFixed(2)}) — copied to clipboard!`);
+        showToast(isMgmtOrHigher(getActiveUser()) ? `Approved & Placed ${po.po_number} (${total.toFixed(2)}) — copied to clipboard!` : `Approved & Placed ${po.po_number} — copied to clipboard!`);
         render();
       } else {
         showToast('Order sheet copied to clipboard!');
@@ -4153,3 +4161,25 @@ document.addEventListener('click', (e) => {
 });
 
 window.addEventListener("afterprint", () => document.body.classList.remove("printing-modal"));
+
+
+document.addEventListener('change', (e) => {
+  const attr = e.target && e.target.getAttribute && e.target.getAttribute('data-po-price');
+  if (!attr || !isMgmtOrHigher(getActiveUser())) return;
+  const [poId, idxStr] = attr.split(':');
+  const idx = Number(idxStr);
+  const val = Math.max(0, Number(e.target.value || 0));
+  const po = (state.purchaseOrders || []).find(p => p.id === poId);
+  if (!po || !po.lines || !po.lines[idx]) return;
+  const ln = po.lines[idx];
+  ln.unit_price = val;
+  ln.isWholesaleEst = false;
+  const matchedItem = (state.items || []).find(it => it.id === ln.item_id || (ln.sku && it.sku === ln.sku) || it.name.toLowerCase() === String(ln.name || '').toLowerCase());
+  if (matchedItem && val > 0) {
+    const packMult = Number(ln.packQty || 1) || 1;
+    matchedItem.unit_price = Math.round((val / packMult) * 10000) / 10000;
+  }
+  saveState();
+  render();
+  showToast(`Updated price for ${ln.name} to $${val.toFixed(2)} (saved for future orders)`);
+});

@@ -44,7 +44,7 @@ export function renderOrders(main) {
             <span class="text-xs font-bold px-2 py-0.5 rounded bg-black/10">${esc(po.vendor)}</span>
             <span class="text-[11px] font-extrabold uppercase px-2 py-0.5 rounded ${placed ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-black'}">${placed ? 'Stage 3 · Placed with Vendor' : 'Stage 2 · Request for Purchase'}</span>
           </div>
-          <p class="text-xs opacity-75 mt-1">Created ${esc(po.created_at || '')} by ${esc(po.created_by || 'Staff')} · Est. Invoice Total: <strong>$${total.toFixed(2)}</strong></p>
+          <p class="text-xs opacity-75 mt-1">Created ${esc(po.created_at || '')} by ${esc(po.created_by || 'Staff')}${isMgr ? ` · Est. PO Total: <strong>${total.toFixed(2)}</strong> <span class="opacity-75">(editable unit prices)</span>` : ''}</p>
         </div>
         <div class="flex flex-wrap gap-1.5">
           ${(!placed && isMgr) ? `<button type="button" data-ord-approve="${esc(po.id)}" class="kms-btn-primary px-3 py-1.5 text-xs font-bold">1-Click Approve &amp; Place Order</button>` : ''}
@@ -54,8 +54,8 @@ export function renderOrders(main) {
         </div>
       </div>
       <div class="overflow-x-auto"><table class="w-full text-xs border-collapse">
-        <thead><tr class="border-b border-[var(--line)] text-left opacity-70"><th class="py-1 pr-2">SKU</th><th class="py-1 pr-2">Category</th><th class="py-1 pr-2">Item</th><th class="py-1 pr-2 text-right">Order Qty</th><th class="py-1 pr-2 text-right">Stock Gain</th><th class="py-1 pr-2 text-right">Unit Price</th><th class="py-1 text-right">Ext. Total</th></tr></thead>
-        <tbody>${lines.map(ln => `<tr class="border-b border-[var(--line)]/40"><td class="py-1.5 pr-2 font-mono text-[11px] opacity-75">${esc(ln.sku || '—')}</td><td class="py-1.5 pr-2 opacity-75">${esc(ln.category || '—')}</td><td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td><td class="py-1.5 pr-2 text-right font-bold">${ln.qty} ${esc(ln.unit)}</td><td class="py-1.5 pr-2 text-right opacity-75">${ln.isFee ? '—' : '+' + (Number(ln.qty || 0) * Number(ln.packQty || 1)) + ' ' + esc(ln.baseUnit || ln.unit)}</td><td class="py-1.5 pr-2 text-right">$${Number(ln.unit_price || 0).toFixed(2)}</td><td class="py-1.5 text-right font-bold">$${(Number(ln.qty || 0) * Number(ln.unit_price || 0)).toFixed(2)}</td></tr>`).join('')}</tbody>
+        <thead><tr class="border-b border-[var(--line)] text-left opacity-70"><th class="py-1 pr-2">SKU</th><th class="py-1 pr-2">Category</th><th class="py-1 pr-2">Item</th><th class="py-1 pr-2 text-right">Order Qty</th><th class="py-1 pr-2 text-right">Stock Gain</th>${isMgr ? `<th class="py-1 pr-2 text-right">Unit Price ($)</th><th class="py-1 text-right">Ext. Total</th>` : ''}</tr></thead>
+        <tbody>${lines.map((ln, lnIdx) => `<tr class="border-b border-[var(--line)]/40"><td class="py-1.5 pr-2 font-mono text-[11px] opacity-75">${esc(ln.sku || '—')}</td><td class="py-1.5 pr-2 opacity-75">${esc(ln.category || '—')}</td><td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td><td class="py-1.5 pr-2 text-right font-bold">${ln.qty} ${esc(ln.unit)}</td><td class="py-1.5 pr-2 text-right opacity-75">${ln.isFee ? '—' : '+' + (Number(ln.qty || 0) * Number(ln.packQty || 1)) + ' ' + esc(ln.baseUnit || ln.unit)}</td>${isMgr ? `<td class="py-1.5 pr-2 text-right"><input type="number" step="0.01" min="0" value="${Number(ln.unit_price || 0).toFixed(2)}" data-po-price="${esc(po.id)}:${lnIdx}" title="${ln.isWholesaleEst ? 'Standard Wholesale Benchmark (edit to save real price)' : 'Saved Unit Price (editable)'}" class="kms-input w-20 text-xs text-right font-semibold" />${ln.isWholesaleEst ? `<div class="text-[9px] text-amber-600 font-bold">Est. Wholesale</div>` : ''}</td><td class="py-1.5 text-right font-bold">${(Number(ln.qty || 0) * Number(ln.unit_price || 0)).toFixed(2)}</td>` : ''}</tr>`).join('')}</tbody>
       </table></div>
     </div>`;
   };
@@ -93,7 +93,7 @@ export function renderOrders(main) {
             <button type="button" id="btn-req-all-md" class="kms-btn-alt px-2.5 py-1.5 text-xs font-bold">+ Request All Marberger (${mdCount})</button>
           </div>
         </div>
-        ${suggestions.length === 0 ? `<p class="text-xs opacity-70 py-4 text-center">All inventory items meet par &amp; planned menu servings for this window.</p>` : `<div class="max-h-80 overflow-y-auto divide-y divide-[var(--line)]/50 text-xs">${suggestions.map(sg => `<div class="py-2 flex items-center justify-between gap-2"><div><span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/10 mr-1">${esc(sg.sku)}</span><strong>${esc(sg.name)}</strong><div class="text-[11px] opacity-75 mt-0.5">${esc(sg.vendor)} · On Hand: <strong>${sg.onHand}</strong>${sg.inTransit ? ` (+${sg.inTransit} ord)` : ''} · Menu: <strong>${sg.committed}</strong> · Par: <strong>${sg.parTarget} ${esc(sg.baseUnit)}</strong></div></div><div class="flex items-center gap-2 shrink-0"><span class="font-bold">${sg.orderQty} ${esc(sg.unit)} ($${(sg.orderQty * sg.unitPrice).toFixed(2)})</span><button type="button" data-add-sug-id="${esc(sg.itemId)}" class="kms-btn-alt px-2 py-1 text-[11px] font-bold">+ Request</button></div></div>`).join('')}</div>`}
+        ${suggestions.length === 0 ? `<p class="text-xs opacity-70 py-4 text-center">All inventory items meet par &amp; planned menu servings for this window.</p>` : `<div class="max-h-80 overflow-y-auto divide-y divide-[var(--line)]/50 text-xs">${suggestions.map(sg => `<div class="py-2 flex items-center justify-between gap-2"><div><span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/10 mr-1">${esc(sg.sku)}</span><strong>${esc(sg.name)}</strong><div class="text-[11px] opacity-75 mt-0.5">${esc(sg.vendor)} · On Hand: <strong>${sg.onHand}</strong>${sg.inTransit ? ` (+${sg.inTransit} ord)` : ''} · Menu: <strong>${sg.committed}</strong> · Par: <strong>${sg.parTarget} ${esc(sg.baseUnit)}</strong></div></div><div class="flex items-center gap-2 shrink-0"><span class="font-bold">${sg.orderQty} ${esc(sg.unit)}${isMgr ? ` (${(sg.orderQty * sg.unitPrice).toFixed(2)})` : ''}</span><button type="button" data-add-sug-id="${esc(sg.itemId)}" class="kms-btn-alt px-2 py-1 text-[11px] font-bold">+ Request</button></div></div>`).join('')}</div>`}
       </div>
       <div class="lg:col-span-5 kms-card p-4 space-y-3">
         <div class="border-b border-[var(--line)] pb-2">
@@ -101,13 +101,13 @@ export function renderOrders(main) {
           <p class="text-[11px] opacity-75">Order Full Case, Single Broken-Case (ea), or Catch-Weight (lb)</p>
         </div>
         <div class="space-y-2.5 text-xs">
-          <label class="block font-bold">Catalog Item<select id="ord-cat-idx" class="kms-input w-full mt-1">${VENDOR_CATALOG.map((c, idx) => `<option value="${idx}">[${esc(c.sku)}] ${esc(c.name)} — $${c.casePrice.toFixed(2)}/${esc(c.orderUnit)} (${c.packQty} ${esc(c.baseUnit)})</option>`).join('')}</select></label>
+          <label class="block font-bold">Catalog Item<select id="ord-cat-idx" class="kms-input w-full mt-1">${VENDOR_CATALOG.map((c, idx) => `<option value="${idx}">[${esc(c.sku)}] ${esc(c.name)}${isMgr ? ` — ${c.casePrice.toFixed(2)}/${esc(c.orderUnit)}` : ''} (${c.packQty} ${esc(c.baseUnit)})</option>`).join('')}</select></label>
           <div class="grid grid-cols-2 gap-2">
             <label class="font-bold">Order Mode<select id="ord-cat-mode" class="kms-input w-full mt-1"><option value="case">Full Case / Bulk U/M</option><option value="single">Broken-Case Single (ea)</option></select></label>
             <label class="font-bold">Quantity<input type="number" id="ord-cat-qty" step="0.5" min="0.5" value="1" class="kms-input w-full mt-1 text-center font-bold" /></label>
           </div>
           <button type="button" id="btn-ord-cat-add" class="kms-btn-primary w-full py-2 text-xs font-bold">+ Add Line to Purchase Request</button>
-          <p class="text-[11px] opacity-70">Jordan Banana requests automatically consolidate into one PO and include the flat <strong>$10.00 Delivery Charge</strong>.</p>
+          <p class="text-[11px] opacity-70">Jordan Banana requests automatically consolidate into one PO and include the standard vendor delivery fee.</p>
         </div>
       </div>
     </div>

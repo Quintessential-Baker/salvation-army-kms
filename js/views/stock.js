@@ -47,13 +47,12 @@ export function renderStock(main) {
             ${list.map(x => {
               const st = itemStatus(x);
               const meta = getCatalogMetaForItem(x);
-              const extVal = (Number(x.on_hand || 0) * Number(meta.unitPrice || 0)).toFixed(2);
               const curUnit = normStockUnit(x.unit);
               const unitOpts = Array.from(new Set([...STOCK_UNITS, curUnit]));
               return `
                 <div class="kms-card p-3 flex flex-wrap items-center justify-between gap-2 stock-row-card">
                   <div class="min-w-[200px] flex-1">
-                    <div class="font-bold text-sm flex flex-wrap items-center gap-1.5">${esc(x.name)} <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-black/10">${esc(meta.sku !== '—' ? meta.sku : x.sku)}</span> <span class="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded ${meta.vendor === 'Marberger Dairy' ? 'bg-sky-100 text-sky-900' : 'bg-amber-100 text-amber-900'}">${esc(meta.vendor)}</span> ${meta.unitPrice ? `<span class="text-[11px] font-semibold opacity-75">· ${meta.unitPrice.toFixed(2)}/${esc(curUnit)} (Est. ${extVal})</span>` : ''}</div>
+                    <div class="font-bold text-sm flex flex-wrap items-center gap-1.5">${esc(x.name)} <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-black/10">${esc(meta.sku !== '—' ? meta.sku : x.sku)}</span> <span class="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded ${meta.vendor === 'Marberger Dairy' ? 'bg-sky-100 text-sky-900' : 'bg-amber-100 text-amber-900'}">${esc(meta.vendor)}</span></div>
                     <div class="text-xs opacity-75 flex flex-wrap items-center gap-1.5 mt-1">
                       <span class="tag tag-${st}">${st}</span>
                       <span>Par${x.par_learned ? ' (learned)' : ''}:</span>
@@ -61,8 +60,6 @@ export function renderStock(main) {
                       <select data-item-field="${x.id}:unit" ${!isMgr ? 'disabled' : ''} class="kms-input text-xs font-semibold" title="Stock Unit">
                         ${unitOpts.map(u => `<option value="${esc(u)}" ${curUnit === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}
                       </select>
-                      <span>· $</span>
-                      <input type="number" step="0.01" min="0" value="${x.unit_price || ''}" placeholder="0.00" data-item-field="${x.id}:unit_price" ${!isMgr ? 'disabled' : ''} class="kms-input w-16 text-xs text-center" />
                       <select data-item-field="${x.id}:cadence" ${!isMgr ? 'disabled' : ''} class="kms-input text-xs">
                         <option value="W" ${x.cadence === 'W' ? 'selected' : ''}>Weekly</option>
                         <option value="M" ${x.cadence === 'M' ? 'selected' : ''}>Monthly</option>

@@ -6,6 +6,7 @@ import {
 } from '../state.js';
 
 export function renderReport(main) {
+  const canSeePrices = isMgmtOrHigher(getActiveUser());
   if (!isMgmtOrHigher()) {
     main.innerHTML = `
       <div class="kms-card p-6 max-w-lg mx-auto text-center space-y-2">
@@ -45,7 +46,7 @@ export function renderReport(main) {
   const purchasedRecvs = recvs.filter(t => !/donat|food bank/i.test(t.source || ''));
   const closedPeriodPOs = (state.purchaseOrders || []).filter(p => p.status === "closed" && inPeriod(p.created_at || p.approved_at)); const jbSpend = closedPeriodPOs.filter(p => /jordan/i.test(p.vendor)).reduce((s, p) => s + Number(p.verified_total || 0), 0); const mdSpend = closedPeriodPOs.filter(p => /marberger/i.test(p.vendor)).reduce((s, p) => s + Number(p.verified_total || 0), 0); const poSpend = closedPeriodPOs.reduce((s, p) => s + Number(p.verified_total || 0), 0); const spend = poSpend > 0 ? poSpend : purchasedRecvs.reduce((s, t) => {
     const item = state.items.find(i => i.id === t.item_id);
-    const unitP = Number(t.cost || (item ? item.unit_price : 0) || 0);
+    const unitP = Number(t.cost || (item ? getEffectiveUnitPrice(item).price : 0) || 0);
     return s + (t.cost ? Number(t.cost) : (Number(t.qty || 0) * unitP));
   }, 0);
   const costPerMeal = meals > 0 && spend > 0 ? (spend / meals) : 0;
@@ -65,10 +66,10 @@ export function renderReport(main) {
   const safetyPct = checks ? Math.round(((checks - fails) / checks) * 100) : null;
 
   const activeItems = state.items.filter(x => !x.discontinued);
-  const stockValue = activeItems.reduce((s, x) => s + (x.on_hand || 0) * (x.unit_price || 0), 0);
+  const stockValue = activeItems.reduce((s, x) => s + (x.on_hand || 0) * getEffectiveUnitPrice(x).price, 0);
   const lowItems = activeItems.filter(x => itemStatus(x) !== 'OK').map(x => {
     const needCases = x.on_hand <= 0 ? Math.max(1, Math.floor(x.par || 1)) : Math.floor(itemNeed(x));
-    const estCost = needCases * (x.unit_price || 0);
+    const estCost = needCases * getEffectiveUnitPrice(x).price;
     return { item: x, needCases, estCost };
   }).sort((a, b) => b.needCases - a.needCases);
   const restockCost = lowItems.reduce((s, r) => s + r.estCost, 0);
@@ -155,18 +156,18 @@ export function renderReport(main) {
         </div>
         <div class="kms-card p-3.5 border-t-4 border-t-[#1b365d] print-keep">
           <div class="text-[11px] uppercase opacity-70 font-bold">Food Spend &amp; Donations</div>
-          <div class="text-2xl font-black mt-0.5">$${spend.toFixed(2)}</div>
-          <div class="text-xs opacity-75 mt-0.5">${costPerMeal > 0 ? '$' + costPerMeal.toFixed(2) + ' / meal' : 'Est. $3.25/meal'} &bull; ${donatedRecvs.length} donated drop(s) &bull; JB: ${jbSpend.toFixed(2)} / MD: ${mdSpend.toFixed(2)}</div>
+          <div class="text-2xl font-black mt-0.5">${canSeePrices ? "$" + spend.toFixed(2) : donatedRecvs.length + " Drop(s)"}</div>
+          <div class="text-xs opacity-75 mt-0.5">${canSeePrices ? ((costPerMeal > 0 ? "$" + costPerMeal.toFixed(2) + " / meal" : "Est. $3.25/meal") + " &bull; JB: $" + jbSpend.toFixed(2) + " / MD: $" + mdSpend.toFixed(2)) : (donatedRecvs.length + " donated drop(s) logged")}</div>
         </div>
         <div class="kms-card p-3.5 border-t-4 border-t-[#1b365d] print-keep">
           <div class="text-[11px] uppercase opacity-70 font-bold">Inventory &amp; Restock Gap</div>
           <div class="text-2xl font-black mt-0.5">${parHealthPct}% At Par</div>
-          <div class="text-xs opacity-75 mt-0.5">Stock value: $${stockValue.toFixed(2)} &bull; ${lowItems.length} below par</div>
+          <div class="text-xs opacity-75 mt-0.5">${lowItems.length} item(s) below par level</div>
         </div>
         <div class="kms-card p-3.5 border-t-4 border-t-emerald-600 print-keep">
           <div class="text-[11px] uppercase opacity-70 font-bold">Safety &amp; Stewardship</div>
           <div class="text-2xl font-black text-emerald-700 mt-0.5">${safetyPct !== null ? safetyPct + '% Pass' : 'N/A'}</div>
-          <div class="text-xs opacity-75 mt-0.5">${checks} temp check(s), ${fails} flagged &bull; ${waste.length} waste (${wasteDollars.toFixed(2)}) / ${savedLeftovers} reused</div>
+          <div class="text-xs opacity-75 mt-0.5">${checks} temp check(s), ${fails} flagged &bull; ${waste.length} waste ${canSeePrices ? " ($" + wasteDollars.toFixed(2) + " est. wholesale)" : ""} / ${savedLeftovers} reused</div>
         </div>
       </div>
 
@@ -182,22 +183,22 @@ export function renderReport(main) {
           <div class="p-3 rounded-lg border border-[var(--line)] bg-black/5">
             <div class="font-bold uppercase opacity-65">Next 7 Service Days</div>
             <div class="text-lg font-black mt-0.5">${next7Meals.toLocaleString()} meals</div>
-            <div class="opacity-75">Est. food need: $${Math.round(next7Meals * benchPerMeal).toLocaleString()}</div>
+            <div class="opacity-75">${canSeePrices ? "Est. food need: $" + Math.round(next7Meals * benchPerMeal).toLocaleString() : "7-day meal projection"}</div>
           </div>
           <div class="p-3 rounded-lg border border-[var(--line)] bg-black/5">
             <div class="font-bold uppercase opacity-65">Next 30 Days (Monthly)</div>
             <div class="text-lg font-black mt-0.5">${proj30Meals.toLocaleString()} meals</div>
-            <div class="opacity-75">Est. budget: $${proj30Budget.toLocaleString()}</div>
+            <div class="opacity-75">${canSeePrices ? "Est. budget: $" + proj30Budget.toLocaleString() : "30-day meal projection"}</div>
           </div>
           <div class="p-3 rounded-lg border border-[var(--line)] bg-black/5">
             <div class="font-bold uppercase opacity-65">Next 90 Days (Quarterly)</div>
             <div class="text-lg font-black mt-0.5">${proj90Meals.toLocaleString()} meals</div>
-            <div class="opacity-75">Est. budget: $${proj90Budget.toLocaleString()}</div>
+            <div class="opacity-75">${canSeePrices ? "Est. budget: $" + proj90Budget.toLocaleString() : "90-day meal projection"}</div>
           </div>
           <div class="p-3 rounded-lg border border-[var(--line)] bg-black/5">
             <div class="font-bold uppercase opacity-65">Annual Projection (12 Mo)</div>
             <div class="text-lg font-black text-[#b3122b] mt-0.5">${proj365Meals.toLocaleString()} meals</div>
-            <div class="opacity-75">Est. annual budget: $${proj365Budget.toLocaleString()}</div>
+            <div class="opacity-75">${canSeePrices ? "Est. annual budget: $" + proj365Budget.toLocaleString() : "12-month meal projection"}</div>
           </div>
         </div>
       </div>
@@ -233,7 +234,7 @@ export function renderReport(main) {
                   <th class="py-1.5 px-2.5">Vendor</th>
                   <th class="py-1.5 px-2.5">On Hand / Par</th>
                   <th class="py-1.5 px-2.5">Cases Needed</th>
-                  <th class="py-1.5 px-2.5 text-right">Est. Cost</th>
+                  ${canSeePrices ? "<th class='py-1.5 px-2.5 text-right'>Est. PO Cost</th>" : ""}
                 </tr>
               </thead>
               <tbody class="divide-y divide-[var(--line)]">
@@ -243,7 +244,7 @@ export function renderReport(main) {
                     <td class="py-1.5 px-2.5 opacity-75">${esc(r.item.vendor || '')}</td>
                     <td class="py-1.5 px-2.5">${r.item.on_hand} / ${r.item.par} ${esc(r.item.unit)}</td>
                     <td class="py-1.5 px-2.5 font-bold text-[#b3122b]">${r.needCases} whole case(s)</td>
-                    <td class="py-1.5 px-2.5 text-right font-semibold">${r.estCost > 0 ? '$' + r.estCost.toFixed(2) : '—'}</td>
+                    ${canSeePrices ? "<td class='py-1.5 px-2.5 text-right font-semibold'>" + (r.estCost > 0 ? "$" + r.estCost.toFixed(2) : "—") + "</td>" : ""}
                   </tr>
                 `).join('')}
               </tbody>

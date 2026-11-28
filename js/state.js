@@ -1174,13 +1174,41 @@ export function matchCatalogItem(q, vendor) {
   ) || null;
 }
 
+export function getWholesaleBenchmark(item) {
+  const text = `${item?.name || ''} ${item?.zone || ''} ${item?.category || ''}`.toLowerCase();
+  const unit = String(item?.unit || 'cs').toLowerCase();
+  const isCase = /cs|case|box|flat|tub|jug|bag/.test(unit);
+  if (/beef|chicken|turkey|pork|ham|sausage|bacon|fish|tuna|meat/.test(text)) return isCase ? 68.00 : 4.25;
+  if (/milk|cream|butter|cheese|yogurt|sour cream|cottage|egg|dairy/.test(text)) return isCase ? 36.00 : 3.25;
+  if (/lettuce|tomato|potato|onion|carrot|pepper|apple|banana|orange|fruit|produce|greens|salad|celery|broccoli/.test(text)) return isCase ? 28.00 : 1.85;
+  if (/bread|roll|bun|bagel|tortilla|bakery|pastry/.test(text)) return isCase ? 22.00 : 2.75;
+  if (/can|sauce|soup|beans|corn|peas|paste|broth|oil|vinegar|sugar|flour|rice|pasta|oats|cereal|spice/.test(text)) return isCase ? 32.00 : 2.50;
+  if (/paper|cup|plate|bowl|napkin|foil|wrap|glove|towel|soap|bleach|sanitizer|trash|bag/.test(text)) return isCase ? 34.00 : 4.50;
+  return isCase ? 30.00 : 3.00;
+}
+
+export function getEffectiveUnitPrice(item) {
+  const saved = Number(item?.unit_price || 0);
+  if (saved > 0) return { price: saved, isWholesaleEst: false };
+  const cat = matchCatalogItem(item?.sku) || matchCatalogItem(item?.name);
+  if (cat) {
+    const packQty = cat.packQty || 1;
+    const isCaseUnit = /cs|case|box/.test(String(item?.unit || '').toLowerCase());
+    const p = isCaseUnit ? Number(cat.casePrice || 0) : Number((cat.casePrice / packQty).toFixed(2));
+    if (p > 0) return { price: p, isWholesaleEst: false };
+  }
+  return { price: getWholesaleBenchmark(item), isWholesaleEst: true };
+}
+
 export function getCatalogMetaForItem(item) {
   const cat = matchCatalogItem(item?.sku) || matchCatalogItem(item?.name);
   const vendor = cat?.vendor || (item?.cadence === 'W' || /milk|lemonade|tea|yogurt|butter|cottage/i.test(item?.name || '') ? 'Marberger Dairy' : 'Jordan Banana');
   const packQty = cat?.packQty || 1;
   const orderUnit = cat?.orderUnit || item?.unit || 'cs';
-  const casePrice = cat?.casePrice || (Number(item?.unit_price || 0) * packQty) || 0;
-  const unitPrice = cat ? Number((cat.casePrice / packQty).toFixed(2)) : Number(item?.unit_price || 0);
+  const eff = getEffectiveUnitPrice(item);
+  const saved = Number(item?.unit_price || 0);
+  const casePrice = saved > 0 ? Number((saved * packQty).toFixed(2)) : (cat?.casePrice || Number((eff.price * packQty).toFixed(2)));
+  const unitPrice = saved > 0 ? saved : (cat ? Number((cat.casePrice / packQty).toFixed(2)) : eff.price);
   return {
     sku: cat?.sku || item?.sku || '—',
     vendor,
@@ -1191,6 +1219,7 @@ export function getCatalogMetaForItem(item) {
     casePrice,
     singlePrice: cat?.singlePrice || unitPrice,
     unitPrice,
+    isWholesaleEst: saved <= 0 && !cat,
     catchWeight: !!cat?.catchWeight
   };
 }
