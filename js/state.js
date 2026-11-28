@@ -1246,3 +1246,79 @@ export function committedAndNetAvailable(item, dayList) {
   const netAvailable = Number((onHand + inTransit + inRequest - committed).toFixed(2));
   return { onHand, inTransit, inRequest, committed, netAvailable };
 }
+
+// === ACCURATE MULTI-VARIABLE ORDER SUGGESTION ENGINE (MENU BOM + BURN RATE + SAFETY PAR) ===
+export function getDailyItemBurnRate(itemId, lookbackDays = 45) {
+  const cutoff = addDays(localDateStr(), -lookbackDays);
+  const txs = (state.transactions || []).filter(t =>
+    String(t.item_id) === String(itemId) &&
+    (t.tx_type === 'USE' || t.tx_type === 'WASTE') &&
+    String(t.tx_date || '').slice(0, 10) >= cutoff
+  );
+  if (!txs.length) return 0;
+  const totalUsed = txs.reduce((s, t) => s + Math.abs(Number(t.qty || 0)), 0);
+  const activeServiceDays = Math.max(1, serviceDaysBetween(cutoff, localDateStr()).length);
+  return totalUsed / activeServiceDays;
+}
+
+export function computeAccurateOrderSuggestions(hz = 7) {
+  const today = localDateStr();
+  const windowEnd = addDays(today, hz === 1 ? 4 : hz);
+  const allDays = serviceDaysBetween(today, windowEnd);
+  const useDays = hz === 1 ? allDays.slice(0, 1) : allDays;
+
+  // Separate days with an assigned recipe from unplanned open service days
+  const plannedDays = useDays.filter(ds => {
+    const mp = (state.menuPlan || []).find(m => m.service_date === ds && m.status !== 'SERVED' && m.status !== 'CLOSED');
+    return Boolean(mp && mp.recipe_id);
+  });
+  const unplannedDaysCount = Math.max(0, useDays.length - plannedDays.length);
+  const menuDemandMap = demandForDays(plannedDays);
+
+  return (state.items || []).filter(x => !x.discontinued).map(x => {
+    const meta = getCatalogMetaForItem(x);
+    const isPerishable = /produce|dairy|milk|deli|fresh|cooler/i.test(meta.cat + ' ' + (x.location || ''));
+
+    // 1. Exact BOM demand from scheduled recipes & forecasted portions
+    const menuNeed = Number((menuDemandMap[x.id] || 0).toFixed(2));
+
+    // 2. Historical burn rate applied to unplanned service days (or non-recipe staples across all service days)
+    const dailyBurn = getDailyItemBurnRate(x.id, 45);
+    const burnDays = menuNeed > 0 ? unplannedDaysCount : useDays.length;
+    const burnNeed = Number((dailyBurn * burnDays).toFixed(2));
+
+    // 3. Learned safety par floor (never arbitrarily multiplied by 4; perishables stay capped at 1-week turn)
+    const basePar = Number(x.par || 0);
+    const parFloor = hz === 1 ? Math.ceil(basePar * 0.25) : basePar;
+
+    // Total requirement = Scheduled Menu BOM + Projected Unplanned Burn + Safety Par Floor
+    const totalRequirement = Number((menuNeed + burnNeed + parFloor).toFixed(2));
+    const onHand = Number(x.on_hand || 0);
+    const inTransit = Number(onOrderQty(x.id) || 0);
+    const deficit = Number((totalRequirement - (onHand + inTransit)).toFixed(2));
+
+    if (deficit <= 0) return null;
+    const packQty = meta.packQty || 1;
+    const orderQty = Math.max(1, Math.ceil(deficit / packQty));
+
+    return {
+      itemId: x.id,
+      sku: meta.sku,
+      cat: meta.cat,
+      vendor: meta.vendor,
+      name: x.name,
+      onHand,
+      inTransit,
+      menuNeed,
+      burnNeed,
+      parFloor,
+      totalRequirement,
+      deficit,
+      baseUnit: meta.baseUnit,
+      orderQty,
+      unit: meta.orderUnit,
+      packQty,
+      unitPrice: meta.casePrice || meta.unitPrice
+    };
+  }).filter(Boolean);
+}

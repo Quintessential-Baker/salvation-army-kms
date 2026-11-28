@@ -24,7 +24,7 @@ import {
   updateSyncUI, edgeFetch, rpcLogin, rpcSetPin, pinErrorText,
   randomTempPin, stripLocalPins, requireRelogin,
   syncToSupabase, forceLiveStatus, initSupabase
-} from './state.js';
+, computeAccurateOrderSuggestions } from "./state.js";
 
 import { renderDashboard } from './views/dashboard.js';
 import { renderStock } from './views/stock.js';

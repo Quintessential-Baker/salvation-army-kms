@@ -11,23 +11,7 @@ export function renderOrders(main) {
   const isMgr = isMgmtOrHigher(me);
   const canEditReq = isStaffOrHigher(me);
   const approvers = (state.users || []).filter(u => u.active !== false && ['ADMIN', 'MANAGER'].includes(normalizeRole(u.role)));
-  const parMult = hz === 30 ? 4 : (hz === 1 ? 0.25 : 1);
-
-  const suggestions = (state.items || []).filter(x => !x.discontinued).map(x => {
-    const meta = getCatalogMetaForItem(x);
-    const isPerishable = /produce|dairy|milk|deli|fresh|cooler/i.test(meta.cat + ' ' + (x.location || ''));
-    const effMult = (hz === 30 && isPerishable) ? 1 : parMult;
-    const parTarget = Math.ceil(Number(x.par || 0) * effMult);
-    const { onHand, inTransit, committed, netAvailable } = committedAndNetAvailable(x, useDays);
-    const deficit = Math.max(0, parTarget - netAvailable);
-    if (deficit <= 0) return null;
-    const orderQty = Math.max(1, Math.ceil(deficit / (meta.packQty || 1)));
-    return {
-      itemId: x.id, sku: meta.sku, cat: meta.cat, vendor: meta.vendor, name: x.name,
-      onHand, inTransit, committed, parTarget, baseUnit: meta.baseUnit,
-      orderQty, unit: meta.orderUnit, packQty: meta.packQty, unitPrice: meta.casePrice || meta.unitPrice
-    };
-  }).filter(Boolean).filter(s => vFilter === 'ALL' || s.vendor === vFilter);
+  const suggestions = computeAccurateOrderSuggestions(hz).filter(s => vFilter === 'ALL' || s.vendor === vFilter);
 
   const jbCount = suggestions.filter(s => s.vendor === 'Jordan Banana').length;
   const mdCount = suggestions.filter(s => s.vendor === 'Marberger Dairy').length;
@@ -89,7 +73,7 @@ export function renderOrders(main) {
           <select id="order-hz" class="px-2.5 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold">
             <option value="1" ${hz === 1 ? 'selected' : ''}>Next Service Day (1-Day)</option>
             <option value="7" ${hz === 7 ? 'selected' : ''}>Weekly Order (7-Day Menu + Par)</option>
-            <option value="30" ${hz === 30 ? 'selected' : ''}>Monthly Order (30-Day Menu + 4x Dry Par)</option>
+            <option value="30" ${hz === 30 ? 'selected' : ''}>Monthly Order (30-Day Menu BOM + Burn Rate + Par Floor)</option>
           </select>
         </div>
       </div>
