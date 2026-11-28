@@ -24,11 +24,12 @@ import {
   updateSyncUI, edgeFetch, rpcLogin, rpcSetPin, pinErrorText,
   randomTempPin, stripLocalPins, requireRelogin,
   syncToSupabase, forceLiveStatus, initSupabase
-, VENDOR_CATALOG, matchCatalogItem } from "./state.js";
+} from './state.js';
 
 import { renderDashboard } from './views/dashboard.js';
 import { renderStock } from './views/stock.js';
 import { renderOrders } from './views/orders.js';
+import { VENDOR_CATALOG, getCatalogMetaForItem, committedAndNetAvailable } from './state.js';
 import { renderReceive, showDonationTaxReceiptModal } from './views/receive.js';
 import { renderMenu, showMenuPrintSuiteModal, showBulkMenuModal } from './views/menu.js';
 import { renderPrep } from './views/prep.js';
@@ -50,75 +51,6 @@ let trainingStep = 0;
 
 // Direct high-priority handler for Recipe Card + QR printing so no earlier click branch can intercept it
 document.addEventListener('click', (e) => {
-
-  const addLineToVendorPO = (vendor, line) => {
-    state.purchaseOrders = state.purchaseOrders || [];
-    let po = state.purchaseOrders.find(p => p.vendor === vendor && p.status === "requested");
-    if (!po) {
-      const pfx = /jordan/i.test(vendor) ? "JB-" : "MD-";
-      po = { id: uid(), po_number: pfx + new Date().toISOString().slice(0,10).replace(/-/g,"") + "-" + (state.purchaseOrders.length + 1), vendor, status: "requested", created_at: new Date().toISOString().slice(0,10), created_by: getActiveUser()?.name || "Staff", lines: /jordan/i.test(vendor) ? [{ sku: "FEE-DEL", category: "Delivery", name: "Delivery Charge", qty: 1, unit: "fee", unit_price: 10.00, packQty: 1, baseUnit: "fee", isFee: true }] : [] };
-      state.purchaseOrders.unshift(po);
-    }
-    const ex = po.lines.find(l => l.sku === line.sku && l.unit === line.unit && !l.isFee);
-    if (ex) ex.qty = Number(ex.qty || 0) + Number(line.qty || 0);
-    else po.lines.unshift(line);
-    return po;
-  };
-  if (e.target.closest("#btn-ord-cat-add")) {
-    const c = VENDOR_CATALOG[parseInt(document.getElementById("ord-cat-idx")?.value || "0", 10)];
-    const mode = document.getElementById("ord-cat-mode")?.value || "case";
-    const qty = Math.max(0.5, parseFloat(document.getElementById("ord-cat-qty")?.value || "1"));
-    if (c) {
-      const sng = mode === "single";
-      const po = addLineToVendorPO(c.vendor, { sku: c.sku, category: c.cat, name: c.name, qty, unit: sng ? "ea" : c.orderUnit, unit_price: sng ? c.singlePrice : c.casePrice, packQty: sng ? 1 : c.packQty, baseUnit: c.baseUnit, catchWeight: !!c.catchWeight });
-      saveState(); toast(`Added [${c.sku}] ${c.name} to ${po.po_number}`); render(); return;
-    }
-  }
-  const sugBtn = e.target.closest("[data-add-sug], #btn-req-all-jb, #btn-req-all-md");
-  if (sugBtn) {
-    const hz = Number(state._orderHorizon || 30);
-    const days = serviceDaysBetween(localDateStr(), addDays(localDateStr(), hz === 1 ? 4 : hz));
-    const dd = demandForDays(hz === 1 ? days.slice(0, 1) : days);
-    const low = (state.items || []).filter(x => Number(x.on_hand || 0) < Math.max(Number(x.par || 0), Number(dd[x.id] || 0))).map(x => {
-      const cat = matchCatalogItem(x.sku) || matchCatalogItem(x.name);
-      const vendor = cat?.vendor || (/milk|lemonade|tea|yogurt|butter/i.test(x.name) ? "Marberger Dairy" : "Jordan Banana");
-      const need = Math.max(Number(x.par || 0), Number(dd[x.id] || 0));
-      const packQty = cat?.packQty || 1;
-      const orderQty = Math.max(1, Math.ceil((need - Number(x.on_hand || 0)) / packQty));
-      return { vendor, line: { sku: cat?.sku || x.sku || "STK", category: cat?.cat || x.zone || "General", name: cat?.name || x.name, qty: orderQty, unit: cat?.orderUnit || x.unit || "cs", unit_price: cat?.casePrice || Number(x.unit_price || 0) || 0, packQty, baseUnit: x.unit || cat?.baseUnit || "ea" } };
-    });
-    if (sugBtn.hasAttribute("data-add-sug")) {
-      const s = low[parseInt(sugBtn.getAttribute("data-add-sug"), 10)];
-      if (s) { const po = addLineToVendorPO(s.vendor, s.line); saveState(); toast(`Added ${s.line.name} to ${po.po_number}`); render(); return; }
-    } else {
-      const tv = sugBtn.id === "btn-req-all-jb" ? "Jordan Banana" : "Marberger Dairy";
-      const list = low.filter(x => x.vendor === tv);
-      if (!list.length) { toast(`No low-stock items for ${tv}`); return; }
-      let po; list.forEach(x => { po = addLineToVendorPO(x.vendor, x.line); });
-      saveState(); toast(`Added ${list.length} items to ${po.po_number}`); render(); return;
-    }
-  }
-  const actBtn = e.target.closest("[data-ord-approve], [data-ord-copy], [data-ord-del], [data-ord-recv]");
-  if (actBtn) {
-    const id = actBtn.getAttribute("data-ord-approve") || actBtn.getAttribute("data-ord-copy") || actBtn.getAttribute("data-ord-del") || actBtn.getAttribute("data-ord-recv");
-    const po = (state.purchaseOrders || []).find(p => String(p.id) === String(id));
-    if (actBtn.hasAttribute("data-ord-del") && po) { state.purchaseOrders = state.purchaseOrders.filter(p => p !== po); saveState(); render(); return; }
-    if (actBtn.hasAttribute("data-ord-recv")) { state.activeTab = "receive"; render(); return; }
-    if (po) {
-      const lines = po.lines || [];
-      const total = lines.reduce((s, l) => s + Number(l.qty || 0) * Number(l.unit_price || 0), 0);
-      const txt = [`PURCHASE ORDER: ${po.po_number} (${po.vendor})`, "SHIP TO: The Salvation Army Butler · 92 Race St., Butler, PA 16003 · NEED BY 1:00 PM · Net 7 Days · Tax Exempt", ...lines.map(l => `- [${l.sku || ""}] ${l.qty} ${l.unit} ${l.name} @ $${Number(l.unit_price||0).toFixed(2)} = $${(Number(l.qty||0)*Number(l.unit_price||0)).toFixed(2)}`), `ESTIMATED INVOICE TOTAL: $${total.toFixed(2)}`].join("\n");
-      navigator.clipboard?.writeText(txt);
-      if (actBtn.hasAttribute("data-ord-approve")) {
-        po.status = "ordered"; po.approved_by = getActiveUser()?.name || "Manager"; po.approved_at = localDateStr();
-        saveState();
-        const to = /jordan/i.test(po.vendor) ? "orders@jordanbanana.com" : "";
-        window.open(`mailto:${to}?subject=${encodeURIComponent("Approved Order " + po.po_number + " - Salvation Army Butler")}&body=${encodeURIComponent(txt)}`, "_blank");
-        toast(`Approved & Placed ${po.po_number} ($${total.toFixed(2)}) — copied to clipboard!`); render(); return;
-      } else { toast("Order sheet copied to clipboard!"); return; }
-    }
-  }
-
   if (e.target.closest('#btn-print-rec-modal-now')) {
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -4145,35 +4077,39 @@ pruneExpiredAlerts();
 render();
 initSupabase();
 setInterval(checkScheduledAlerts, 15000);
-// --- Unified 4-Stage Ordering Event Wiring ---
-if (!window.__unifiedOrdersWired) {
-  window.__unifiedOrdersWired = true;
-  const computeOrderSuggestions = () => {
+
+// === SECTION 3: UNIFIED WEEKLY/MONTHLY ORDERING EVENT HANDLERS ===
+if (!window.__sec3OrdersWired) {
+  window.__sec3OrdersWired = true;
+
+  const buildOrderSuggestions = () => {
     const hz = Number(state._orderHorizon || 7);
     const days = serviceDaysBetween(localDateStr(), addDays(localDateStr(), hz === 1 ? 4 : hz));
-    const dd = demandForDays(hz === 1 ? days.slice(0, 1) : days);
+    const useDays = hz === 1 ? days.slice(0, 1) : days;
     const parMult = hz === 30 ? 4 : (hz === 1 ? 0.25 : 1);
-    return (state.items || []).map(x => {
-      const cat = matchCatalogItem(x.sku) || matchCatalogItem(x.name);
-      const vendor = cat?.vendor || (/milk|lemonade|tea|yogurt|butter|cream/i.test(x.name) ? 'Marberger Dairy' : 'Jordan Banana');
-      const isPerishable = /produce|dairy|milk|deli|fresh/i.test(cat?.cat || x.zone || '');
+
+    return (state.items || []).filter(x => !x.discontinued).map(x => {
+      const meta = getCatalogMetaForItem(x);
+      const isPerishable = /produce|dairy|milk|deli|fresh|cooler/i.test(meta.cat + ' ' + (x.location || ''));
       const effMult = (hz === 30 && isPerishable) ? 1 : parMult;
-      const totalNeed = Math.max(Math.ceil(Number(x.par || 0) * effMult), Math.ceil(Number(dd[x.id] || 0)));
-      const deficit = totalNeed - Number(x.on_hand || 0);
+      const parTarget = Math.ceil(Number(x.par || 0) * effMult);
+      const { netAvailable } = committedAndNetAvailable(x, useDays);
+      const deficit = Math.max(0, parTarget - netAvailable);
       if (deficit <= 0) return null;
-      const packQty = cat?.packQty || 1;
-      const orderQty = Math.max(1, Math.ceil(deficit / packQty));
+      const orderQty = Math.max(1, Math.ceil(deficit / (meta.packQty || 1)));
       return {
-        itemId: x.id, vendor,
+        itemId: x.id,
+        vendor: meta.vendor,
         line: {
-          sku: cat?.sku || x.sku || 'STK',
-          category: cat?.cat || x.zone || 'General',
-          name: cat?.name || x.name,
+          item_id: x.id,
+          sku: meta.sku,
+          category: meta.cat,
+          name: x.name,
           qty: orderQty,
-          unit: cat?.orderUnit || x.unit || 'cs',
-          unit_price: cat?.casePrice || Number(x.unit_price || 0) || 0,
-          packQty,
-          baseUnit: x.unit || cat?.baseUnit || 'ea'
+          unit: meta.orderUnit,
+          unit_price: meta.casePrice || meta.unitPrice,
+          packQty: meta.packQty,
+          baseUnit: meta.baseUnit
         }
       };
     }).filter(Boolean);
@@ -4186,16 +4122,18 @@ if (!window.__unifiedOrdersWired) {
       const pfx = /jordan/i.test(vendor) ? 'JB-' : 'MD-';
       po = {
         id: uid(),
-        po_number: pfx + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + (state.purchaseOrders.length + 1),
+        po_number: pfx + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + (state.purchaseOrders.length + 1),
         vendor,
         status: 'requested',
         created_at: localDateStr(),
         created_by: getActiveUser()?.name || 'Staff',
-        lines: /jordan/i.test(vendor) ? [{ sku: 'FEE-DEL', category: 'Delivery', name: 'Delivery Charge', qty: 1, unit: 'fee', unit_price: 10.00, packQty: 1, baseUnit: 'fee', isFee: true }] : []
+        lines: /jordan/i.test(vendor)
+          ? [{ sku: 'FEE-DEL', category: 'Delivery', name: 'Delivery Charge', qty: 1, unit: 'fee', unit_price: 10.00, packQty: 1, baseUnit: 'fee', isFee: true }]
+          : []
       };
       state.purchaseOrders.unshift(po);
     }
-    const ex = po.lines.find(l => l.sku === line.sku && l.unit === line.unit && !l.isFee);
+    const ex = po.lines.find(l => l.sku === line.sku && l.name === line.name && l.unit === line.unit && !l.isFee);
     if (ex) ex.qty = Number(ex.qty || 0) + Number(line.qty || 0);
     else po.lines.unshift(line);
     return po;
@@ -4213,15 +4151,22 @@ if (!window.__unifiedOrdersWired) {
       const qty = Math.max(0.5, parseFloat(document.getElementById('ord-cat-qty')?.value || '1'));
       if (c) {
         const sng = mode === 'single';
+        const invMatch = (state.items || []).find(it => it.name.toLowerCase() === c.name.toLowerCase());
         const po = addLineToVendorPO(c.vendor, {
-          sku: c.sku, category: c.cat, name: c.name, qty,
+          item_id: invMatch?.id || null,
+          sku: c.sku,
+          category: c.cat,
+          name: c.name,
+          qty,
           unit: sng ? 'ea' : c.orderUnit,
           unit_price: sng ? c.singlePrice : c.casePrice,
           packQty: sng ? 1 : c.packQty,
           baseUnit: c.baseUnit,
           catchWeight: !!c.catchWeight
         });
-        saveState(); toast(`Added [${c.sku}] ${c.name} to ${po.po_number}`); render();
+        saveState();
+        showToast(`Added [${c.sku}] ${c.name} to ${po.po_number}`);
+        render();
       }
       return;
     }
@@ -4229,10 +4174,12 @@ if (!window.__unifiedOrdersWired) {
     const oneSug = e.target.closest('[data-add-sug-id]');
     if (oneSug) {
       const itemId = oneSug.getAttribute('data-add-sug-id');
-      const found = computeOrderSuggestions().find(s => String(s.itemId) === String(itemId));
+      const found = buildOrderSuggestions().find(s => String(s.itemId) === String(itemId));
       if (found) {
         const po = addLineToVendorPO(found.vendor, found.line);
-        saveState(); toast(`Added ${found.line.name} to ${po.po_number}`); render();
+        saveState();
+        showToast(`Added ${found.line.name} to ${po.po_number}`);
+        render();
       }
       return;
     }
@@ -4240,10 +4187,13 @@ if (!window.__unifiedOrdersWired) {
     const bulkBtn = e.target.closest('#btn-req-all-jb, #btn-req-all-md');
     if (bulkBtn) {
       const tv = bulkBtn.id === 'btn-req-all-jb' ? 'Jordan Banana' : 'Marberger Dairy';
-      const list = computeOrderSuggestions().filter(s => s.vendor === tv);
-      if (!list.length) { toast(`No low-stock or menu-shortage items for ${tv}`); return; }
-      let po; list.forEach(s => { po = addLineToVendorPO(s.vendor, s.line); });
-      saveState(); toast(`Added ${list.length} ${tv} items to ${po.po_number}`); render();
+      const list = buildOrderSuggestions().filter(s => s.vendor === tv);
+      if (!list.length) { showToast(`No shortages for ${tv} in this window`); return; }
+      let po;
+      list.forEach(s => { po = addLineToVendorPO(s.vendor, s.line); });
+      saveState();
+      showToast(`Added ${list.length} ${tv} items to ${po.po_number}`);
+      render();
       return;
     }
 
@@ -4252,26 +4202,33 @@ if (!window.__unifiedOrdersWired) {
       const id = actBtn.getAttribute('data-ord-approve') || actBtn.getAttribute('data-ord-copy') || actBtn.getAttribute('data-ord-del') || actBtn.getAttribute('data-ord-recv');
       const po = (state.purchaseOrders || []).find(p => String(p.id) === String(id));
       if (!po) return;
-      if (actBtn.hasAttribute('data-ord-del')) { state.purchaseOrders = state.purchaseOrders.filter(p => p !== po); saveState(); render(); return; }
-      if (actBtn.hasAttribute('data-ord-recv')) { state.activeTab = 'receive'; render(); return; }
+      if (actBtn.hasAttribute('data-ord-del')) {
+        state.purchaseOrders = state.purchaseOrders.filter(p => p !== po);
+        saveState(); render(); return;
+      }
+      if (actBtn.hasAttribute('data-ord-recv')) {
+        state.activeTab = 'receive'; render(); return;
+      }
       const lines = po.lines || [];
       const total = lines.reduce((s, l) => s + Number(l.qty || 0) * Number(l.unit_price || 0), 0);
       const txt = [
         `PURCHASE ORDER: ${po.po_number} (${po.vendor})`,
         'SHIP TO: The Salvation Army Butler · 92 Race St., Butler, PA 16003 · NEED BY 1:00 PM · Net 7 Days · Tax Exempt',
-        ...lines.map(l => `- [${l.sku || ''}] ${l.qty} ${l.unit} ${l.name} @ $${Number(l.unit_price||0).toFixed(2)} = $${(Number(l.qty||0)*Number(l.unit_price||0)).toFixed(2)}`),
+        ...lines.map(l => `- [${l.sku || ''}] ${l.qty} ${l.unit} ${l.name} @ $${Number(l.unit_price || 0).toFixed(2)} = $${(Number(l.qty || 0) * Number(l.unit_price || 0)).toFixed(2)}`),
         `ESTIMATED INVOICE TOTAL: $${total.toFixed(2)}`
       ].join('\n');
       navigator.clipboard?.writeText(txt);
       if (actBtn.hasAttribute('data-ord-approve')) {
-        po.status = 'ordered'; po.approved_by = getActiveUser()?.name || 'Manager'; po.approved_at = localDateStr();
+        po.status = 'ordered';
+        po.approved_by = getActiveUser()?.name || 'Manager';
+        po.approved_at = localDateStr();
         saveState();
         const to = /jordan/i.test(po.vendor) ? 'orders@jordanbanana.com' : '';
         window.open(`mailto:${to}?subject=${encodeURIComponent('Approved Order ' + po.po_number + ' - Salvation Army Butler')}&body=${encodeURIComponent(txt)}`, '_blank');
-        toast(`Approved & Placed ${po.po_number} ($${total.toFixed(2)}) — copied to clipboard!`);
+        showToast(`Approved & Placed ${po.po_number} ($${total.toFixed(2)}) — copied to clipboard!`);
         render();
       } else {
-        toast('Order sheet copied to clipboard!');
+        showToast('Order sheet copied to clipboard!');
       }
     }
   });

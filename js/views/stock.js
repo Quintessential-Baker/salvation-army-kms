@@ -1,7 +1,7 @@
 // js/views/stock.js — Living Stock & Bulk Stock Manager
 
 import { LOCATIONS, STOCK_UNITS, normStockUnit, esc } from '../utils.js';
-import { state, isMgmtOrHigher, isStaffOrHigher, learnMessage, itemStatus } from '../state.js';
+import { state, isMgmtOrHigher, isStaffOrHigher, learnMessage, itemStatus, getCatalogMetaForItem } from '../state.js';
 
 export function renderStock(main) {
   const q = (state._stockSearch || '').toLowerCase();
@@ -46,12 +46,14 @@ export function renderStock(main) {
             <h3 class="text-sm font-bold uppercase tracking-wide pb-1 border-b-2 border-[#b3122b]">${esc(L)} (${list.length})</h3>
             ${list.map(x => {
               const st = itemStatus(x);
+              const meta = getCatalogMetaForItem(x);
+              const extVal = (Number(x.on_hand || 0) * Number(meta.unitPrice || 0)).toFixed(2);
               const curUnit = normStockUnit(x.unit);
               const unitOpts = Array.from(new Set([...STOCK_UNITS, curUnit]));
               return `
                 <div class="kms-card p-3 flex flex-wrap items-center justify-between gap-2 stock-row-card">
                   <div class="min-w-[200px] flex-1">
-                    <div class="font-bold text-sm">${esc(x.name)} <span class="text-[11px] font-mono opacity-60">${esc(x.sku)}</span></div>
+                    <div class="font-bold text-sm flex flex-wrap items-center gap-1.5">${esc(x.name)} <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-black/10">${esc(meta.sku !== '—' ? meta.sku : x.sku)}</span> <span class="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded ${meta.vendor === 'Marberger Dairy' ? 'bg-sky-100 text-sky-900' : 'bg-amber-100 text-amber-900'}">${esc(meta.vendor)}</span> ${meta.unitPrice ? `<span class="text-[11px] font-semibold opacity-75">· ${meta.unitPrice.toFixed(2)}/${esc(curUnit)} (Est. ${extVal})</span>` : ''}</div>
                     <div class="text-xs opacity-75 flex flex-wrap items-center gap-1.5 mt-1">
                       <span class="tag tag-${st}">${st}</span>
                       <span>Par${x.par_learned ? ' (learned)' : ''}:</span>
