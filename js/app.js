@@ -2750,7 +2750,7 @@ document.addEventListener('submit', (e) => {
           showErr(pinErrorText(res));
           return;
         }
-        setSessionPin(pin);
+        setSessionPin(pin); if (typeof initSupabase === "function") initSupabase();
         u.must_change_pin = !!res.must_change_pin;
         if (res.role) u.role = normalizeRole(res.role);
         finishLogin();
