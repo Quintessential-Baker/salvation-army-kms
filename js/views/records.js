@@ -1,7 +1,8 @@
 // js/views/records.js — Section Blank 30-Line Blind Count, Waste & System Backups
 
 import { LOCATIONS, normStockUnit, dLabel, esc } from '../utils.js';
-import { state } from '../state.js';
+import { state, isMgmtOrHigher, getCatalogMetaForItem } from '../state.js';
+import { localDateStr } from '../utils.js';
 
 function ensureBlankRows(draft, zone) {
   if (!draft.blankRowsByZone) draft.blankRowsByZone = {};
@@ -178,16 +179,58 @@ export function renderRecords(main) {
         ${lastAudit ? `<div class="text-xs opacity-80 pt-2 border-t border-[var(--line)]">Last reconciled count: <strong>${dLabel(lastAudit.audit_date)}</strong> (${esc(lastAudit.zone || 'ALL')}) by ${esc(lastAudit.auditor)} — ${lastAudit.rows.filter(r => r.sys !== r.phys).length} variance(s)</div>` : ''}
       </div>
 
-      <!-- Log Waste -->
-      <form id="form-waste" class="kms-card p-4 space-y-3 no-print">
-        <h2 class="text-base font-bold">Log Waste</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <select name="itemId" class="kms-input text-sm">${opts}</select>
-          <input name="qty" type="number" step="0.5" min="0.5" required placeholder="Amount wasted" class="kms-input text-sm" />
-          <select name="reason" class="kms-input text-sm"><option>Expired</option><option>Spoiled</option><option>Dropped or damaged</option><option>Overcooked or burned</option><option>Other</option></select>
+      <!-- End-of-Shift Store-Use & Waste / Crack Logger -->
+      <div class="kms-card p-4 border-l-4 border-l-[#b3122b] space-y-3 no-print">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-bold">End-of-Shift Store-Use &amp; Waste ("Crack") Logger</h2>
+            <p class="text-xs opacity-75">Deducts daily kitchen pulls (Store-Use) or dropped/spoiled items (Waste/Crack) directly from Living Stock in real time.</p>
+          </div>
+          <span class="text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-black/10">1:45 PM Shift Closeout SOP</span>
         </div>
-        <button type="submit" class="kms-btn-primary px-4 py-2 text-sm">Remove from Stock</button>
-      </form>
+        <form id="form-waste" class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+          <label class="sm:col-span-2 text-xs font-bold">Log Type
+            <select name="txType" class="kms-input w-full mt-1 text-xs font-bold">
+              <option value="STORE_USE">Store-Use (Kitchen Pull)</option>
+              <option value="WASTE">Waste / Crack / Spoilage</option>
+            </select>
+          </label>
+          <label class="sm:col-span-4 text-xs font-bold">Inventory Item
+            <select name="itemId" class="kms-input w-full mt-1 text-xs">${opts}</select>
+          </label>
+          <label class="sm:col-span-2 text-xs font-bold">Qty Removed
+            <input name="qty" type="number" step="0.5" min="0.5" required placeholder="0.5" class="kms-input w-full mt-1 text-xs text-center font-bold" />
+          </label>
+          <label class="sm:col-span-2 text-xs font-bold">Reason / Station
+            <select name="reason" class="kms-input w-full mt-1 text-xs">
+              <option>Daily Meal / Salad Bar</option>
+              <option>Dropped / Crack (Breakage)</option>
+              <option>Expired (Day-Dot)</option>
+              <option>Spoiled / Mold</option>
+              <option>Overcooked / Burned</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <div class="sm:col-span-2">
+            <button type="submit" class="kms-btn-primary w-full py-2 text-xs font-bold">Deduct from Stock</button>
+          </div>
+        </form>
+        ${(() => {
+          const todayTxs = (state.transactions || []).filter(t => t.tx_date === localDateStr() && ['STORE_USE', 'WASTE'].includes(t.tx_type));
+          if (!todayTxs.length) return '<p class="text-xs opacity-65">No Store-Use or Waste/Crack entries logged today yet.</p>';
+          return `<div class="border-t border-[var(--line)] pt-2 space-y-1 text-xs">
+            <div class="font-bold uppercase text-[11px] opacity-70">Today's Logged Deductions (${todayTxs.length})</div>
+            ${todayTxs.map(t => `<div class="flex flex-wrap items-center justify-between gap-2 py-1 border-b border-[var(--line)]/40">
+              <div>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold ${t.tx_type === 'WASTE' ? 'bg-red-100 text-red-900' : 'bg-amber-100 text-amber-900'}">${t.tx_type === 'WASTE' ? 'WASTE / CRACK' : 'STORE-USE'}</span>
+                <strong class="ml-1">${esc(t.item_name)}</strong>: <span class="font-bold text-red-700">${t.qty} ${esc(t.unit)}</span>
+                <span class="opacity-75">· ${esc(t.reason || '')} (by ${esc(t.staff_name || 'Staff')})</span>
+              </div>
+              ${isMgmtOrHigher() ? `<button type="button" data-undo-tx="${esc(t.id)}" class="text-xs font-semibold text-blue-700 hover:underline">Undo &amp; Restore</button>` : ''}
+            </div>`).join('')}
+          </div>`;
+        })()}
+      </div>
 
       <!-- Exports & Backups -->
       <div class="kms-card p-4 flex flex-wrap gap-2 no-print">

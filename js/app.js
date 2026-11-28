@@ -3873,16 +3873,19 @@ document.addEventListener('submit', (e) => {
   if (e.target.id === 'form-waste') {
     const x = state.items.find(i => i.id === fd.get('itemId'));
     const q = parseFloat(fd.get('qty')) || 0;
+    const txType = String(fd.get('txType') || 'WASTE');
+    const reason = String(fd.get('reason') || '');
     if (!x || q <= 0) return;
-    x.on_hand = Math.round(Math.max(0, x.on_hand - q) * 100) / 100;
+    x.on_hand = Math.round(Math.max(0, Number(x.on_hand || 0) - q) * 100) / 100;
+    const costImpact = Math.round(q * Number(x.unit_price || 0) * 100) / 100;
     state.transactions.unshift({
-      id: uid('tx'), tx_date: localDateStr(), tx_type: 'WASTE', item_id: x.id, item_name: x.name,
-      unit: x.unit, qty: -q, reason: fd.get('reason'), staff_name: getActiveUser().name
+      id: uid('tx'), tx_date: localDateStr(), tx_type: txType, item_id: x.id, item_name: x.name,
+      unit: x.unit, qty: -q, cost_impact: costImpact, reason, staff_name: getActiveUser().name
     });
-    logActivity('WASTE', `-${q} ${x.unit} ${x.name} (${fd.get('reason')})`);
+    logActivity(txType, `-${q} ${x.unit} ${x.name} (${reason})`);
     saveState();
     render();
-    showToast(`Logged waste for ${x.name}`, 'warn');
+    showToast(`Logged ${txType === 'STORE_USE' ? 'Store-Use' : 'Waste/Crack'}: -${q} ${x.unit} ${x.name}`, txType === 'WASTE' ? 'warn' : 'ok');
     return;
   }
 
@@ -4246,3 +4249,23 @@ if (!window.__sec3OrdersWired) {
     }
   });
 }
+
+
+// === SECTION 5 PART 1: UNDO DAILY DEDUCTION ===
+document.addEventListener('click', (e) => {
+  const undoBtn = e.target.closest('[data-undo-tx]');
+  if (!undoBtn) return;
+  const txId = undoBtn.getAttribute('data-undo-tx');
+  const idx = (state.transactions || []).findIndex(t => t.id === txId);
+  if (idx === -1) return;
+  const tx = state.transactions[idx];
+  const item = (state.items || []).find(i => i.id === tx.item_id);
+  if (item && Number(tx.qty) < 0) {
+    item.on_hand = Math.round((Number(item.on_hand || 0) + Math.abs(Number(tx.qty))) * 100) / 100;
+  }
+  state.transactions.splice(idx, 1);
+  logActivity('UNDO DEDUCTION', `Restored ${Math.abs(Number(tx.qty))} ${tx.unit} ${tx.item_name}`);
+  saveState();
+  render();
+  showToast(`Restored ${Math.abs(Number(tx.qty))} ${tx.unit} ${tx.item_name} to Living Stock`);
+});
