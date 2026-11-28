@@ -1200,15 +1200,16 @@ document.addEventListener('click', (e) => {
         showToast('Only Management can edit approved or ordered POs', 'warn');
         return;
       }
+      const isMgrModal = isMgmtOrHigher();
       const allItems = state.items.filter(i => !i.discontinued).map(i => `<option value="${i.id}">${esc(i.name)} (${esc(i.unit)})</option>`).join('');
-      openModal(`Edit Purchase Order — ${po.po_number}`, `
+      openModal(`${isMgrModal ? 'Edit Purchase Order' : 'Edit Purchase Request'} — ${po.po_number}`, `
         <form id="form-edit-po" class="space-y-3 text-xs">
           <input type="hidden" name="poId" value="${esc(po.id)}" />
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          ${isMgrModal ? `<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div><label class="block font-semibold mb-1">PO #</label><input name="poNumber" type="text" required value="${esc(po.po_number)}" class="kms-input w-full text-xs font-mono" /></div>
             <div><label class="block font-semibold mb-1">Vendor Invoice / Conf #</label><input name="vendorConf" type="text" value="${esc(po.vendor_conf || '')}" placeholder="e.g. INV-4821" class="kms-input w-full text-xs font-mono" /></div>
             <div><label class="block font-semibold mb-1">Expected Delivery</label><input name="expectedArrival" type="date" value="${esc(po.expected_arrival || '')}" class="kms-input w-full text-xs" /></div>
-          </div>
+          </div>` : ''}
           <p class="opacity-75">Update requested whole-case quantities below (set to 0 to remove an item).</p>
           <div class="max-h-60 overflow-y-auto divide-y divide-[var(--line)] border border-[var(--line)] rounded-lg">
             ${(po.lines || []).map((l, lIdx) => l.isFee ? '' : `
@@ -4071,6 +4072,8 @@ if (!window.__sec3OrdersWired) {
 
     const oneSug = e.target.closest('[data-add-sug-id]');
     if (oneSug) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
       const itemId = oneSug.getAttribute('data-add-sug-id');
       const found = buildOrderSuggestions().find(s => String(s.itemId) === String(itemId));
       if (found) {
@@ -4084,6 +4087,8 @@ if (!window.__sec3OrdersWired) {
 
     const bulkBtn = e.target.closest('#btn-req-all-jb, #btn-req-all-md');
     if (bulkBtn) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
       const tv = bulkBtn.id === 'btn-req-all-jb' ? 'Jordan Banana' : 'Marberger Dairy';
       const list = buildOrderSuggestions().filter(s => s.vendor === tv);
       if (!list.length) { showToast(`No shortages for ${tv} in this window`); return; }
@@ -4241,8 +4246,29 @@ document.addEventListener('change', (e) => {
 });
 
 document.addEventListener('click', (e) => {
+  const rmLineBtn = e.target.closest('[data-po-rm-line]');
+  if (rmLineBtn && isStaffOrHigher(getActiveUser())) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const [poId, idxStr] = rmLineBtn.getAttribute('data-po-rm-line').split(':');
+    const idx = Number(idxStr);
+    const po = (state.purchaseOrders || []).find(p => String(p.id) === String(poId));
+    if (!po || !po.lines || !po.lines[idx]) return;
+    if (!isMgmtOrHigher(getActiveUser()) && po.status !== 'requested') {
+      showToast('Only Management can modify approved or ordered POs', 'warn');
+      return;
+    }
+    const removed = po.lines.splice(idx, 1)[0];
+    saveState();
+    render();
+    showToast(`Removed ${removed?.name || 'item'} from ${po.po_number}`);
+    return;
+  }
+
   const emailBtn = e.target.closest('[data-po-email]');
   if (!emailBtn) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
   const poId = emailBtn.getAttribute('data-po-email');
   const po = (state.purchaseOrders || []).find(p => String(p.id) === String(poId));
   if (!po) return;
@@ -4255,10 +4281,6 @@ document.addEventListener('click', (e) => {
   }
   const approver = (state.users || []).find(u => String(u.id) === String(approverId));
   if (!approver) return;
-  if (!approver.email) {
-    showToast(`${approver.name} does not have an email address saved yet (add it in Users & Roster).`, 'warn');
-    return;
-  }
   const me = getActiveUser();
   const canSeePrices = isMgmtOrHigher(me);
   const lines = po.lines || [];
@@ -4277,7 +4299,13 @@ document.addEventListener('click', (e) => {
     'Please review and approve this request in the Salvation Army Community Meals KMS (Orders & POs tab).'
   ];
   const subj = `PO Approval Needed: ${po.po_number} (${po.vendor})`;
-  window.open(`mailto:${encodeURIComponent(approver.email)}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(bodyLines.join('\n'))}`, '_blank');
+  const bodyTxt = bodyLines.join('\n');
+  navigator.clipboard?.writeText(bodyTxt);
+
+  po.assigned_approver_id = approver.id;
+  po.assigned_approver_name = approver.name;
+  po.routed_at = localDateStr();
+
   state.messages = state.messages || [];
   state.messages.unshift({
     id: uid('msg'),
@@ -4285,10 +4313,21 @@ document.addEventListener('click', (e) => {
     sender_name: me.name,
     sender_role: me.role,
     recipient_id: approver.id,
-    body: `Sent PO Request ${po.po_number} (${po.vendor}) to ${approver.name} (${approver.email}) for approval.`,
+    body: `PO Approval Requested: ${po.po_number} (${po.vendor}) routed to ${approver.name}${approver.email ? ' (' + approver.email + ')' : ''}.`,
     created_at: new Date().toISOString()
   });
-  logActivity('PO APPROVAL EMAILED', `Emailed ${po.po_number} to ${approver.name} (${approver.email})`);
-  saveState();
-  showToast(`Opened email to ${approver.name} (${approver.email})`);
+
+  if (approver.email) {
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(approver.email)}&su=${encodeURIComponent(subj)}&body=${encodeURIComponent(bodyTxt)}`;
+    window.open(gmailUrl, '_blank', 'noopener');
+    logActivity('PO APPROVAL EMAILED', `Routed & emailed ${po.po_number} to ${approver.name} (${approver.email})`);
+    saveState();
+    render();
+    showToast(`Routed ${po.po_number} to ${approver.name}, copied text & opened Gmail compose!`);
+  } else {
+    logActivity('PO APPROVAL ROUTED', `Routed ${po.po_number} in-app to ${approver.name} (no email on file)`);
+    saveState();
+    render();
+    showToast(`Routed ${po.po_number} in-app to ${approver.name} & copied request text (add their email in Users & Roster to launch Gmail).`);
+  }
 });

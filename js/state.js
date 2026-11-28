@@ -1226,11 +1226,23 @@ export function getCatalogMetaForItem(item) {
 
 
 // === SECTION 2: COMMITTED STOCK & ROLLOVER CALCULATION ===
+export function requestedOrderQty(itemId) {
+  return (state.purchaseOrders || [])
+    .filter(p => p.status === 'requested')
+    .reduce((sum, p) => sum + (p.lines || []).reduce((s, l) => {
+      if (l.isFee) return s;
+      const match = String(l.item_id || '') === String(itemId);
+      if (!match) return s;
+      return s + (Number(l.qty || 0) * Number(l.packQty || 1));
+    }, 0), 0);
+}
+
 export function committedAndNetAvailable(item, dayList) {
   const dd = demandForDays(dayList);
   const committed = Number((dd[item.id] || 0).toFixed(2));
   const inTransit = Number(onOrderQty(item.id) || 0);
+  const inRequest = Number(requestedOrderQty(item.id) || 0);
   const onHand = Number(item.on_hand || 0);
-  const netAvailable = Number((onHand + inTransit - committed).toFixed(2));
-  return { onHand, inTransit, committed, netAvailable };
+  const netAvailable = Number((onHand + inTransit + inRequest - committed).toFixed(2));
+  return { onHand, inTransit, inRequest, committed, netAvailable };
 }
