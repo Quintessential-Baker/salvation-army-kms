@@ -1946,7 +1946,7 @@ document.addEventListener('click', (e) => {
       <div class="text-xs">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 mb-3 no-print">
           <div class="opacity-80">Formatted to fit <strong>exactly 1 Letter page per zone</strong> (${zonesToPrint.length} page${zonesToPrint.length > 1 ? 's' : ''} total, 30 write-in lines each).</div>
-          <button type="button" onclick="window.print()" class="kms-btn-navy px-4 py-1.5 text-xs font-semibold">Print Blank 30-Line Sheet(s)</button>
+          <div class="flex items-center gap-2"><button type="button" onclick="window.print()" class="kms-btn-primary px-4 py-2 text-xs font-extrabold shadow-md">🖨️ Print Blank 30-Line Sheet (Letter)</button><button type="button" onclick="document.getElementById('modal-close').click()" class="kms-btn-alt px-3 py-2 text-xs">Close</button></div>
         </div>
         ${zonesToPrint.map((z, zIdx) => `
           <div class="sa-print-shell w-full overflow-hidden" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
