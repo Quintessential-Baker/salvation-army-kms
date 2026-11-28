@@ -130,8 +130,8 @@ document.addEventListener('click', (e) => {
                 <table class="w-full text-left border-collapse border border-slate-300 text-xs">
                   <thead>
                     <tr class="bg-[#1b365d] text-white uppercase text-[10px]">
-                      <th class="border border-slate-400 py-1.5 px-2">Ingredient</th>
-                      ${cols.map(p => `<th class="border border-slate-400 py-1.5 px-2 text-center ${p === scale ? 'bg-[#b3122b] font-black' : ''}">${p} Port.${p === scale ? ' ★' : ''}</th>`).join('')}
+                      <th class="border border-black py-1.5 px-2">Ingredient</th>
+                      ${cols.map(p => `<th class="border border-black py-1.5 px-2 text-center ${p === scale ? 'bg-[#b3122b] font-black' : ''}">${p} Port.${p === scale ? ' ★' : ''}</th>`).join('')}
                     </tr>
                   </thead>
                   <tbody>
@@ -155,16 +155,16 @@ document.addEventListener('click', (e) => {
                     <span class="font-extrabold uppercase tracking-wider text-[11px] text-[#1b365d]">Preparation &amp; Service Directions</span>
                     <span class="text-[10px] font-bold text-[#b3122b]">Cook &ge;165&deg;F &bull; Hot Hold &ge;135&deg;F &bull; Cold &le;41&deg;F</span>
                   </div>
-                  <ol class="list-decimal list-inside space-y-1 text-xs leading-relaxed text-slate-800">
+                  <ol class="list-decimal list-inside space-y-1 text-xs leading-relaxed text-black">
                     ${rNorm.steps.map(s => `<li>${esc(s)}</li>`).join('')}
                   </ol>
                 </div>
               ` : ''}
 
               <div class="grid grid-cols-3 gap-3 pt-1 text-[11px] font-semibold text-slate-700 print-keep">
-                <div class="border-b border-slate-400 pb-0.5">Prepared By:</div>
-                <div class="border-b border-slate-400 pb-0.5">Final Cook Temp (&ge;165&deg;F):</div>
-                <div class="border-b border-slate-400 pb-0.5">Date / Portions Made:</div>
+                <div class="border-b border-black pb-0.5">Prepared By:</div>
+                <div class="border-b border-black pb-0.5">Final Cook Temp (&ge;165&deg;F):</div>
+                <div class="border-b border-black pb-0.5">Date / Portions Made:</div>
               </div>
             </div>
           </div>
@@ -1564,8 +1564,8 @@ document.addEventListener('click', (e) => {
               <table class="w-full text-left border-collapse border border-slate-300 text-xs">
                 <thead>
                   <tr class="bg-[#1b365d] text-white uppercase text-[10px]">
-                    <th class="border border-slate-400 py-1.5 px-2">Ingredient</th>
-                    ${cols.map(p => `<th class="border border-slate-400 py-1.5 px-2 text-center ${p === scale ? 'bg-[#b3122b] font-black' : ''}">${p} Port.${p === scale ? ' ★' : ''}</th>`).join('')}
+                    <th class="border border-black py-1.5 px-2">Ingredient</th>
+                    ${cols.map(p => `<th class="border border-black py-1.5 px-2 text-center ${p === scale ? 'bg-[#b3122b] font-black' : ''}">${p} Port.${p === scale ? ' ★' : ''}</th>`).join('')}
                   </tr>
                 </thead>
                 <tbody>
@@ -1590,7 +1590,7 @@ document.addEventListener('click', (e) => {
                   <span class="font-extrabold uppercase tracking-wider text-[11px] text-[#1b365d]">Preparation &amp; Service Directions</span>
                   <span class="text-[10px] font-bold text-[#b3122b]">Cook &ge;165&deg;F &bull; Hot Hold &ge;135&deg;F &bull; Cold &le;41&deg;F</span>
                 </div>
-                <ol class="list-decimal list-inside space-y-1 text-xs leading-relaxed text-slate-800">
+                <ol class="list-decimal list-inside space-y-1 text-xs leading-relaxed text-black">
                   ${rNorm.steps.map(s => `<li>${esc(s)}</li>`).join('')}
                 </ol>
               </div>
@@ -1598,9 +1598,9 @@ document.addEventListener('click', (e) => {
 
             <!-- Kitchen Execution Sign-Off -->
             <div class="grid grid-cols-3 gap-3 pt-1 text-[11px] font-semibold text-slate-700 print-keep">
-              <div class="border-b border-slate-400 pb-0.5">Prepared By:</div>
-              <div class="border-b border-slate-400 pb-0.5">Final Cook Temp (&ge;165&deg;F):</div>
-              <div class="border-b border-slate-400 pb-0.5">Date / Portions Made:</div>
+              <div class="border-b border-black pb-0.5">Prepared By:</div>
+              <div class="border-b border-black pb-0.5">Final Cook Temp (&ge;165&deg;F):</div>
+              <div class="border-b border-black pb-0.5">Date / Portions Made:</div>
             </div>
           </div>
         </div>
@@ -1954,7 +1954,7 @@ document.addEventListener('click', (e) => {
         </div>
         ${zonesToPrint.map((z, zIdx) => `
           <div class="sa-print-shell w-full bg-white text-slate-900 border-2 border-[#1b365d] rounded-md overflow-hidden" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
-            <div style="background-color:#1b365d;color:#ffffff;border-bottom:3px solid #b3122b;" class="sa-sheet-banner px-3.5 py-2.5 flex items-center justify-between gap-3">
+            <div style="background-color:#0a1628;color:#ffffff;border-bottom:3px solid #b3122b;" class="sa-sheet-banner px-3.5 py-2.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2.5">
                 <div style="background-color:#b3122b;color:#ffffff;" class="w-7 h-7 rounded flex items-center justify-center font-black text-xs shrink-0">SA</div>
                 <div>
@@ -1969,13 +1969,13 @@ document.addEventListener('click', (e) => {
             </div>
             <div class="p-2 bg-white text-slate-900">
               <div class="grid grid-cols-3 gap-3 text-[11px] font-extrabold text-black mb-2">
-                <div class="border-b border-slate-700 pb-0.5">Date: _______________________</div>
-                <div class="border-b border-slate-700 pb-0.5">Counted By: _________________</div>
-                <div class="border-b border-slate-700 pb-0.5">Verified By: _________________</div>
+                <div class="border-b border-black pb-0.5">Date: _______________________</div>
+                <div class="border-b border-black pb-0.5">Counted By: _________________</div>
+                <div class="border-b border-black pb-0.5">Verified By: _________________</div>
               </div>
               <table class="w-full text-[11.5px] border-collapse" style="border:1.5px solid #1e293b;">
                 <thead>
-                  <tr style="background-color:#1b365d;color:#ffffff;">
+                  <tr style="background-color:#0a1628;color:#ffffff;">
                     <th style="width:30px;border:1px solid #1e293b;padding:3px 4px;text-align:center;color:#ffffff;">#</th>
                     <th style="border:1px solid #1e293b;padding:3px 6px;text-align:left;color:#ffffff;">ITEM NAME / DESCRIPTION</th>
                     <th style="width:74px;border:1px solid #1e293b;padding:3px 4px;text-align:center;color:#ffffff;">UNIT</th>
@@ -1986,16 +1986,16 @@ document.addEventListener('click', (e) => {
                 <tbody>
                   ${blankLines.map(n => `
                     <tr style="height:21px;background-color:${n % 2 === 0 ? '#f8fafc' : '#ffffff'};">
-                      <td style="border:1.25px solid #000000;padding:1px 4px;text-align:center;font-weight:700;color:#0f172a;">${n}</td>
-                      <td style="border:1.25px solid #000000;padding:1px 6px;"></td>
-                      <td style="border:1.25px solid #000000;padding:1px 4px;"></td>
-                      <td style="border:1.25px solid #000000;padding:1px 4px;"></td>
-                      <td style="border:1.25px solid #000000;padding:1px 6px;"></td>
+                      <td style="border:1.5px solid #000000;padding:1px 4px;text-align:center;font-weight:700;color:#0f172a;">${n}</td>
+                      <td style="border:1.5px solid #000000;padding:1px 6px;"></td>
+                      <td style="border:1.5px solid #000000;padding:1px 4px;"></td>
+                      <td style="border:1.5px solid #000000;padding:1px 4px;"></td>
+                      <td style="border:1.5px solid #000000;padding:1px 6px;"></td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
-              <div class="flex justify-between items-center text-[9.5px] font-semibold text-slate-800 mt-1.5 pt-1 border-t border-slate-400">
+              <div class="flex justify-between items-center text-[9.5px] font-semibold text-black mt-1.5 pt-1 border-t border-black">
                 <span>Instructions: Write item name, unit (cs, lb, gal, ea), and physical count. Enter totals into Records &rarr; Blind Audit.</span>
                 <span>Form KMS-INV-30</span>
               </div>
