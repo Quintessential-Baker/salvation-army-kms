@@ -922,12 +922,18 @@ export async function syncToSupabase() {
         updated_at: new Date().toISOString()
       })), { onConflict: 'id' }),
       sbClient.from('kms_purchase_orders').upsert(state.purchaseOrders.map(p => ({
-        id: p.id, po_number: p.po_number, vendor: p.vendor, cadence: p.cadence, status: p.status,
-        requested_by: p.requested_by, requested_date: p.requested_date, approved_by: p.approved_by || '',
-        approved_date: p.approved_date || '', expected_arrival: p.expected_arrival || '',
-        vendor_conf: p.vendor_conf || '', notes: p.notes || '', lines: p.lines || [],
+        id: p.id, po_number: p.po_number, vendor: p.vendor, cadence: p.cadence || 'weekly', status: p.status,
+        requested_by: p.requested_by || p.created_by || 'Staff',
+        requested_date: p.requested_date || p.created_at || localDateStr(),
+        approved_by: p.approved_by || '',
+        approved_date: p.approved_date || p.approved_at || '',
+        expected_arrival: p.expected_arrival || '',
+        vendor_conf: p.vendor_conf || p.invoice_number || '',
+        notes: p.notes || (p.verified_total ? `Verified Total: ${Number(p.verified_total).toFixed(2)}` : ''),
+        lines: p.lines || [],
         updated_at: new Date().toISOString()
       })), { onConflict: 'id' }),
+      sbClient.from('kms_settings').upsert([{ key: 'purchase_orders_v2', value: state.purchaseOrders }], { onConflict: 'key' }),
       sbClient.from('kms_transactions').upsert(state.transactions.slice(0, 300).map(t => ({
         id: t.id, tx_date: t.tx_date, tx_type: t.tx_type, item_id: t.item_id || '', item_name: t.item_name,
         unit: t.unit, qty: t.qty, source: t.source || '', exp_date: t.exp_date || '', cleared: !!t.cleared,
@@ -1026,7 +1032,17 @@ export async function refreshFromCloud() {
       state.items = invData.map(normalizeInventoryItem);
       if (recR.data && recR.data.length) state.recipes = recR.data.map(normalizeRecipe);
       if (mpR.data && mpR.data.length) state.menuPlan = mpR.data;
-      if (poR.data) state.purchaseOrders = poR.data;
+      if (poR.data) {
+        const delSet = new Set(state._deletedPoIds || []);
+        const byPo = new Map();
+        (state.purchaseOrders || []).forEach(p => { if (p && p.id && !delSet.has(p.id)) byPo.set(p.id, p); });
+        (poR.data || []).forEach(p => {
+          if (!p || !p.id || delSet.has(p.id)) return;
+          const loc = byPo.get(p.id);
+          if (!loc) byPo.set(p.id, { ...p, created_by: p.created_by || p.requested_by, created_at: p.created_at || p.requested_date });
+        });
+        state.purchaseOrders = Array.from(byPo.values());
+      }
       if (txAll && txAll.length) {
         const byTx = new Map();
         [...txAll, ...(state.transactions || [])].forEach(t => { if (t && t.id && !byTx.has(t.id)) byTx.set(t.id, t); });
