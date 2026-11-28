@@ -1937,9 +1937,10 @@ document.addEventListener('click', (e) => {
     });
     return;
   }
-  if (e.target.id === 'btn-print-blind-sheet') {
+  if (e.target.id === 'btn-print-blind-sheet' || e.target.id === 'btn-print-blind-all') {
+    const isAll = e.target.id === 'btn-print-blind-all';
     const zone = (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0];
-    const zonesToPrint = zone === 'ALL' ? LOCATIONS : [zone];
+    const zonesToPrint = (isAll || zone === 'ALL') ? LOCATIONS : [zone];
     const blankLines = Array.from({ length: 30 }, (_, idx) => idx + 1);
     document.body.classList.add('printing-modal');
     openModal(`Printable Blank 30-Line Blind Count Sheet — ${zone === 'ALL' ? 'All Sections (1 Page per Zone)' : zone}`, `
