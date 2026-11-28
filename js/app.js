@@ -4303,3 +4303,5 @@ document.addEventListener('click', (e) => {
   render();
   showToast(`Deducted ${count} prepped ingredient(s) for ${rec.name}!`);
 });
+
+window.addEventListener("afterprint", () => document.body.classList.remove("printing-modal"));

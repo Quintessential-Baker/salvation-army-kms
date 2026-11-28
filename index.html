@@ -294,6 +294,49 @@
 
     @media print {
       @page { size: letter portrait; margin: 0.38in; }
+      body.printing-modal #app-main,
+      body.printing-modal footer {
+        display: none !important;
+      }
+      body.printing-modal #modal-backdrop {
+        position: static !important;
+        inset: auto !important;
+        display: block !important;
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      body.printing-modal #modal-box {
+        position: static !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        max-height: none !important;
+        overflow: visible !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+      body.printing-modal #modal-box > div:first-child {
+        display: none !important;
+      }
+      .grid.md\:grid-cols-3 {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+      }
+      .grid.lg\:grid-cols-4 {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+      }
+      .grid.lg\:grid-cols-2, .grid.md\:grid-cols-2 {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+      }
+      canvas {
+        max-width: 100% !important;
+        max-height: 220px !important;
+      }
       .no-print, header, nav, #mobile-dock, #toast-container, #pin-change-backdrop, #training-backdrop, #page-guide-banner { display: none !important; }
       html, body {
         height: auto !important;
