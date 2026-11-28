@@ -4269,3 +4269,37 @@ document.addEventListener('click', (e) => {
   render();
   showToast(`Restored ${Math.abs(Number(tx.qty))} ${tx.unit} ${tx.item_name} to Living Stock`);
 });
+
+
+// === SECTION 5 PART 2: 1-CLICK TODAY PREP STOCK DEDUCTION ===
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-deduct-today-prep]');
+  if (!btn) return;
+  const mpId = btn.getAttribute('data-deduct-today-prep');
+  const mp = (state.menuPlan || []).find(m => m.id === mpId);
+  if (!mp || mp.prep_deducted) return;
+  const rec = mp.recipe_id ? (state.recipes || []).find(r => r.id === mp.recipe_id) : null;
+  if (!rec) return;
+  const portions = mp.planned_portions || predictedPortions(mp.service_date);
+  const scale = portions / (rec.base_servings || 65);
+  const uName = getActiveUser()?.name || 'Staff';
+  const todayStr = localDateStr();
+  let count = 0;
+  (rec.ingredients || []).forEach(g => {
+    const x = g.inv_id ? (state.items || []).find(i => i.id === g.inv_id) : null;
+    if (!x) return;
+    const amt = Math.round(((g.per100 ? (g.per100 * portions) / 100 : ((g.qty || 0) * scale))) * 100) / 100;
+    if (amt <= 0) return;
+    x.on_hand = Math.round(Math.max(0, Number(x.on_hand || 0) - amt) * 100) / 100;
+    state.transactions.unshift({
+      id: uid('tx'), tx_date: todayStr, tx_type: 'STORE_USE', item_id: x.id, item_name: x.name,
+      unit: x.unit, qty: -amt, reason: `Meal Prep: ${rec.name} (${portions} portions)`, staff_name: uName
+    });
+    count++;
+  });
+  mp.prep_deducted = true;
+  logActivity('PREP DEDUCT', `${rec.name} (${portions} portions · ${count} ingredients deducted)`);
+  saveState();
+  render();
+  showToast(`Deducted ${count} prepped ingredient(s) for ${rec.name}!`);
+});

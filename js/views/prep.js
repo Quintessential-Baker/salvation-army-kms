@@ -5,6 +5,16 @@ import { state, predictedPortions } from '../state.js';
 
 export function renderPrep(main) {
   const today = localDateStr();
+  const todayMeal = state.menuPlan.find(m => m.service_date === today && m.status !== 'CLOSED' && (m.recipe_id || m.custom_title));
+  const todayRec = todayMeal && todayMeal.recipe_id ? state.recipes.find(r => r.id === todayMeal.recipe_id) : null;
+  const todayPortions = todayMeal ? (todayMeal.planned_portions || predictedPortions(today)) : 0;
+  const todayScale = todayRec ? (todayPortions / (todayRec.base_servings || 65)) : 1;
+  const todayIngs = (todayMeal && todayRec) ? (todayRec.ingredients || []).map(g => {
+    const x = g.inv_id ? state.items.find(i => i.id === g.inv_id) : null;
+    const stockAmt = x ? (g.per100 ? (g.per100 * todayPortions) / 100 : ((g.qty || 0) * todayScale)) : 0;
+    return { name: g.name, kitchenAmt: formatKitchenAmt((g.qty || 0) * todayScale, g.unit), item: x, stockAmt };
+  }) : [];
+
   const nextMeal = state.menuPlan
     .filter(m => m.service_date > today && m.status !== 'CLOSED' && (m.recipe_id || m.custom_title))
     .sort((a, b) => a.service_date.localeCompare(b.service_date))[0];
@@ -43,6 +53,33 @@ export function renderPrep(main) {
 
   main.innerHTML = `
     <div class="space-y-4">
+      <!-- Today's Active Production & 86 Alerts (Section 5 Part 2) -->
+      ${(() => {
+        const shortages = [
+          ...todayIngs.filter(i => i.item && Number(i.item.on_hand || 0) < i.stockAmt).map(i => `Today: ${i.item.name} (need ${fmtNum(i.stockAmt)}, have ${fmtNum(i.item.on_hand)} ${normStockUnit(i.item.unit)})`),
+          ...Object.values(byLoc).flat().filter(i => i.item && Number(i.item.on_hand || 0) < i.stockAmt).map(i => `Next Meal: ${i.item.name} (need ${fmtNum(i.stockAmt)}, have ${fmtNum(i.item.on_hand)} ${normStockUnit(i.item.unit)})`)
+        ];
+        const alertHtml = shortages.length ? `<div class="p-3 rounded-xl border-2 border-[#b3122b] bg-red-50 text-xs text-red-950 space-y-1 print-keep">
+          <div class="font-extrabold uppercase tracking-wide text-[#b3122b]">86 / Ingredient Shortage Alert (${shortages.length})</div>
+          <div>${shortages.map(s => `<span class="inline-block mr-3 font-semibold">&bull; ${esc(s)}</span>`).join('')}</div>
+        </div>` : '';
+
+        if (!todayMeal) return alertHtml;
+        const alreadyDeducted = Boolean(todayMeal.prep_deducted);
+        return alertHtml + `<div class="kms-card p-3.5 border-l-4 border-l-emerald-600 space-y-2 print-keep">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">Today's Active Service Production &bull; ${dLabel(today)}</div>
+              <div class="text-sm font-black text-[#1b365d]">${esc(todayRec ? todayRec.name : todayMeal.custom_title)} <span class="ml-1.5 px-2 py-0.5 rounded-full bg-emerald-700 text-white text-xs font-bold">${todayPortions} Portions</span></div>
+            </div>
+            ${todayIngs.some(i => i.item && i.stockAmt > 0) ? (alreadyDeducted
+              ? '<span class="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-900 text-xs font-bold">Today\'s Prep Deducted from Stock</span>'
+              : `<button type="button" data-deduct-today-prep="${esc(todayMeal.id)}" class="kms-btn-primary px-3 py-1.5 text-xs font-bold no-print">1-Click Deduct Today's Prep from Stock</button>`) : ''}
+          </div>
+          ${todayIngs.length ? `<div class="flex flex-wrap gap-1.5 text-xs pt-1">${todayIngs.map(i => `<span class="px-2 py-1 rounded border border-[var(--line)] bg-black/5"><strong>${esc(i.item ? i.item.name : i.name)}</strong>: ${i.item ? fmtNum(i.stockAmt) + ' ' + esc(normStockUnit(i.item.unit)) : esc(i.kitchenAmt)}</span>`).join('')}</div>` : ''}
+        </div>`;
+      })()}
+
       <!-- Top Control & Print Banner -->
       <div class="sa-print-shell rounded-xl border-2 border-[#1b365d] overflow-hidden shadow-sm">
         <div class="sa-print-banner bg-[#1b365d] text-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 border-b-4 border-[#b3122b]">
