@@ -1986,11 +1986,11 @@ document.addEventListener('click', (e) => {
                 <tbody>
                   ${blankLines.map(n => `
                     <tr style="height:21px;background-color:${n % 2 === 0 ? '#f8fafc' : '#ffffff'};">
-                      <td style="border:1.5px solid #000000;padding:1px 4px;text-align:center;font-weight:700;color:#0f172a;">${n}</td>
-                      <td style="border:1.5px solid #000000;padding:1px 6px;"></td>
-                      <td style="border:1.5px solid #000000;padding:1px 4px;"></td>
-                      <td style="border:1.5px solid #000000;padding:1px 4px;"></td>
-                      <td style="border:1.5px solid #000000;padding:1px 6px;"></td>
+                      <td style="height:31px;border:1.5px solid #000000;padding:1px 4px;text-align:center;font-weight:700;color:#0f172a;">${n}</td>
+                      <td style="height:31px;border:1.5px solid #000000;padding:1px 6px;"></td>
+                      <td style="height:31px;border:1.5px solid #000000;padding:1px 4px;"></td>
+                      <td style="height:31px;border:1.5px solid #000000;padding:1px 4px;"></td>
+                      <td style="height:31px;border:1.5px solid #000000;padding:1px 6px;"></td>
                     </tr>
                   `).join('')}
                 </tbody>
