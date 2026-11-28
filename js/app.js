@@ -1943,55 +1943,62 @@ document.addEventListener('click', (e) => {
     const zonesToPrint = (isAll || zone === 'ALL') ? LOCATIONS : [zone];
     const blankLines = Array.from({ length: 30 }, (_, idx) => idx + 1);
     document.body.classList.add('printing-modal');
-    openModal(`Printable Blank 30-Line Blind Count Sheet — ${zone === 'ALL' ? 'All Sections (1 Page per Zone)' : zone}`, `
-      <div class="text-xs">
+    openModal(`Printable Blank 30-Line Blind Count Sheet — ${zonesToPrint.length > 1 ? 'All 6 Sections (1 Page per Zone)' : zone}`, `
+      <div class="text-xs text-slate-900">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 mb-3 no-print">
-          <div class="opacity-80">Formatted to fit <strong>exactly 1 Letter page per zone</strong> (${zonesToPrint.length} page${zonesToPrint.length > 1 ? 's' : ''} total, 30 write-in lines each).</div>
-          <div class="flex items-center gap-2"><button type="button" onclick="window.print()" class="kms-btn-primary px-4 py-2 text-xs font-extrabold shadow-md">🖨️ Print Blank 30-Line Sheet (Letter)</button><button type="button" onclick="document.getElementById('modal-close').click()" class="kms-btn-alt px-3 py-2 text-xs">Close</button></div>
+          <div class="opacity-85">Formatted to fit <strong>exactly 1 US Letter page per section</strong> (${zonesToPrint.length} page${zonesToPrint.length > 1 ? 's' : ''} total, 30 write-in lines each).</div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="window.print()" class="kms-btn-primary px-4 py-2 text-xs font-extrabold shadow-md">Print Blank 30-Line Sheet (Letter)</button>
+            <button type="button" onclick="document.getElementById('modal-close').click()" class="kms-btn-alt px-3 py-2 text-xs">Close</button>
+          </div>
         </div>
         ${zonesToPrint.map((z, zIdx) => `
-          <div class="sa-print-shell w-full overflow-hidden" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
-            <div class="sa-print-banner flex items-center justify-between gap-3 print-keep">
+          <div class="sa-print-shell w-full bg-white text-slate-900 border-2 border-[#1b365d] rounded-md overflow-hidden" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
+            <div style="background-color:#1b365d;color:#ffffff;border-bottom:3px solid #b3122b;" class="px-3 py-2 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-md bg-[#b3122b] text-white flex items-center justify-center font-black text-sm shrink-0">SA</div>
+                <div style="background-color:#b3122b;color:#ffffff;" class="w-7 h-7 rounded flex items-center justify-center font-black text-xs shrink-0">SA</div>
                 <div>
-                  <div class="sa-sub text-[9.5px] font-extrabold uppercase tracking-wider text-[#b3122b]">The Salvation Army &bull; Butler, PA &bull; Community Meals KMS</div>
-                  <div class="sa-title text-sm font-black text-[#1b365d]">BLIND PHYSICAL INVENTORY SHEET — <span class="underline">${esc(z.toUpperCase())}</span></div>
+                  <div style="color:#fde68a;" class="text-[9px] font-extrabold uppercase tracking-wider">The Salvation Army &bull; Butler, PA &bull; Community Meals KMS</div>
+                  <div style="color:#ffffff;" class="text-sm font-black tracking-tight">BLIND PHYSICAL INVENTORY SHEET — <span style="text-decoration:underline;">${esc(z.toUpperCase())}</span></div>
                 </div>
               </div>
-              <div class="sa-meta text-right text-[10px] font-bold text-slate-700">
+              <div style="color:#ffffff;" class="text-right text-[10px] font-bold">
                 <div>Page ${zIdx + 1} of ${zonesToPrint.length} &bull; 30 Lines</div>
-                <div class="font-normal text-slate-500">313 W. Cunningham St.</div>
+                <div style="color:#e2e8f0;" class="font-normal">313 W. Cunningham St.</div>
               </div>
             </div>
-            <div class="p-2.5 bg-white">
-              <div class="grid grid-cols-3 gap-3 text-[10.5px] font-bold text-[#1b365d] mb-2 print-keep">
-                <div class="border-b border-slate-400 pb-0.5">Date:</div>
-                <div class="border-b border-slate-400 pb-0.5">Counted By:</div>
-                <div class="border-b border-slate-400 pb-0.5">Verified By:</div>
+            <div class="p-2 bg-white text-slate-900">
+              <div class="grid grid-cols-3 gap-3 text-[10.5px] font-bold text-slate-900 mb-1.5">
+                <div class="border-b border-slate-700 pb-0.5">Date: _______________________</div>
+                <div class="border-b border-slate-700 pb-0.5">Counted By: _________________</div>
+                <div class="border-b border-slate-700 pb-0.5">Verified By: _________________</div>
               </div>
-              <table class="w-full text-left border-collapse border border-slate-400" style="font-size: 9pt; table-layout: fixed;">
+              <table class="w-full text-[10.5px] border-collapse" style="border:1.5px solid #1e293b;">
                 <thead>
-                  <tr class="bg-[#1b365d] text-white uppercase" style="font-size: 8pt;">
-                    <th class="border border-slate-400 py-1 px-1 text-center" style="width: 6%;">#</th>
-                    <th class="border border-slate-400 py-1 px-2" style="width: 48%;">Item Name / Description</th>
-                    <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 14%;">Unit</th>
-                    <th class="border border-slate-400 py-1 px-1.5 text-center" style="width: 14%;">Counted Qty</th>
-                    <th class="border border-slate-400 py-1 px-2" style="width: 18%;">Notes / Exp.</th>
+                  <tr style="background-color:#1b365d;color:#ffffff;">
+                    <th style="width:30px;border:1px solid #1e293b;padding:3px 4px;text-align:center;color:#ffffff;">#</th>
+                    <th style="border:1px solid #1e293b;padding:3px 6px;text-align:left;color:#ffffff;">ITEM NAME / DESCRIPTION</th>
+                    <th style="width:74px;border:1px solid #1e293b;padding:3px 4px;text-align:center;color:#ffffff;">UNIT</th>
+                    <th style="width:84px;border:1px solid #1e293b;padding:3px 4px;text-align:center;color:#ffffff;">COUNTED QTY</th>
+                    <th style="width:125px;border:1px solid #1e293b;padding:3px 6px;text-align:left;color:#ffffff;">NOTES / EXP.</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${blankLines.map((num, idx) => `
-                    <tr class="${idx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'}" style="height: 21px;">
-                      <td class="border border-slate-300 px-1 text-center font-mono font-bold text-slate-600">${num}</td>
-                      <td class="border border-slate-300 px-2"></td>
-                      <td class="border border-slate-300 px-1.5"></td>
-                      <td class="border border-slate-300 px-1.5"></td>
-                      <td class="border border-slate-300 px-2"></td>
+                  ${blankLines.map(n => `
+                    <tr style="height:21px;background-color:${n % 2 === 0 ? '#f8fafc' : '#ffffff'};">
+                      <td style="border:1px solid #475569;padding:1px 4px;text-align:center;font-weight:700;color:#0f172a;">${n}</td>
+                      <td style="border:1px solid #475569;padding:1px 6px;"></td>
+                      <td style="border:1px solid #475569;padding:1px 4px;"></td>
+                      <td style="border:1px solid #475569;padding:1px 4px;"></td>
+                      <td style="border:1px solid #475569;padding:1px 6px;"></td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
+              <div class="flex justify-between items-center text-[9.5px] font-semibold text-slate-800 mt-1.5 pt-1 border-t border-slate-400">
+                <span>Instructions: Write item name, unit (cs, lb, gal, ea), and physical count. Enter totals into Records &rarr; Blind Audit.</span>
+                <span>Form KMS-INV-30</span>
+              </div>
             </div>
           </div>
         `).join('')}
@@ -1999,167 +2006,7 @@ document.addEventListener('click', (e) => {
     `);
     return;
   }
-  if (e.target.id === 'btn-review-blind') {
-    const mode = (state.blindDraft && state.blindDraft.mode) || 'blank30';
-    const rows = [];
-    if (mode === 'blank30') {
-      const byZone = (state.blindDraft && state.blindDraft.blankRowsByZone) || {};
-      Object.entries(byZone).forEach(([zName, zRows]) => {
-        (zRows || []).forEach(r => {
-          if (!r || !r.name.trim() || r.qty === '' || r.qty === undefined) return;
-          const phys = parseFloat(r.qty);
-          if (isNaN(phys) || phys < 0) return;
-          const qName = r.name.trim().toLowerCase();
-          const match = state.items.find(i => !i.discontinued && i.location === zName && i.name.trim().toLowerCase() === qName) ||
-                        state.items.find(i => !i.discontinued && i.name.trim().toLowerCase() === qName);
-          const sys = match ? match.on_hand : 0;
-          const unit = normStockUnit(r.unit.trim() || (match ? match.unit : 'cases'));
-          const diff = Math.round((phys - sys) * 100) / 100;
-          rows.push({ id: match ? match.id : null, isNew: !match, name: match ? match.name : r.name.trim(), location: zName, unit, sys, phys, diff });
-        });
-      });
-    } else {
-      const counts = (state.blindDraft && state.blindDraft.counts) || {};
-      state.items.filter(i => !i.discontinued).forEach(x => {
-        const val = counts[x.id];
-        if (val === undefined || val === '') return;
-        const phys = parseFloat(val);
-        if (isNaN(phys) || phys < 0) return;
-        const diff = Math.round((phys - x.on_hand) * 100) / 100;
-        rows.push({ id: x.id, isNew: false, name: x.name, location: x.location, unit: normStockUnit(x.unit), sys: x.on_hand, phys, diff });
-      });
-    }
-    if (!rows.length) { showToast('Enter at least one counted item and quantity first', 'warn'); return; }
-    const varCount = rows.filter(r => r.diff !== 0).length;
-    openModal(`Review & Reconcile Blind Count (${rows.length} Items)`, `
-      <div class="space-y-3 text-xs">
-        <div class="p-3 rounded-lg bg-black/5 border border-[var(--line)] flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <strong>${rows.length}</strong> item(s) counted &bull; <strong>${varCount}</strong> variance(s) detected against Living Stock.
-          </div>
-          <span class="tag ${varCount ? 'tag-LOW' : 'tag-OK'}">${varCount ? `${varCount} Variance(s)` : '100% Match'}</span>
-        </div>
-        <div class="overflow-x-auto max-h-80 border border-[var(--line)] rounded-lg">
-          <table class="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="border-b border-[var(--line)] bg-black/5 uppercase">
-                <th class="p-2">Item</th>
-                <th class="p-2">Unit</th>
-                <th class="p-2 text-right">System</th>
-                <th class="p-2 text-right">Counted</th>
-                <th class="p-2 text-right">Variance</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[var(--line)]">
-              ${rows.map(r => `
-                <tr>
-                  <td class="p-2 font-bold">${esc(r.name)} <span class="opacity-60 font-normal">(${esc(r.location)})</span> ${r.isNew ? '<span class="tag tag-OK ml-1">NEW ITEM</span>' : ''}</td>
-                  <td class="p-2">${esc(r.unit)}</td>
-                  <td class="p-2 text-right opacity-75">${fmtNum(r.sys)}</td>
-                  <td class="p-2 text-right font-bold">${fmtNum(r.phys)}</td>
-                  <td class="p-2 text-right font-bold ${r.diff === 0 ? 'text-emerald-700' : 'text-[#b3122b]'}">${r.diff > 0 ? '+' + fmtNum(r.diff) : fmtNum(r.diff)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div class="flex flex-wrap gap-2 pt-1">
-          <button type="button" id="btn-commit-blind" class="kms-btn-ok flex-1 py-2 text-xs font-semibold">Accept &amp; Update Living Stock</button>
-          <button type="button" data-close-modal="1" class="kms-btn-alt px-4 py-2 text-xs font-semibold">Back to Counting</button>
-        </div>
-      </div>
-    `);
-    return;
-  }
-  if (e.target.id === 'btn-commit-blind') {
-    const mode = (state.blindDraft && state.blindDraft.mode) || 'blank30';
-    const zone = (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0];
-    const rows = [];
-    snapUndo();
-    if (mode === 'blank30') {
-      const byZone = (state.blindDraft && state.blindDraft.blankRowsByZone) || {};
-      Object.entries(byZone).forEach(([zName, zRows]) => {
-        (zRows || []).forEach(r => {
-          if (!r || !r.name.trim() || r.qty === '' || r.qty === undefined) return;
-          const phys = parseFloat(r.qty);
-          if (isNaN(phys) || phys < 0) return;
-          const qName = r.name.trim().toLowerCase();
-          let item = state.items.find(i => !i.discontinued && i.location === zName && i.name.trim().toLowerCase() === qName) ||
-                     state.items.find(i => !i.discontinued && i.name.trim().toLowerCase() === qName);
-          const cleanU = normStockUnit(r.unit.trim() || (item ? item.unit : 'cases'));
-          if (item) {
-            rows.push({ name: item.name, unit: cleanU, sys: item.on_hand, phys });
-            item.unit = cleanU;
-            item.pack_label = cleanU;
-            item.on_hand = Math.round(phys * 100) / 100;
-          } else {
-            const newId = uid('item');
-            const skuPrefix = zName.includes('cooler') ? 'CLR' : zName.includes('freezer') ? 'FRZ' : 'STK';
-            const newItem = {
-              id: newId,
-              sku: `${skuPrefix}-${Math.floor(200 + Math.random() * 799)}`,
-              name: r.name.trim(),
-              location: zName,
-              unit: cleanU,
-              pack_label: cleanU,
-              on_hand: Math.round(phys * 100) / 100,
-              par: Math.max(1, Math.ceil(phys)),
-              cadence: 'M',
-              unit_cost: 0
-            };
-            state.items.push(newItem);
-            rows.push({ name: newItem.name, unit: cleanU, sys: 0, phys });
-          }
-        });
-      });
-    } else {
-      const counts = (state.blindDraft && state.blindDraft.counts) || {};
-      state.items.filter(i => !i.discontinued).forEach(x => {
-        const val = counts[x.id];
-        if (val === undefined || val === '') return;
-        const phys = parseFloat(val);
-        if (isNaN(phys) || phys < 0) return;
-        const cleanU = normStockUnit(x.unit);
-        x.unit = cleanU;
-        x.pack_label = cleanU;
-        rows.push({ name: x.name, unit: cleanU, sys: x.on_hand, phys });
-        x.on_hand = Math.round(phys * 100) / 100;
-      });
-    }
-    if (!rows.length) { closeModal(); return; }
-    state.blindAudits.unshift({ id: uid('aud'), audit_date: localDateStr(), auditor: getActiveUser().name, zone, rows });
-    state.blindDraft = { zone, mode, search: '', revealed: false, counts: {}, blankRowsByZone: {} };
-    logActivity('BLIND COUNT', `Reconciled ${rows.length} item(s) in ${zone}`);
-    closeModal();
-    saveState();
-    render();
-    showToast(`Reconciled physical count for ${rows.length} item(s) into Living Stock!`);
-    return;
-  }
 
-  if (e.target.id === 'btn-exp-csv') {
-    const rows = [['SKU','Item','Location','Unit','On Hand','Par','Cadence']].concat(state.items.map(x => [x.sku, x.name, x.location, x.unit, x.on_hand, x.par, x.cadence]));
-    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = `inventory-${localDateStr()}.csv`;
-    a.click();
-    return;
-  }
-  if (e.target.id === 'btn-exp-json') {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
-    a.download = `sa-butler-kms-${localDateStr()}.json`;
-    a.click();
-    return;
-  }
-
-  const repRangeBtn = e.target.closest('[data-rep-range]');
-  if (repRangeBtn) {
-    state.reportRange = repRangeBtn.dataset.repRange;
-    render();
-    return;
-  }
   if (e.target.id === 'btn-print-exec-report') { window.print(); return; }
   if (e.target.id === 'btn-copy-funding-brief' || e.target.id === 'btn-copy-funding-brief-2') {
     const ta = document.getElementById('exec-funding-brief');

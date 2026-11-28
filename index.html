@@ -298,12 +298,27 @@
       body.printing-modal footer {
         display: none !important;
       }
+      body.printing-modal {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
       body.printing-modal #modal-backdrop {
         position: static !important;
         inset: auto !important;
         display: block !important;
-        background: transparent !important;
+        background: #ffffff !important;
         padding: 0 !important;
+        margin: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+      }
+      .sa-print-shell table th, .sa-print-shell table td {
+        border: 1px solid #334155 !important;
+        color: #0f172a !important;
+      }
+      .sa-print-shell table thead th {
+        background-color: #1b365d !important;
+        color: #ffffff !important;
       }
       body.printing-modal #modal-box {
         position: static !important;
