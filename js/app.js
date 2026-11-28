@@ -2934,13 +2934,15 @@ document.addEventListener('submit', (e) => {
   if (e.target.classList && e.target.classList.contains('form-reconcile-po')) {
     const po = (state.purchaseOrders || []).find(p => p.id === e.target.dataset.poId);
     if (po && ['requested', 'ordered', 'approved', 'APPROVED_ORDERED'].includes(po.status)) {
-      const activeLines = (po.lines || []).filter(ln => Number(ln.qty || 0) > 0);
-      for (const ln of activeLines) {
-        const rawVal = String(fd.get('rec_' + ln.item_id) ?? '').trim();
+      const lines = po.lines || [];
+      for (let idx = 0; idx < lines.length; idx++) {
+        const ln = lines[idx];
+        if (Number(ln.qty || 0) <= 0) continue;
+        const rawVal = String(fd.get('rec_idx_' + idx) ?? '').trim();
         const numVal = parseFloat(rawVal);
         if (rawVal === '' || isNaN(numVal) || numVal < 0) {
           showToast(`Enter the actual received quantity for ${ln.name} (enter 0 if shorted)`, 'warn');
-          const badInp = e.target.querySelector(`[name="rec_${ln.item_id}"]`);
+          const badInp = e.target.querySelector(`[name="rec_idx_${idx}"]`);
           if (badInp) badInp.focus();
           return;
         }
@@ -2952,27 +2954,38 @@ document.addEventListener('submit', (e) => {
       const invNum = String(fd.get('recInvNum') || '').trim();
       if (invNum) po.vendor_conf = invNum;
       let added = 0;
-      activeLines.forEach(ln => {
-        const iid = ln.item_id;
-        const actual = Math.max(0, Math.round((parseFloat(fd.get('rec_' + iid)) || 0) * 100) / 100);
-        ln.received = actual;
-        if (actual <= 0) return;
-        const x = state.items.find(i => i.id === iid);
+      let invTotal = 0;
+      lines.forEach((ln, idx) => {
+        if (Number(ln.qty || 0) <= 0) return;
+        const actualOrderUnits = Math.max(0, Math.round((parseFloat(fd.get('rec_idx_' + idx)) || 0) * 100) / 100);
+        ln.received = actualOrderUnits;
+        invTotal += actualOrderUnits * Number(ln.unit_price || 0);
+        if (ln.isFee || actualOrderUnits <= 0) return;
+        const packMult = Number(ln.packQty || 1);
+        const stockGain = Math.round((actualOrderUnits * packMult) * 100) / 100;
+        const x = (ln.item_id && state.items.find(i => i.id === ln.item_id))
+          || state.items.find(i => !i.discontinued && (i.name.toLowerCase() === String(ln.name || '').toLowerCase() || (ln.sku && i.sku === ln.sku)));
         if (!x) return;
-        x.on_hand = Math.round((x.on_hand + actual) * 100) / 100;
+        x.on_hand = Math.round((Number(x.on_hand || 0) + stockGain) * 100) / 100;
+        if (ln.sku && ln.sku !== 'STK') x.sku = ln.sku;
+        if (Number(ln.unit_price || 0) > 0) {
+          x.unit_price = Math.round((Number(ln.unit_price) / packMult) * 10000) / 10000;
+        }
         state.transactions.unshift({
           id: uid('tx'), tx_date: todayStr, tx_type: 'RECEIVE', item_id: x.id, item_name: x.name,
-          unit: x.unit, qty: actual, source: `PO ${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${po.vendor})`,
+          unit: x.unit, qty: stockGain,
+          source: `PO ${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${po.vendor} · ${actualOrderUnits} ${ln.unit})`,
           exp_date: '', cleared: false, staff_name: uName
         });
         added++;
       });
       po.status = 'closed';
       po.received_by = uName;
-      logActivity('PO RECEIVED', `${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} (${added} items checked in)`);
+      po.verified_total = Math.round(invTotal * 100) / 100;
+      logActivity('PO RECEIVED', `${po.po_number}${po.vendor_conf ? ' / Inv ' + po.vendor_conf : ''} ($${po.verified_total.toFixed(2)} · ${added} items checked in)`);
       saveState();
       render();
-      showToast(`Reconciled ${po.po_number}: updated ${added} item(s) in Living Stock!`);
+      showToast(`Reconciled ${po.po_number} ($${po.verified_total.toFixed(2)}): added ${added} item(s) to Living Stock!`);
     }
     return;
   }

@@ -129,13 +129,27 @@ export function renderReceive(main) {
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs">
-                <thead><tr class="border-b border-[var(--line)] opacity-70 uppercase"><th class="py-1 pr-2">Item</th><th class="py-1 pr-2">Ordered</th><th class="py-1">Actually Received (Required)</th></tr></thead>
+                <thead>
+                  <tr class="border-b border-[var(--line)] opacity-70 uppercase">
+                    <th class="py-1 pr-2">SKU</th>
+                    <th class="py-1 pr-2">Invoice Item</th>
+                    <th class="py-1 pr-2">Ordered</th>
+                    <th class="py-1 pr-2">Pack → Stock</th>
+                    <th class="py-1 pr-2 text-right">Invoice Rate</th>
+                    <th class="py-1">Actually Received (Required)</th>
+                  </tr>
+                </thead>
                 <tbody class="divide-y divide-[var(--line)]">
-                  ${(po.lines || []).filter(l => (l.qty || 0) > 0).map(ln => `
+                  ${(po.lines || []).map((ln, idx) => Number(ln.qty || 0) <= 0 ? '' : `
                     <tr>
-                      <td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}</td>
-                      <td class="py-1.5 pr-2">${ln.qty} ${esc(ln.unit || '')}</td>
-                      <td class="py-1.5"><input type="number" step="0.5" min="0" required name="rec_${esc(ln.item_id)}" value="" placeholder="Enter qty" class="kms-input w-24 text-xs font-bold text-center" /></td>
+                      <td class="py-1.5 pr-2 font-mono text-[11px] opacity-75">${esc(ln.sku || '—')}</td>
+                      <td class="py-1.5 pr-2 font-semibold">${esc(ln.name)}${ln.catchWeight ? ' <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">CATCH-WEIGHT (lb)</span>' : ''}</td>
+                      <td class="py-1.5 pr-2 font-bold">${ln.qty} ${esc(ln.unit || '')}</td>
+                      <td class="py-1.5 pr-2 opacity-75">${ln.isFee ? 'Delivery Fee' : `× ${ln.packQty || 1} ${esc(ln.baseUnit || ln.unit || '')}`}</td>
+                      <td class="py-1.5 pr-2 text-right">${Number(ln.unit_price || 0).toFixed(2)}</td>
+                      <td class="py-1.5">
+                        <input type="number" step="0.01" min="0" required name="rec_idx_${idx}" value="${ln.isFee ? ln.qty : ''}" placeholder="${ln.catchWeight ? 'Scale lb' : 'Count'}" class="kms-input w-24 text-xs font-bold text-center" />
+                      </td>
                     </tr>
                   `).join('')}
                 </tbody>
