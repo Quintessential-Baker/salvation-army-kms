@@ -1954,11 +1954,11 @@ document.addEventListener('click', (e) => {
         </div>
         ${zonesToPrint.map((z, zIdx) => `
           <div class="sa-print-shell w-full bg-white text-slate-900 border-2 border-[#1b365d] rounded-md overflow-hidden" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
-            <div style="background-color:#1b365d;color:#ffffff;border-bottom:3px solid #b3122b;" class="px-3 py-2 flex items-center justify-between gap-3">
+            <div style="background-color:#1b365d;color:#ffffff;border-bottom:3px solid #b3122b;" class="sa-sheet-banner px-3.5 py-2.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2.5">
                 <div style="background-color:#b3122b;color:#ffffff;" class="w-7 h-7 rounded flex items-center justify-center font-black text-xs shrink-0">SA</div>
                 <div>
-                  <div style="color:#fde68a;" class="text-[9px] font-extrabold uppercase tracking-wider">The Salvation Army &bull; Butler, PA &bull; Community Meals KMS</div>
+                  <div style="color:#fde68a;" class="sa-sub text-[9.5px] font-extrabold uppercase tracking-wider">The Salvation Army &bull; Butler, PA &bull; Community Meals KMS</div>
                   <div style="color:#ffffff;" class="text-sm font-black tracking-tight">BLIND PHYSICAL INVENTORY SHEET — <span style="text-decoration:underline;">${esc(z.toUpperCase())}</span></div>
                 </div>
               </div>
@@ -1968,12 +1968,12 @@ document.addEventListener('click', (e) => {
               </div>
             </div>
             <div class="p-2 bg-white text-slate-900">
-              <div class="grid grid-cols-3 gap-3 text-[10.5px] font-bold text-slate-900 mb-1.5">
+              <div class="grid grid-cols-3 gap-3 text-[11px] font-extrabold text-black mb-2">
                 <div class="border-b border-slate-700 pb-0.5">Date: _______________________</div>
                 <div class="border-b border-slate-700 pb-0.5">Counted By: _________________</div>
                 <div class="border-b border-slate-700 pb-0.5">Verified By: _________________</div>
               </div>
-              <table class="w-full text-[10.5px] border-collapse" style="border:1.5px solid #1e293b;">
+              <table class="w-full text-[11.5px] border-collapse" style="border:1.5px solid #1e293b;">
                 <thead>
                   <tr style="background-color:#1b365d;color:#ffffff;">
                     <th style="width:30px;border:1px solid #1e293b;padding:3px 4px;text-align:center;color:#ffffff;">#</th>
@@ -1986,11 +1986,11 @@ document.addEventListener('click', (e) => {
                 <tbody>
                   ${blankLines.map(n => `
                     <tr style="height:21px;background-color:${n % 2 === 0 ? '#f8fafc' : '#ffffff'};">
-                      <td style="border:1px solid #475569;padding:1px 4px;text-align:center;font-weight:700;color:#0f172a;">${n}</td>
-                      <td style="border:1px solid #475569;padding:1px 6px;"></td>
-                      <td style="border:1px solid #475569;padding:1px 4px;"></td>
-                      <td style="border:1px solid #475569;padding:1px 4px;"></td>
-                      <td style="border:1px solid #475569;padding:1px 6px;"></td>
+                      <td style="border:1.25px solid #000000;padding:1px 4px;text-align:center;font-weight:700;color:#0f172a;">${n}</td>
+                      <td style="border:1.25px solid #000000;padding:1px 6px;"></td>
+                      <td style="border:1.25px solid #000000;padding:1px 4px;"></td>
+                      <td style="border:1.25px solid #000000;padding:1px 4px;"></td>
+                      <td style="border:1.25px solid #000000;padding:1px 6px;"></td>
                     </tr>
                   `).join('')}
                 </tbody>
