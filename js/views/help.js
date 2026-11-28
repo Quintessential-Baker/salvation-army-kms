@@ -560,7 +560,7 @@ export function renderHelp(main) {
             <p class="text-xs opacity-75">Snapshots your real Butler inventory first, then simulates a complete shift across Recipes, Menu, Prep, HACCP Temps, Service, Waste, 30-Day Orders &amp; Weekly Digest—with 1-click restore.</p>
           </div>
           <div class="flex flex-wrap gap-1.5 no-print">
-            <button type="button" id="btn-sim-run-all" class="kms-btn-navy px-3.5 py-1.5 text-xs font-bold">Run Full Shift Simulation</button>
+            <button type="button" id="btn-sim-run-all" class="kms-btn-navy px-3.5 py-1.5 text-xs font-bold">Start Live Interactive Walkthrough</button>
             ${state._simSnapshot ? `<button type="button" id="btn-sim-restore" class="kms-btn-ok px-3.5 py-1.5 text-xs font-bold">Restore Live Data</button>` : ''}
           </div>
         </div>

@@ -4577,7 +4577,7 @@ if (!window.__smartAlertDispatcherReady) {
 }
 
 
-// === INTERACTIVE END-TO-END SHIFT SIMULATOR ===
+// === INTERACTIVE END-TO-END SHIFT SIMULATOR (LIVE TAB-BY-TAB WALKTHROUGH) ===
 if (!window.__shiftSimulatorReady) {
   window.__shiftSimulatorReady = true;
 
@@ -4586,123 +4586,273 @@ if (!window.__shiftSimulatorReady) {
       const clone = JSON.parse(JSON.stringify(state));
       delete clone._simSnapshot;
       delete clone._simLog;
+      delete clone._simStep;
+      delete clone._simAuto;
       state._simSnapshot = JSON.stringify(clone);
-      state._simLog = ['Backed up live Butler kitchen state before simulation.'];
+      state._simLog = ['Backed up live Butler kitchen state before walkthrough.'];
     }
   };
 
-  const runSimPhase = (phase) => {
-    ensureSimSnapshot();
-    const today = localDateStr();
-    const actor = getActiveUser().name + ' (Sim)';
+  const restoreSimSnapshot = () => {
+    if (!state._simSnapshot) return;
+    const restored = JSON.parse(state._simSnapshot);
+    Object.keys(state).forEach(k => delete state[k]);
+    Object.assign(state, restored);
+    clearSimHighlights();
+    removeSimHud();
+    saveState();
+    render();
+    showToast('Restored your exact live Butler kitchen data!');
+  };
 
-    if (phase === 1) {
-      let rec = (state.recipes || []).find(r => /goulash/i.test(r.name)) || (state.recipes || [])[0];
-      if (rec) {
-        state.selectedRecipeId = rec.id;
-        const portions = Math.max(45, predictedPortions(today));
-        let mp = (state.menuPlan || []).find(m => m.service_date === today);
-        if (!mp) {
-          mp = { id: uid('mp'), service_date: today, status: 'PLANNED' };
-          state.menuPlan.push(mp);
-        }
-        mp.recipe_id = rec.id;
-        mp.custom_title = rec.name;
-        mp.planned_portions = portions;
-        mp.status = 'PLANNED';
+  const clearSimHighlights = () => {
+    document.querySelectorAll('.sim-spotlight').forEach(el => el.classList.remove('sim-spotlight'));
+  };
 
-        let deducted = 0;
-        (rec.ingredients || []).forEach(g => {
-          const item = g.inv_id ? (state.items || []).find(x => x.id === g.inv_id) : null;
-          if (item && g.per100) {
-            const amt = Math.round(((g.per100 * portions) / 100) * 100) / 100;
-            item.on_hand = Math.round(Math.max(0, Number(item.on_hand || 0) - amt) * 100) / 100;
-            state.transactions.unshift({
-              id: uid('tx'), tx_date: today, tx_type: 'PREP_DEDUCT',
-              item_id: item.id, item_name: item.name, unit: item.unit,
-              qty: -amt, reason: `Simulated 8:30 AM Prep (${rec.name})`, staff_name: actor
-            });
-            deducted++;
+  const removeSimHud = () => {
+    const hud = document.getElementById('sim-walkthrough-hud');
+    if (hud) hud.remove();
+  };
+
+  const spotlightEl = (selector) => {
+    clearSimHighlights();
+    if (!selector) return null;
+    const el = document.querySelector(selector);
+    if (el) {
+      el.classList.add('sim-spotlight');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return el;
+  };
+
+  const animateType = async (el, val) => {
+    if (!el) return;
+    el.focus();
+    const str = String(val);
+    el.value = '';
+    for (let i = 1; i <= str.length; i++) {
+      el.value = str.slice(0, i);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 45));
+    }
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const WALKTHROUGH_STEPS = [
+    {
+      tab: 'recipes',
+      time: '8:30 AM',
+      title: 'Step 1 of 8: Discover & Auto-Link a Standardized Recipe',
+      desc: 'Opens the Classics library on Recipes, adds Classic American Beef Goulash, links ingredients to Living Stock, and scales to today\'s forecasted headcount.',
+      selector: '[data-rec-input-tab="starters"]',
+      run: async () => {
+        state._recInputTab = 'starters';
+        render();
+        await new Promise(r => setTimeout(r, 350));
+        spotlightEl('[data-add-starter-rec="starter-goulash"]');
+        await new Promise(r => setTimeout(r, 500));
+        const btn = document.querySelector('[data-add-starter-rec="starter-goulash"]');
+        if (btn) btn.click();
+        await new Promise(r => setTimeout(r, 350));
+        spotlightEl('#rec-scale-inp');
+      }
+    },
+    {
+      tab: 'menu',
+      time: '8:45 AM',
+      title: 'Step 2 of 8: Schedule Entrée on Today\'s Menu Calendar',
+      desc: 'Navigates to Menu & Daily Sheet and assigns today\'s lunch entrée using the automated attendance forecast.',
+      selector: '[data-menu-range]',
+      run: async () => {
+        const today = localDateStr();
+        const rec = (state.recipes || []).find(r => /goulash/i.test(r.name)) || (state.recipes || [])[0];
+        if (rec) {
+          let mp = (state.menuPlan || []).find(m => m.service_date === today);
+          if (!mp) {
+            mp = { id: uid('mp'), service_date: today, status: 'PLANNED' };
+            state.menuPlan.push(mp);
           }
-        });
-        state._simLog.push(`Phase 1 (8:30 AM): Scheduled "${rec.name}" for ${portions} forecasted portions & deducted ${deducted} linked pantry item(s).`);
+          mp.recipe_id = rec.id;
+          mp.custom_title = rec.name;
+          mp.planned_portions = Math.max(45, predictedPortions(today));
+          mp.status = 'PLANNED';
+          saveState();
+          render();
+          await new Promise(r => setTimeout(r, 350));
+          spotlightEl(`[data-open-sheet="${today}"], .kms-card`);
+        }
+      }
+    },
+    {
+      tab: 'prep',
+      time: '9:15 AM',
+      title: 'Step 3 of 8: Review Storage-Zone Prep Pulls & Deduct Stock',
+      desc: 'Switches to Next-Day Prep where ingredients are grouped by Walk-In Cooler, Freezer, and Stockroom, then deducts morning prep.',
+      selector: '#btn-deduct-today-prep',
+      run: async () => {
+        await new Promise(r => setTimeout(r, 350));
+        const btn = spotlightEl('#btn-deduct-today-prep');
+        if (btn && !btn.disabled) {
+          await new Promise(r => setTimeout(r, 550));
+          btn.click();
+        }
+      }
+    },
+    {
+      tab: 'safety',
+      time: '11:00 AM',
+      title: 'Step 4 of 8: Log 6-Point HACCP Temperatures',
+      desc: 'Opens Temps & Cleaning, types passing cooler, freezer, and hot-hold temperatures into the live inputs, and saves the compliance log.',
+      selector: '#form-safety-temps',
+      run: async () => {
+        await new Promise(r => setTimeout(r, 350));
+        spotlightEl('#form-safety-temps');
+        const sampleTemps = [37, -4, 38, 152, 168, 39];
+        const inputs = Array.from(document.querySelectorAll('#form-safety-temps input[type="number"]'));
+        for (let i = 0; i < Math.min(inputs.length, sampleTemps.length); i++) {
+          await animateType(inputs[i], sampleTemps[i]);
+        }
+        const saveBtn = document.querySelector('#form-safety-temps button[type="submit"]');
+        if (saveBtn) {
+          spotlightEl('#form-safety-temps button[type="submit"]');
+          await new Promise(r => setTimeout(r, 350));
+          saveBtn.click();
+        }
+      }
+    },
+    {
+      tab: 'menu',
+      time: '12:30 PM',
+      title: 'Step 5 of 8: Record Lunch Served & Auto-Tag Leftovers',
+      desc: 'Returns to Menu & Daily Sheet, enters actual served portions, clicks Mark Served, and generates a 6-day FIFO leftover tag.',
+      selector: '[data-mark-served]',
+      run: async () => {
+        const today = localDateStr();
+        await new Promise(r => setTimeout(r, 350));
+        const qtyInp = document.getElementById('sv-qty-' + today);
+        const mp = (state.menuPlan || []).find(m => m.service_date === today);
+        const servedVal = Math.max(35, ((mp && mp.planned_portions) || 65) - 4);
+        if (qtyInp) {
+          spotlightEl('#sv-qty-' + today);
+          await animateType(qtyInp, servedVal);
+          const srvBtn = spotlightEl(`[data-mark-served="${today}"]`);
+          await new Promise(r => setTimeout(r, 400));
+          if (srvBtn) srvBtn.click();
+        }
+      }
+    },
+    {
+      tab: 'records',
+      time: '1:15 PM',
+      title: 'Step 6 of 8: Log Breakdown Waste ("Crack") Deduction',
+      desc: 'Navigates to Blind Count & Waste, fills in a sample waste entry, and deducts it directly from Living Stock.',
+      selector: '#form-waste',
+      run: async () => {
+        await new Promise(r => setTimeout(r, 350));
+        spotlightEl('#form-waste');
+        const qtyInp = document.querySelector('#form-waste input[name="qty"]');
+        if (qtyInp) {
+          await animateType(qtyInp, '1');
+          const subBtn = spotlightEl('#form-waste button[type="submit"]');
+          await new Promise(r => setTimeout(r, 350));
+          if (subBtn) subBtn.click();
+        }
+      }
+    },
+    {
+      tab: 'orders',
+      time: '1:45 PM',
+      title: 'Step 7 of 8: Generate 30-Day Multi-Variable Vendor Orders',
+      desc: 'Switches to Orders & POs, selects the 30-Day Monthly Window, and highlights exact restock needs (Menu BOM + 45-Day Burn Rate + Par Floor).',
+      selector: '#order-hz',
+      run: async () => {
+        state._orderHorizon = 30;
+        render();
+        await new Promise(r => setTimeout(r, 350));
+        spotlightEl('#order-hz');
+      }
+    },
+    {
+      tab: 'users',
+      time: '2:15 PM',
+      title: 'Step 8 of 8: Review Friday Weekly Digest & Restore Live Data',
+      desc: 'Opens Users & Activity to inspect the consolidated Weekly Digest & Smart Escalation panel. Click Restore Live Data below to reset your sandbox!',
+      selector: '#form-smart-alert-config',
+      run: async () => {
+        await new Promise(r => setTimeout(r, 350));
+        spotlightEl('#form-smart-alert-config');
       }
     }
+  ];
 
-    if (phase === 2) {
-      state.safetyLogs = state.safetyLogs || {};
-      state.safetyLogs[today] = state.safetyLogs[today] || { temps: {}, cleaning: {} };
-      state.safetyLogs[today].temps = { 0: 37, 1: -4, 2: 38, 3: 152, 4: 168, 5: 39 };
+  const renderSimHud = () => {
+    removeSimHud();
+    if (!state._simSnapshot) return;
+    const stepIdx = Number(state._simStep || 0);
+    const step = WALKTHROUGH_STEPS[stepIdx] || WALKTHROUGH_STEPS[0];
+    const isLast = stepIdx >= WALKTHROUGH_STEPS.length - 1;
 
-      const mp = (state.menuPlan || []).find(m => m.service_date === today);
-      const planned = (mp && mp.planned_portions) || 65;
-      const served = Math.max(35, planned - 4);
-      if (mp) {
-        mp.served_portions = served;
-        mp.status = 'SERVED';
-        mp.logged_by = actor;
-      }
-      state.storageTags = state.storageTags || [];
-      state.storageTags.unshift({
-        id: uid('tag'),
-        item_name: (mp && mp.custom_title) || 'Community Lunch Entree',
-        tag_category: 'LEFTOVER',
-        zone: 'Walk-In Cooler',
-        qty_label: `${Math.max(4, planned - served)} portions`,
-        prep_date: today,
-        prep_time: '12:30',
-        use_by_date: addDays(today, 6),
-        tagged_by: actor,
-        status: 'STORED'
-      });
-      state._simLog.push(`Phase 2 (11:30 AM): Logged 6 passing HACCP temps, recorded ${served} meals served & created 6-day FIFO leftover tag.`);
-    }
+    const hud = document.createElement('div');
+    hud.id = 'sim-walkthrough-hud';
+    hud.className = 'fixed bottom-3 right-3 left-3 sm:left-auto sm:w-[430px] z-50 rounded-xl border-2 border-[#b3122b] bg-[#1b365d] text-white p-3.5 shadow-2xl space-y-2 no-print';
+    hud.innerHTML = `
+      <div class="flex items-center justify-between gap-2">
+        <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider">Interactive Shift Tutorial &bull; ${step.time}</span>
+        <button type="button" id="btn-hud-restore" class="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-[11px]">Restore Live Data</button>
+      </div>
+      <div class="font-extrabold text-sm leading-snug">${esc(step.title)}</div>
+      <p class="text-xs text-white/90 leading-relaxed">${esc(step.desc)}</p>
+      <div class="flex items-center justify-between gap-2 pt-1 border-t border-white/15">
+        <div class="flex gap-1">
+          ${WALKTHROUGH_STEPS.map((_, i) => `<span class="w-2.5 h-1.5 rounded-full ${i === stepIdx ? 'bg-amber-400' : i < stepIdx ? 'bg-emerald-400' : 'bg-white/25'}"></span>`).join('')}
+        </div>
+        <div class="flex items-center gap-1.5">
+          ${stepIdx > 0 ? `<button type="button" id="btn-hud-prev" class="px-2.5 py-1 rounded bg-white/15 hover:bg-white/25 text-xs font-bold">Back</button>` : ''}
+          ${!isLast
+            ? `<button type="button" id="btn-hud-next" class="px-3 py-1 rounded bg-[#b3122b] hover:bg-[#910d22] text-white text-xs font-extrabold">Next Step &rarr;</button>`
+            : `<button type="button" id="btn-hud-finish" class="px-3 py-1 rounded bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold">Finish &amp; Restore</button>`}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(hud);
+  };
 
-    if (phase === 3) {
-      const sampleItem = (state.items || []).find(x => !x.discontinued && Number(x.on_hand || 0) >= 2) || (state.items || [])[0];
-      if (sampleItem) {
-        sampleItem.on_hand = Math.round(Math.max(0, Number(sampleItem.on_hand) - 1) * 100) / 100;
-        state.transactions.unshift({
-          id: uid('tx'), tx_date: today, tx_type: 'WASTE',
-          item_id: sampleItem.id, item_name: sampleItem.name, unit: sampleItem.unit,
-          qty: -1, reason: 'Simulated Shift Crack / Spoilage', staff_name: actor
-        });
-      }
-      const sug30 = computeAccurateOrderSuggestions(30);
-      state._simLog.push(`Phase 3 (1:00 PM): Logged 1 ${sampleItem ? sampleItem.unit + ' ' + sampleItem.name : 'item'} waste; 30-Day Multi-Variable Engine calculated ${sug30.length} vendor restock line(s).`);
-    }
-
-    if (phase === 4) {
-      const dig = buildWeeklyExecutiveDigest(today);
-      state._simLog.push(`Phase 4 (2:00 PM): Generated Weekly Executive Digest ("${dig.subject}") — ready for Friday dispatch or Restore Live Data.`);
+  const executeWalkthroughStep = async (idx) => {
+    ensureSimSnapshot();
+    const clamped = Math.max(0, Math.min(WALKTHROUGH_STEPS.length - 1, idx));
+    state._simStep = clamped;
+    const step = WALKTHROUGH_STEPS[clamped];
+    state.activeTab = step.tab;
+    render();
+    renderSimHud();
+    if (step.run) {
+      await step.run();
+      renderSimHud();
     }
   };
 
   document.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-sim-run-all')) {
+      executeWalkthroughStep(0);
+      return;
+    }
     const phaseBtn = e.target.closest('[data-sim-phase]');
     if (phaseBtn) {
       const p = Number(phaseBtn.dataset.simPhase);
-      runSimPhase(p);
-      saveState();
-      render();
-      showToast(`Completed Shift Simulation Phase ${p}!`);
+      const map = { 1: 0, 2: 3, 3: 5, 4: 7 };
+      executeWalkthroughStep(map[p] ?? 0);
       return;
     }
-    if (e.target.closest('#btn-sim-run-all')) {
-      [1, 2, 3, 4].forEach(p => runSimPhase(p));
-      saveState();
-      render();
-      showToast('Full 8:30 AM – 2:30 PM Shift Simulation complete! Inspect any tab or click Restore Live Data.');
+    if (e.target.closest('#btn-hud-next')) {
+      executeWalkthroughStep(Number(state._simStep || 0) + 1);
       return;
     }
-    if (e.target.closest('#btn-sim-restore')) {
-      if (!state._simSnapshot) return;
-      const restored = JSON.parse(state._simSnapshot);
-      Object.keys(state).forEach(k => delete state[k]);
-      Object.assign(state, restored);
-      saveState();
-      render();
-      showToast('Restored your exact live Butler kitchen data!');
+    if (e.target.closest('#btn-hud-prev')) {
+      executeWalkthroughStep(Number(state._simStep || 0) - 1);
+      return;
+    }
+    if (e.target.closest('#btn-sim-restore') || e.target.closest('#btn-hud-restore') || e.target.closest('#btn-hud-finish')) {
+      restoreSimSnapshot();
     }
   });
 }
