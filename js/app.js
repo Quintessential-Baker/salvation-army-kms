@@ -1941,14 +1941,14 @@ document.addEventListener('click', (e) => {
     const isAll = e.target.id === 'btn-print-blind-all';
     const zone = (state.blindDraft && state.blindDraft.zone) || LOCATIONS[0];
     const zonesToPrint = (isAll || zone === 'ALL') ? LOCATIONS : [zone];
-    const blankLines = Array.from({ length: 30 }, (_, idx) => idx + 1);
+    const blankLines = Array.from({ length: 25 }, (_, idx) => idx + 1);
     document.body.classList.add('printing-modal');
-    openModal(`Printable Blank 30-Line Blind Count Sheet — ${zonesToPrint.length > 1 ? 'All 6 Sections (1 Page per Zone)' : zone}`, `
+    openModal(`Printable Blank 25-Line Blind Count Sheet — ${zonesToPrint.length > 1 ? 'All 6 Sections (1 Page per Zone)' : zone}`, `
       <div class="text-xs text-slate-900">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2 mb-3 no-print">
-          <div class="opacity-85">Formatted to fit <strong>exactly 1 US Letter page per section</strong> (${zonesToPrint.length} page${zonesToPrint.length > 1 ? 's' : ''} total, 30 write-in lines each).</div>
+          <div class="opacity-85">Formatted to fit <strong>exactly 1 US Letter page per section</strong> (${zonesToPrint.length} page${zonesToPrint.length > 1 ? 's' : ''} total, 25 large write-in lines each).</div>
           <div class="flex items-center gap-2">
-            <button type="button" onclick="window.print()" class="kms-btn-primary px-4 py-2 text-xs font-extrabold shadow-md">Print Blank 30-Line Sheet (Letter)</button>
+            <button type="button" onclick="window.print()" class="kms-btn-primary px-4 py-2 text-xs font-extrabold shadow-md">Print Blank 25-Line Sheet (Letter)</button>
             <button type="button" onclick="document.getElementById('modal-close').click()" class="kms-btn-alt px-3 py-2 text-xs">Close</button>
           </div>
         </div>
@@ -1963,7 +1963,7 @@ document.addEventListener('click', (e) => {
                 </div>
               </div>
               <div style="color:#ffffff;" class="text-right text-[10px] font-bold">
-                <div>Page ${zIdx + 1} of ${zonesToPrint.length} &bull; 30 Lines</div>
+                <div>Page ${zIdx + 1} of ${zonesToPrint.length} &bull; 25 Lines</div>
                 <div style="color:#e2e8f0;" class="font-normal">313 W. Cunningham St.</div>
               </div>
             </div>
@@ -1986,18 +1986,18 @@ document.addEventListener('click', (e) => {
                 <tbody>
                   ${blankLines.map(n => `
                     <tr style="height:21px;background-color:${n % 2 === 0 ? '#f8fafc' : '#ffffff'};">
-                      <td style="height:31px;border:1.5px solid #000000;padding:1px 4px;text-align:center;font-weight:700;color:#0f172a;">${n}</td>
-                      <td style="height:31px;border:1.5px solid #000000;padding:1px 6px;"></td>
-                      <td style="height:31px;border:1.5px solid #000000;padding:1px 4px;"></td>
-                      <td style="height:31px;border:1.5px solid #000000;padding:1px 4px;"></td>
-                      <td style="height:31px;border:1.5px solid #000000;padding:1px 6px;"></td>
+                      <td style="height:34.5px;border:1.5px solid #000000;padding:1px 4px;text-align:center;font-weight:700;color:#0f172a;">${n}</td>
+                      <td style="height:34.5px;border:1.5px solid #000000;padding:1px 6px;"></td>
+                      <td style="height:34.5px;border:1.5px solid #000000;padding:1px 4px;"></td>
+                      <td style="height:34.5px;border:1.5px solid #000000;padding:1px 4px;"></td>
+                      <td style="height:34.5px;border:1.5px solid #000000;padding:1px 6px;"></td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
               <div class="flex justify-between items-center text-[9px] font-bold text-black mt-1 pt-0.5 border-t border-black">
                 <span>Instructions: Write item name, unit (cs, lb, gal, ea), and physical count. Enter totals into Records &rarr; Blind Audit.</span>
-                <span>Form KMS-INV-30</span>
+                <span>Form KMS-INV-25</span>
               </div>
             </div>
           </div>

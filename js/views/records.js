@@ -1,4 +1,4 @@
-// js/views/records.js — Section Blank 30-Line Blind Count, Waste & System Backups
+// js/views/records.js — Section Blank 25-Line Blind Count, Waste & System Backups
 
 import { LOCATIONS, normStockUnit, dLabel, esc } from '../utils.js';
 import { state, isMgmtOrHigher, getCatalogMetaForItem } from '../state.js';
@@ -8,7 +8,7 @@ function ensureBlankRows(draft, zone) {
   if (!draft.blankRowsByZone) draft.blankRowsByZone = {};
   if (!Array.isArray(draft.blankRowsByZone[zone]) || draft.blankRowsByZone[zone].length < 30) {
     const existing = Array.isArray(draft.blankRowsByZone[zone]) ? draft.blankRowsByZone[zone] : [];
-    draft.blankRowsByZone[zone] = Array.from({ length: 30 }, (_, idx) => existing[idx] || { name: '', unit: '', qty: '' });
+    draft.blankRowsByZone[zone] = Array.from({ length: 25 }, (_, idx) => existing[idx] || { name: '', unit: '', qty: '' });
   }
   return draft.blankRowsByZone[zone];
 }
@@ -47,11 +47,11 @@ export function renderRecords(main) {
             <div class="w-10 h-10 rounded-lg bg-[#b3122b] text-white flex items-center justify-center font-black text-base shadow shrink-0">SA</div>
             <div class="min-w-0">
               <div class="text-[10px] font-bold uppercase tracking-widest text-amber-300">The Salvation Army &bull; Butler, PA &bull; Physical Inventory Audit</div>
-              <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Blind Physical Inventory Count (30-Line Blank Form)</h2>
+              <h2 class="text-base sm:text-lg font-black tracking-tight leading-tight">Blind Physical Inventory Count (25-Line Blank Form)</h2>
               <div class="text-xs text-white/85 mt-0.5">Select a storage section to print a 1-page 30-line blank sheet or reconcile shelf counts into Living Stock.</div>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-1.5 no-print"><button type="button" id="btn-print-blind-sheet" class="px-3.5 py-1.5 rounded-lg bg-white text-[#1b365d] text-xs font-extrabold shadow hover:bg-slate-100">Print Blank 30-Line Sheet (${esc(selZone === 'ALL' ? 'All Sections' : selZone)})</button>
+          <div class="flex flex-wrap items-center gap-1.5 no-print"><button type="button" id="btn-print-blind-sheet" class="px-3.5 py-1.5 rounded-lg bg-white text-[#1b365d] text-xs font-extrabold shadow hover:bg-slate-100">Print Blank 25-Line Sheet (${esc(selZone === 'ALL' ? 'All Sections' : selZone)})</button>
        ${totalEntered ? `<button type="button" id="btn-clear-blind-draft" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold">Clear Draft (${totalEntered})</button>` : ''}
        <button type="button" id="btn-review-blind" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Review &amp; Reconcile (${totalEntered})</button></div>
         </div>
@@ -68,7 +68,7 @@ export function renderRecords(main) {
             const locItems = activeItems.filter(x => x.location === loc);
             const catDone = locItems.filter(x => counts[x.id] !== '' && counts[x.id] !== undefined).length;
             const isOn = selZone === loc;
-            const badge = mode === 'blank30' ? `${blankDone}/30 lines` : `${catDone}/${locItems.length}`;
+            const badge = mode === 'blank30' ? `${blankDone}/25 lines` : `${catDone}/${locItems.length}`;
             return `<button type="button" data-blind-zone="${esc(loc)}" class="px-3 py-1.5 rounded-lg font-semibold border transition ${isOn ? 'bg-[#b3122b] text-white border-[#b3122b]' : 'border-[var(--line)] hover:bg-black/5'}">${esc(loc)} <span class="opacity-80">(${badge})</span></button>`;
           }).join('')}
           <button type="button" data-blind-zone="ALL" class="px-3 py-1.5 rounded-lg font-semibold border transition ${selZone === 'ALL' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">All Sections (${mode === 'blank30' ? `${blankEnteredCount} lines` : `${catalogEntered}/${activeItems.length}`})</button>
@@ -78,12 +78,12 @@ export function renderRecords(main) {
         <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[var(--line)] text-xs no-print">
           <div class="flex flex-wrap items-center gap-1.5">
             <span class="font-bold opacity-75">Entry Mode:</span>
-            <button type="button" data-blind-mode="blank30" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'blank30' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Blank 30-Line Form (By Section)</button>
+            <button type="button" data-blind-mode="blank30" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'blank30' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Blank 25-Line Form (By Section)</button>
             <button type="button" data-blind-mode="live" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'live' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Catalog Live Count (− / +)</button>
             <button type="button" data-blind-mode="hardcopy" class="px-3 py-1.5 rounded-lg font-semibold border ${mode === 'hardcopy' ? 'bg-[#1b365d] text-white border-[#1b365d]' : 'border-[var(--line)] hover:bg-black/5'}">Catalog Fast Tab</button>
           </div>
           ${mode === 'blank30'
-            ? `<span class="opacity-75 font-semibold">Counting Section: <strong>${esc(activeBlankZone)}</strong> (30 blank lines)</span>`
+            ? `<span class="opacity-75 font-semibold">Counting Section: <strong>${esc(activeBlankZone)}</strong> (25 blank lines)</span>`
             : `<input id="blind-search-inp" type="text" value="${esc(draft.search || '')}" placeholder="Filter items in ${esc(selZone === 'ALL' ? 'All Sections' : selZone)}..." class="kms-input text-xs w-60 max-w-full" />`}
         </div>
 
