@@ -33,7 +33,7 @@ import { VENDOR_CATALOG, getCatalogMetaForItem, getEffectiveUnitPrice, committed
 import { renderReceive, showDonationTaxReceiptModal } from './views/receive.js';
 import { renderMenu, showMenuPrintSuiteModal, showBulkMenuModal } from './views/menu.js';
 import { renderPrep } from './views/prep.js';
-import { renderRecipes } from './views/recipes.js';
+import { renderRecipes, COMMUNITY_KITCHEN_STARTERS } from './views/recipes.js';
 import { renderSafety } from './views/safety.js';
 import { renderStorage } from './views/storage.js';
 import { renderChecklists } from './views/checklists.js';
@@ -4331,3 +4331,154 @@ document.addEventListener('click', (e) => {
     showToast(`Routed ${po.po_number} in-app to ${approver.name} & copied request text (add their email in Users & Roster to launch Gmail).`);
   }
 });
+
+
+// === RECIPE DISCOVERY, AUTO-LINKING, APPROVAL & FORECAST SCALING HANDLERS ===
+if (!window.__recipeWorkflowUpgraded) {
+  window.__recipeWorkflowUpgraded = true;
+
+  const autoLinkRecipeIngredients = (rec) => {
+    if (!rec || !Array.isArray(rec.ingredients)) return 0;
+    const base = Number(rec.base_servings || 65) || 65;
+    let linked = 0;
+    rec.ingredients.forEach(g => {
+      if (!g.inv_id) {
+        const gName = String(g.name || '').toLowerCase().trim();
+        const match = (state.items || []).filter(it => !it.discontinued).find(it => {
+          const iName = String(it.name || '').toLowerCase().replace(/\([^)]*\)/g, '').trim();
+          return iName && (gName.includes(iName) || iName.includes(gName));
+        });
+        if (match) {
+          g.inv_id = match.id;
+          linked++;
+        }
+      }
+      if (g.inv_id && (!g.per100 || g.per100 <= 0)) {
+        const inv = (state.items || []).find(it => it.id === g.inv_id);
+        const spu = Number(g.stock_per_unit || 0) || (inv && /cs|cases/i.test(inv.unit) ? 6 : 1);
+        g.per100 = Math.round(((Number(g.qty || 0) / spu) / base) * 10000) / 100;
+      }
+    });
+    return linked;
+  };
+
+  document.addEventListener('click', (e) => {
+    // Switch discovery/input sub-tab
+    const inTab = e.target.closest('[data-rec-input-tab]');
+    if (inTab) {
+      state._recInputTab = inTab.dataset.recInputTab;
+      render();
+      return;
+    }
+
+    // Quick category web search chips
+    const qCat = e.target.closest('[data-quick-web-rec]');
+    if (qCat) {
+      const term = qCat.dataset.quickWebRec;
+      const inp = document.getElementById('web-rec-q-inp');
+      const form = document.getElementById('form-search-web-recipes');
+      if (inp && form) {
+        inp.value = term;
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      }
+      return;
+    }
+
+    // Fill sample recipe template
+    if (e.target.closest('#btn-fill-recipe-template')) {
+      const ta = document.getElementById('paste-recipe-raw');
+      if (ta) {
+        ta.value = [
+          'Baked Ziti with Meat Sauce',
+          'Servings: 65',
+          '10 lbs Penne pasta',
+          '12 lbs Ground beef (hamburger)',
+          '4 cans Spaghetti sauce (large)',
+          '5 lbs Shredded cheese',
+          'Directions:',
+          '1. Boil penne pasta until al dente and drain.',
+          '2. Brown ground beef, drain fat, and simmer with spaghetti sauce.',
+          '3. Combine pasta and meat sauce in hotel pans, top with cheese, and bake at 350°F until >=165°F.'
+        ].join('\n');
+      }
+      return;
+    }
+
+    // Add or suggest from Community Kitchen Classics starter library
+    const stBtn = e.target.closest('[data-add-starter-rec]');
+    if (stBtn) {
+      const st = COMMUNITY_KITCHEN_STARTERS.find(x => x.id === stBtn.dataset.addStarterRec);
+      if (!st) return;
+      const cloned = normalizeRecipe({ ...st, id: uid('rec') });
+      autoLinkRecipeIngredients(cloned);
+      if (isMgmtOrHigher()) {
+        state.recipes.unshift(cloned);
+        state.selectedRecipeId = cloned.id;
+        state._recSearch = '';
+        logActivity('ADD RECIPE', cloned.name);
+        saveState();
+        render();
+        showToast(`Added "${cloned.name}" & linked pantry ingredients!`);
+      } else {
+        state.recipeSuggestions = state.recipeSuggestions || [];
+        state.recipeSuggestions.unshift({
+          id: uid('rsug'),
+          title: cloned.name,
+          servings: cloned.base_servings,
+          raw: cloned.ingredients.map(g => `${g.qty} ${g.unit} ${g.name}`).join('\n'),
+          parsed_recipe: cloned,
+          suggested_by: getActiveUser().name,
+          status: 'PENDING',
+          created_at: localDateStr()
+        });
+        saveState();
+        render();
+        showToast(`Submitted "${cloned.name}" to Management for approval!`);
+      }
+      return;
+    }
+
+    // Auto-link pantry items on active recipe
+    const linkBtn = e.target.closest('[data-autolink-rec]');
+    if (linkBtn) {
+      const rec = (state.recipes || []).find(r => r.id === linkBtn.dataset.autolinkRec);
+      if (rec) {
+        const count = autoLinkRecipeIngredients(rec);
+        saveState();
+        render();
+        showToast(count > 0 ? `Linked ${count} ingredient(s) to Living Stock!` : 'All matching pantry items are already linked.');
+      }
+      return;
+    }
+
+    // Forecasted service day chip click -> loads scheduled recipe (if any) & scales to predicted portions
+    const fcDayBtn = e.target.closest('[data-rec-forecast-day]');
+    if (fcDayBtn) {
+      const [ds, portStr, recId] = fcDayBtn.dataset.recForecastDay.split(':');
+      const portions = Number(portStr) || predictedPortions(ds);
+      state._recTargetDate = ds;
+      state._recScaleTouched = true;
+      state.recipeScale = portions;
+      if (recId && (state.recipes || []).some(r => r.id === recId)) {
+        state.selectedRecipeId = recId;
+      }
+      render();
+      showToast(`Scaled to ${portions} forecasted portions for ${dLabel(ds)}`);
+      return;
+    }
+
+    // Track manual preset clicks so default auto-forecast doesn't overwrite user choice
+    if (e.target.closest('[data-rec-preset]')) {
+      state._recTargetDate = null;
+      state._recScaleTouched = true;
+    }
+  });
+
+  // Also auto-link whenever a recipe is pasted or approved
+  document.addEventListener('submit', () => {
+    setTimeout(() => {
+      const cur = (state.recipes || []).find(r => r.id === state.selectedRecipeId);
+      if (cur) autoLinkRecipeIngredients(cur);
+    }, 50);
+  });
+}
