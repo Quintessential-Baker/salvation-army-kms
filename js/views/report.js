@@ -43,14 +43,14 @@ export function renderReport(main) {
   const recvs = state.transactions.filter(t => t.tx_type === 'RECEIVE' && inPeriod(t.tx_date));
   const donatedRecvs = recvs.filter(t => /donat|food bank/i.test(t.source || ''));
   const purchasedRecvs = recvs.filter(t => !/donat|food bank/i.test(t.source || ''));
-  const spend = purchasedRecvs.reduce((s, t) => {
+  const closedPeriodPOs = (state.purchaseOrders || []).filter(p => p.status === "closed" && inPeriod(p.created_at || p.approved_at)); const jbSpend = closedPeriodPOs.filter(p => /jordan/i.test(p.vendor)).reduce((s, p) => s + Number(p.verified_total || 0), 0); const mdSpend = closedPeriodPOs.filter(p => /marberger/i.test(p.vendor)).reduce((s, p) => s + Number(p.verified_total || 0), 0); const poSpend = closedPeriodPOs.reduce((s, p) => s + Number(p.verified_total || 0), 0); const spend = poSpend > 0 ? poSpend : purchasedRecvs.reduce((s, t) => {
     const item = state.items.find(i => i.id === t.item_id);
     const unitP = Number(t.cost || (item ? item.unit_price : 0) || 0);
     return s + (t.cost ? Number(t.cost) : (Number(t.qty || 0) * unitP));
   }, 0);
   const costPerMeal = meals > 0 && spend > 0 ? (spend / meals) : 0;
 
-  const waste = state.transactions.filter(t => t.tx_type === 'WASTE' && inPeriod(t.tx_date));
+  const waste = state.transactions.filter(t => t.tx_type === 'WASTE' && inPeriod(t.tx_date)); const wasteDollars = waste.reduce((s, t) => s + Number(t.cost_impact || 0), 0);
   const savedLeftovers = (state.storageTags || []).filter(t => t.status === 'USED' && inPeriod(t.prep_date)).length;
 
   let checks = 0, fails = 0;
@@ -156,7 +156,7 @@ export function renderReport(main) {
         <div class="kms-card p-3.5 border-t-4 border-t-[#1b365d] print-keep">
           <div class="text-[11px] uppercase opacity-70 font-bold">Food Spend &amp; Donations</div>
           <div class="text-2xl font-black mt-0.5">$${spend.toFixed(2)}</div>
-          <div class="text-xs opacity-75 mt-0.5">${costPerMeal > 0 ? '$' + costPerMeal.toFixed(2) + ' / meal' : 'Est. $3.25/meal'} &bull; ${donatedRecvs.length} donated drop(s)</div>
+          <div class="text-xs opacity-75 mt-0.5">${costPerMeal > 0 ? '$' + costPerMeal.toFixed(2) + ' / meal' : 'Est. $3.25/meal'} &bull; ${donatedRecvs.length} donated drop(s) &bull; JB: ${jbSpend.toFixed(2)} / MD: ${mdSpend.toFixed(2)}</div>
         </div>
         <div class="kms-card p-3.5 border-t-4 border-t-[#1b365d] print-keep">
           <div class="text-[11px] uppercase opacity-70 font-bold">Inventory &amp; Restock Gap</div>
@@ -166,7 +166,7 @@ export function renderReport(main) {
         <div class="kms-card p-3.5 border-t-4 border-t-emerald-600 print-keep">
           <div class="text-[11px] uppercase opacity-70 font-bold">Safety &amp; Stewardship</div>
           <div class="text-2xl font-black text-emerald-700 mt-0.5">${safetyPct !== null ? safetyPct + '% Pass' : 'N/A'}</div>
-          <div class="text-xs opacity-75 mt-0.5">${checks} temp check(s), ${fails} flagged &bull; ${waste.length} waste / ${savedLeftovers} reused</div>
+          <div class="text-xs opacity-75 mt-0.5">${checks} temp check(s), ${fails} flagged &bull; ${waste.length} waste (${wasteDollars.toFixed(2)}) / ${savedLeftovers} reused</div>
         </div>
       </div>
 
