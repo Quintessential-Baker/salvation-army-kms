@@ -4582,9 +4582,18 @@ if (!window.__smartAlertDispatcherReady) {
 }
 
 
-// === INTERACTIVE END-TO-END SHIFT SIMULATOR (LIVE TAB-BY-TAB WALKTHROUGH) ===
+// === INTERACTIVE END-TO-END SHIFT SIMULATOR (NON-BLOCKING TAB WALKTHROUGH) ===
 if (!window.__shiftSimulatorReady) {
   window.__shiftSimulatorReady = true;
+
+  const clearSimHighlights = () => {
+    document.querySelectorAll('.sim-spotlight').forEach(el => el.classList.remove('sim-spotlight'));
+  };
+
+  const removeSimHud = () => {
+    const hud = document.getElementById('sim-walkthrough-hud');
+    if (hud) hud.remove();
+  };
 
   const ensureSimSnapshot = () => {
     if (!state._simSnapshot) {
@@ -4592,9 +4601,7 @@ if (!window.__shiftSimulatorReady) {
       delete clone._simSnapshot;
       delete clone._simLog;
       delete clone._simStep;
-      delete clone._simAuto;
       state._simSnapshot = JSON.stringify(clone);
-      state._simLog = ['Backed up live Butler kitchen state before walkthrough.'];
     }
   };
 
@@ -4610,35 +4617,25 @@ if (!window.__shiftSimulatorReady) {
     showToast('Restored your exact live Butler kitchen data!');
   };
 
-  const clearSimHighlights = () => {
-    document.querySelectorAll('.sim-spotlight').forEach(el => el.classList.remove('sim-spotlight'));
-  };
-
-  const removeSimHud = () => {
-    const hud = document.getElementById('sim-walkthrough-hud');
-    if (hud) hud.remove();
-  };
-
   const spotlightEl = (selector) => {
     clearSimHighlights();
     if (!selector) return null;
     const el = document.querySelector(selector);
     if (el) {
       el.classList.add('sim-spotlight');
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
     }
     return el;
   };
 
   const animateType = async (el, val) => {
     if (!el) return;
-    el.focus();
     const str = String(val);
     el.value = '';
     for (let i = 1; i <= str.length; i++) {
       el.value = str.slice(0, i);
       el.dispatchEvent(new Event('input', { bubbles: true }));
-      await new Promise(r => setTimeout(r, 45));
+      await new Promise(r => setTimeout(r, 40));
     }
     el.dispatchEvent(new Event('change', { bubbles: true }));
   };
@@ -4647,27 +4644,23 @@ if (!window.__shiftSimulatorReady) {
     {
       tab: 'recipes',
       time: '8:30 AM',
-      title: 'Step 1 of 8: Discover & Auto-Link a Standardized Recipe',
-      desc: 'Opens the Classics library on Recipes, adds Classic American Beef Goulash, links ingredients to Living Stock, and scales to today\'s forecasted headcount.',
-      selector: '[data-rec-input-tab="starters"]',
+      title: 'Step 1 of 8: Discover & Scale a Standardized Recipe',
+      desc: 'Opens Recipes, selects Classic Beef Goulash, links pantry ingredients, and scales yield to today\'s forecasted headcount.',
       run: async () => {
         state._recInputTab = 'starters';
+        const goulash = (state.recipes || []).find(r => /goulash/i.test(r.name)) || (state.recipes || [])[0];
+        if (goulash) state.selectedRecipeId = goulash.id;
+        state.recipeScale = Math.max(30, predictedPortions(localDateStr()));
         render();
-        await new Promise(r => setTimeout(r, 350));
-        spotlightEl('[data-add-starter-rec="starter-goulash"]');
-        await new Promise(r => setTimeout(r, 500));
-        const btn = document.querySelector('[data-add-starter-rec="starter-goulash"]');
-        if (btn) btn.click();
-        await new Promise(r => setTimeout(r, 350));
-        spotlightEl('#rec-scale-inp');
+        await new Promise(r => setTimeout(r, 200));
+        spotlightEl('#rec-scale-inp, [data-rec-input-tab="starters"]');
       }
     },
     {
       tab: 'menu',
       time: '8:45 AM',
-      title: 'Step 2 of 8: Schedule Entrée on Today\'s Menu Calendar',
-      desc: 'Navigates to Menu & Daily Sheet and assigns today\'s lunch entrée using the automated attendance forecast.',
-      selector: '[data-menu-range]',
+      title: 'Step 2 of 8: Schedule Entree on Today\'s Menu',
+      desc: 'Opens Menu & Daily Sheet and schedules today\'s hot lunch using the automated attendance forecast.',
       run: async () => {
         const today = localDateStr();
         const rec = (state.recipes || []).find(r => /goulash/i.test(r.name)) || (state.recipes || [])[0];
@@ -4679,101 +4672,80 @@ if (!window.__shiftSimulatorReady) {
           }
           mp.recipe_id = rec.id;
           mp.custom_title = rec.name;
-          mp.planned_portions = Math.max(45, predictedPortions(today));
+          mp.planned_portions = Math.max(30, predictedPortions(today));
           mp.status = 'PLANNED';
-          saveState();
           render();
-          await new Promise(r => setTimeout(r, 350));
-          spotlightEl(`[data-open-sheet="${today}"], .kms-card`);
         }
+        await new Promise(r => setTimeout(r, 200));
+        spotlightEl('[data-menu-range], .sa-hero-banner');
       }
     },
     {
       tab: 'prep',
       time: '9:15 AM',
-      title: 'Step 3 of 8: Review Storage-Zone Prep Pulls & Deduct Stock',
-      desc: 'Switches to Next-Day Prep where ingredients are grouped by Walk-In Cooler, Freezer, and Stockroom, then deducts morning prep.',
-      selector: '#btn-deduct-today-prep',
+      title: 'Step 3 of 8: Review Storage-Zone Pulls in Next-Day Prep',
+      desc: 'Opens Next-Day Prep where scaled recipe ingredients are grouped by Walk-In Cooler, Freezer, and Stockroom.',
       run: async () => {
-        await new Promise(r => setTimeout(r, 350));
-        const btn = spotlightEl('#btn-deduct-today-prep');
-        if (btn && !btn.disabled) {
-          await new Promise(r => setTimeout(r, 550));
-          btn.click();
-        }
+        await new Promise(r => setTimeout(r, 200));
+        spotlightEl('#btn-deduct-today-prep, .kms-card');
       }
     },
     {
       tab: 'safety',
       time: '11:00 AM',
       title: 'Step 4 of 8: Log 6-Point HACCP Temperatures',
-      desc: 'Opens Temps & Cleaning, types passing cooler, freezer, and hot-hold temperatures into the live inputs, and saves the compliance log.',
-      selector: '#form-safety-temps',
+      desc: 'Opens Temps & Cleaning and types passing cooler, freezer, and hot-hold temperatures into the live inputs.',
       run: async () => {
-        await new Promise(r => setTimeout(r, 350));
+        await new Promise(r => setTimeout(r, 200));
         spotlightEl('#form-safety-temps');
         const sampleTemps = [37, -4, 38, 152, 168, 39];
         const inputs = Array.from(document.querySelectorAll('#form-safety-temps input[type="number"]'));
         for (let i = 0; i < Math.min(inputs.length, sampleTemps.length); i++) {
           await animateType(inputs[i], sampleTemps[i]);
         }
-        const saveBtn = document.querySelector('#form-safety-temps button[type="submit"]');
-        if (saveBtn) {
-          spotlightEl('#form-safety-temps button[type="submit"]');
-          await new Promise(r => setTimeout(r, 350));
-          saveBtn.click();
-        }
+        state.safetyLogs = state.safetyLogs || {};
+        state.safetyLogs[localDateStr()] = state.safetyLogs[localDateStr()] || { temps: {}, cleaning: {} };
+        sampleTemps.forEach((v, idx) => { state.safetyLogs[localDateStr()].temps[idx] = v; });
       }
     },
     {
       tab: 'menu',
       time: '12:30 PM',
       title: 'Step 5 of 8: Record Lunch Served & Auto-Tag Leftovers',
-      desc: 'Returns to Menu & Daily Sheet, enters actual served portions, clicks Mark Served, and generates a 6-day FIFO leftover tag.',
-      selector: '[data-mark-served]',
+      desc: 'Returns to Menu & Daily Sheet, records actual meals served, and generates a 6-day FIFO leftover tag.',
       run: async () => {
         const today = localDateStr();
-        await new Promise(r => setTimeout(r, 350));
-        const qtyInp = document.getElementById('sv-qty-' + today);
         const mp = (state.menuPlan || []).find(m => m.service_date === today);
-        const servedVal = Math.max(35, ((mp && mp.planned_portions) || 65) - 4);
-        if (qtyInp) {
-          spotlightEl('#sv-qty-' + today);
-          await animateType(qtyInp, servedVal);
-          const srvBtn = spotlightEl(`[data-mark-served="${today}"]`);
-          await new Promise(r => setTimeout(r, 400));
-          if (srvBtn) srvBtn.click();
+        if (mp) {
+          mp.served_portions = Math.max(25, (mp.planned_portions || 35) - 3);
+          mp.status = 'SERVED';
         }
+        render();
+        await new Promise(r => setTimeout(r, 200));
+        spotlightEl('.kms-card');
       }
     },
     {
       tab: 'records',
       time: '1:15 PM',
-      title: 'Step 6 of 8: Log Breakdown Waste ("Crack") Deduction',
-      desc: 'Navigates to Blind Count & Waste, fills in a sample waste entry, and deducts it directly from Living Stock.',
-      selector: '#form-waste',
+      title: 'Step 6 of 8: Log Breakdown Waste ("Crack")',
+      desc: 'Opens Blind Count & Waste and types a sample waste deduction into the live form.',
       run: async () => {
-        await new Promise(r => setTimeout(r, 350));
+        await new Promise(r => setTimeout(r, 200));
         spotlightEl('#form-waste');
         const qtyInp = document.querySelector('#form-waste input[name="qty"]');
-        if (qtyInp) {
-          await animateType(qtyInp, '1');
-          const subBtn = spotlightEl('#form-waste button[type="submit"]');
-          await new Promise(r => setTimeout(r, 350));
-          if (subBtn) subBtn.click();
-        }
+        if (qtyInp) await animateType(qtyInp, '1');
       }
     },
     {
       tab: 'orders',
       time: '1:45 PM',
-      title: 'Step 7 of 8: Generate 30-Day Multi-Variable Vendor Orders',
-      desc: 'Switches to Orders & POs, selects the 30-Day Monthly Window, and highlights exact restock needs (Menu BOM + 45-Day Burn Rate + Par Floor).',
-      selector: '#order-hz',
+      title: 'Step 7 of 8: Review 30-Day Multi-Variable Order Suggestions',
+      desc: 'Switches to Orders & POs on the 30-Day horizon combining Menu BOM + 45-Day Burn Rate + Safety Par Floor.',
       run: async () => {
         state._orderHorizon = 30;
         render();
-        await new Promise(r => setTimeout(r, 350));
+        await new Promise(r => setTimeout(r, 200));
         spotlightEl('#order-hz');
       }
     },
@@ -4781,10 +4753,9 @@ if (!window.__shiftSimulatorReady) {
       tab: 'users',
       time: '2:15 PM',
       title: 'Step 8 of 8: Review Friday Weekly Digest & Restore Live Data',
-      desc: 'Opens Users & Activity to inspect the consolidated Weekly Digest & Smart Escalation panel. Click Restore Live Data below to reset your sandbox!',
-      selector: '#form-smart-alert-config',
+      desc: 'Opens Users & Activity to inspect the consolidated Friday Weekly Digest & Smart Escalation rules. Click Finish & Restore to exit sandbox.',
       run: async () => {
-        await new Promise(r => setTimeout(r, 350));
+        await new Promise(r => setTimeout(r, 200));
         spotlightEl('#form-smart-alert-config');
       }
     }
@@ -4799,10 +4770,11 @@ if (!window.__shiftSimulatorReady) {
 
     const hud = document.createElement('div');
     hud.id = 'sim-walkthrough-hud';
-    hud.className = 'fixed bottom-3 right-3 left-3 sm:left-auto sm:w-[430px] z-50 rounded-xl border-2 border-[#b3122b] bg-[#1b365d] text-white p-3.5 shadow-2xl space-y-2 no-print';
+    hud.style.pointerEvents = 'auto';
+    hud.className = 'fixed bottom-3 right-3 left-3 sm:left-auto sm:w-[420px] z-50 rounded-xl border-2 border-[#b3122b] bg-[#1b365d] text-white p-3.5 shadow-2xl space-y-2 no-print';
     hud.innerHTML = `
       <div class="flex items-center justify-between gap-2">
-        <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider">Interactive Shift Tutorial &bull; ${step.time}</span>
+        <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider">Shift Walkthrough &bull; ${step.time}</span>
         <button type="button" id="btn-hud-restore" class="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-[11px]">Restore Live Data</button>
       </div>
       <div class="font-extrabold text-sm leading-snug">${esc(step.title)}</div>
@@ -4823,15 +4795,21 @@ if (!window.__shiftSimulatorReady) {
   };
 
   const executeWalkthroughStep = async (idx) => {
-    ensureSimSnapshot();
-    const clamped = Math.max(0, Math.min(WALKTHROUGH_STEPS.length - 1, idx));
-    state._simStep = clamped;
-    const step = WALKTHROUGH_STEPS[clamped];
-    state.activeTab = step.tab;
-    render();
-    renderSimHud();
-    if (step.run) {
-      await step.run();
+    try {
+      ensureSimSnapshot();
+      const clamped = Math.max(0, Math.min(WALKTHROUGH_STEPS.length - 1, idx));
+      state._simStep = clamped;
+      const step = WALKTHROUGH_STEPS[clamped];
+      state.activeTab = step.tab;
+      render();
+      renderSimHud();
+      if (step.run) {
+        await step.run();
+        renderSimHud();
+      }
+    } catch (err) {
+      console.error('Walkthrough step error:', err);
+      showToast('Walkthrough step recovered — click Next Step or Restore Live Data', 'warn');
       renderSimHud();
     }
   };
@@ -4860,4 +4838,14 @@ if (!window.__shiftSimulatorReady) {
       restoreSimSnapshot();
     }
   });
+
+  // Auto-reconnect Supabase if still in Local Mode 2.5s after boot
+  setTimeout(() => {
+    try {
+      const lbl = document.getElementById('sync-label');
+      if (lbl && /local/i.test(lbl.textContent || '') && typeof initSupabase === 'function') {
+        initSupabase();
+      }
+    } catch (_) {}
+  }, 2500);
 }
