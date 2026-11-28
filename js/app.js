@@ -325,6 +325,11 @@ function checkMandatoryModals() {
 }
 
 export function render() {
+  const lockEl = document.getElementById('lock-screen');
+  if (lockEl && sessionPin) {
+    lockEl.classList.add('hidden');
+    lockEl.style.display = 'none';
+  }
   relearnPars();
   renderNav();
   updateSyncUI();
