@@ -163,10 +163,73 @@
     html[data-theme="dark"] .sa-hero-banner h2 { color: #f8fafc; }
     .sa-hero-banner .text-amber-300 { color: #b3122b; }
     .sa-hero-banner .text-white\/90, .sa-hero-banner .opacity-85 { color: var(--muted); }
+    .sa-hero-banner .text-white\/85, .sa-hero-banner .text-white\/90, .sa-hero-banner .opacity-85 {
+      color: var(--muted) !important;
+      opacity: 1 !important;
+    }
+    html:not([data-theme="dark"]) .sa-hero-banner button.bg-white\/15 {
+      background-color: #f1f5f9 !important;
+      color: #1b365d !important;
+      border: 1px solid #94a3b8 !important;
+    }
+    html:not([data-theme="dark"]) .sa-hero-banner button.bg-white\/15:hover {
+      background-color: #e2e8f0 !important;
+    }
+    html[data-theme="dark"] .sa-hero-banner button.bg-white\/15 {
+      background-color: #334155 !important;
+      color: #f8fafc !important;
+      border: 1px solid #475569 !important;
+    }
+    .sa-hero-banner button.bg-white {
+      background-color: #ffffff !important;
+      color: #1b365d !important;
+      border: 1.5px solid #1b365d !important;
+    }
+    .sa-hero-banner button.bg-white:hover {
+      background-color: #f1f5f9 !important;
+    }
+    table thead tr {
+      opacity: 1 !important;
+    }
     table thead th {
-      background-color: #1b365d;
-      color: #ffffff;
-      font-weight: 700;
+      background-color: #1b365d !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 11px !important;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      padding: 7px 10px !important;
+      opacity: 1 !important;
+    }
+    table tbody td {
+      padding: 7px 10px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 1.3;
+    }
+    .tag-OK { background-color: #dcfce7; color: #14532d; border: 1px solid #86efac; }
+    .tag-LOW { background-color: #fef3c7; color: #78350f; border: 1px solid #fcd34d; }
+    .tag-OUT { background-color: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; }
+    html[data-theme="dark"] .tag-OK { background-color: rgba(22, 101, 52, 0.45); color: #bbf7d0; border-color: #22c55e; }
+    html[data-theme="dark"] .tag-LOW { background-color: rgba(146, 64, 14, 0.45); color: #fde68a; border-color: #f59e0b; }
+    html[data-theme="dark"] .tag-OUT { background-color: rgba(153, 27, 27, 0.5); color: #fecaca; border-color: #ef4444; }
+    html[data-theme="dark"] .bg-red-50, html[data-theme="dark"] .bg-red-50\/60 {
+      background-color: rgba(153, 27, 27, 0.28) !important;
+      color: #fecaca !important;
+    }
+    html[data-theme="dark"] .bg-emerald-50\/30, html[data-theme="dark"] .bg-emerald-50\/40 {
+      background-color: rgba(22, 101, 52, 0.25) !important;
+    }
+    html[data-theme="dark"] .bg-amber-50, html[data-theme="dark"] .bg-amber-50\/50 {
+      background-color: rgba(146, 64, 14, 0.28) !important;
     }
 
     /* Keep Signature Salvation Army Navy Header Crisp & Legible in Both Light & Dark Modes */
