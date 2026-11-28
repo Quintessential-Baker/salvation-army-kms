@@ -293,7 +293,7 @@
     }
 
     @media print {
-      @page { size: letter portrait; margin: 0.38in; }
+      @page { size: letter portrait; margin: 0.3in; }
       body.printing-modal #app-main,
       body.printing-modal footer {
         display: none !important;
@@ -314,11 +314,9 @@
       }
       .sa-print-shell {
         border: 2px solid #000000 !important;
-        min-height: 9.9in !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: space-between !important;
         box-sizing: border-box !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
       .sa-print-shell .sa-sheet-banner {
         background-color: #0a1628 !important;

@@ -1954,7 +1954,7 @@ document.addEventListener('click', (e) => {
         </div>
         ${zonesToPrint.map((z, zIdx) => `
           <div class="sa-print-shell w-full bg-white text-slate-900 border-2 border-[#1b365d] rounded-md overflow-hidden" style="${zIdx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
-            <div style="background-color:#0a1628;color:#ffffff;border-bottom:3px solid #b3122b;" class="sa-sheet-banner px-3.5 py-2.5 flex items-center justify-between gap-3">
+            <div style="background-color:#0a1628;color:#ffffff;border-bottom:3px solid #b3122b;" class="sa-sheet-banner px-3 py-1.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2.5">
                 <div style="background-color:#b3122b;color:#ffffff;" class="w-7 h-7 rounded flex items-center justify-center font-black text-xs shrink-0">SA</div>
                 <div>
@@ -1967,8 +1967,8 @@ document.addEventListener('click', (e) => {
                 <div style="color:#e2e8f0;" class="font-normal">313 W. Cunningham St.</div>
               </div>
             </div>
-            <div class="p-2 bg-white text-slate-900">
-              <div class="grid grid-cols-3 gap-3 text-[11px] font-extrabold text-black mb-2">
+            <div class="px-2 py-1.5 bg-white text-slate-900">
+              <div class="grid grid-cols-3 gap-3 text-[11px] font-extrabold text-black mb-1">
                 <div class="border-b border-black pb-0.5">Date: _______________________</div>
                 <div class="border-b border-black pb-0.5">Counted By: _________________</div>
                 <div class="border-b border-black pb-0.5">Verified By: _________________</div>
@@ -1995,7 +1995,7 @@ document.addEventListener('click', (e) => {
                   `).join('')}
                 </tbody>
               </table>
-              <div class="flex justify-between items-center text-[9.5px] font-semibold text-black mt-1.5 pt-1 border-t border-black">
+              <div class="flex justify-between items-center text-[9px] font-bold text-black mt-1 pt-0.5 border-t border-black">
                 <span>Instructions: Write item name, unit (cs, lb, gal, ea), and physical count. Enter totals into Records &rarr; Blind Audit.</span>
                 <span>Form KMS-INV-30</span>
               </div>
